@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Eye, EyeOff, Leaf } from 'lucide-react';
-import { validatePatientLogin, validateOncologistLogin, Patient, Oncologist } from '../mockData';
-import { RibbonBackground } from '../shared/RibbonBackground';
+import { validatePatientLogin, validateOncologistLogin, Patient, Oncologist } from '../../components/mockData';
+import { RibbonBackground } from '../../components/shared/RibbonBackground';
 
 interface LoginPageProps {
   onPatientLogin: (patient: Patient) => void;
