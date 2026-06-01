@@ -6,12 +6,12 @@ import {
 import {
   Patient, Oncologist, TreatmentCycle, LabResult, ClinicalMessage,
   getCycleStatus, formatDate, patients, shiftDate, TODAY,
-} from '../mockData';
-import { LoadingSpinner } from '../shared/LoadingSpinner';
-import { LabFolderGrid } from '../shared/LabFolderGrid';
+} from '../../components/mockData';
+import { LoadingSpinner } from '../../components/shared/LoadingSpinner';
+import { LabFolderGrid } from '../../components/shared/LabFolderGrid';
 import { PatientProfile } from '../PatientProfile';
-import { RibbonBackground } from '../shared/RibbonBackground';
-import { UnifiedTimeline, ChemoAuthContext } from '../shared/UnifiedTimeline';
+import { RibbonBackground } from '../../components/shared/RibbonBackground';
+import { UnifiedTimeline, ChemoAuthContext } from '../../components/shared/UnifiedTimeline';
 
 interface PatientDetailProps {
   patientId: string;

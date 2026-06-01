@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Leaf, CheckCircle } from 'lucide-react';
-import { validateRegistration } from '../mockData';
-import { RibbonBackground } from '../shared/RibbonBackground';
+import { validateRegistration } from '../../components/mockData';
+import { RibbonBackground } from '../../components/shared/RibbonBackground';
 
 interface RegisterPageProps {
   onBack: () => void;

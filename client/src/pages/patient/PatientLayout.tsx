@@ -3,8 +3,8 @@ import {
   LogOut, Leaf, Home, CalendarCheck, Pill, BookOpen, Droplets,
   UserCircle, Menu, X, Calendar, MessageCircle, ArrowLeft,
 } from 'lucide-react';
-import { Patient } from '../mockData';
-import { RibbonBackground } from '../shared/RibbonBackground';
+import { Patient } from '../../components/mockData';
+import { RibbonBackground } from '../../components/shared/RibbonBackground';
 import { PatientNavPage } from '../../App';
 
 interface NavItem {

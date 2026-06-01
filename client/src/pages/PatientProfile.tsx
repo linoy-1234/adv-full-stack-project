@@ -1,5 +1,5 @@
 import { AlertTriangle, CheckCircle, Droplets, Layers, User } from 'lucide-react';
-import { Patient, formatDate } from './mockData';
+import { Patient, formatDate } from './../components/mockData';
 
 interface PatientProfileProps {
   patient: Patient;
