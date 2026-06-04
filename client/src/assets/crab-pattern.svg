@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <g fill="none" stroke="#7CAE8E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.10">
+    <!-- crab body -->
+    <ellipse cx="60" cy="62" rx="18" ry="13"/>
+    <!-- eyes on stalks -->
+    <path d="M53 50 L50 42"/>
+    <circle cx="50" cy="40" r="2.5"/>
+    <path d="M67 50 L70 42"/>
+    <circle cx="70" cy="40" r="2.5"/>
+    <!-- left legs -->
+    <path d="M44 58 L30 52"/>
+    <path d="M43 64 L28 64"/>
+    <path d="M44 70 L30 76"/>
+    <!-- right legs -->
+    <path d="M76 58 L90 52"/>
+    <path d="M77 64 L92 64"/>
+    <path d="M76 70 L90 76"/>
+    <!-- left claw -->
+    <path d="M46 54 L36 46 L31 49"/>
+    <path d="M36 46 L34 40"/>
+    <!-- right claw -->
+    <path d="M74 54 L84 46 L89 49"/>
+    <path d="M84 46 L86 40"/>
+  </g>
+</svg>
