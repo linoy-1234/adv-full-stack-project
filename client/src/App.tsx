@@ -33,7 +33,7 @@ const PatientProfilePage = lazy(() => import("./components/PatientProfile").then
 const OncologistDashboard = lazy(() => import("./pages/oncologist/OncologistDashboard").then(m => ({ default: m.OncologistDashboard })));
 const PatientDetail     = lazy(() => import("./pages/oncologist/PatientDetail").then(m => ({ default: m.PatientDetail })));
 const LabStaffDashboard = lazy(() => import("./pages/labstaff/LabStaffDashboard").then(m => ({ default: m.LabStaffDashboard })));
-const NotFound          = lazy(() => import("./components/NotFound").then(m => ({ default: m.NotFound })));
+const NotFound          = lazy(() => import("./pages/NotFound").then(m => ({ default: m.NotFound })));
 
 // ─── Page type ────────────────────────────────────────────────────────────────
 
@@ -365,9 +365,10 @@ export default function App() {
               if (p.id !== protocolId) return p;
               return {
                 ...p,
-                items: p.items.map((item) =>
-                  item.id === cycleId ? { ...item, status, ...extra } : item
-                ),
+                items: p.items.map((item) => {
+                  if (item.id !== cycleId || item.type !== "chemotherapy") return item;
+                  return { ...item, status, ...(extra ?? {}) };
+                }),
               };
             }));
           }}
