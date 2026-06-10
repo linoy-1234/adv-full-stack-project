@@ -124,3 +124,5 @@ const treatmentProtocolSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("TreatmentProtocol", treatmentProtocolSchema);
+
+//the whole protocol of the patient will be here
