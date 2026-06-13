@@ -51,8 +51,10 @@ import {
   formatDateShort,
   shiftDate,
   TODAY,
+  SymptomEntry,
 } from "../../utils/mockData";
 import { RibbonBackground } from "../../components/shared/RibbonBackground";
+import { TemperatureBadge } from "../../components/shared/TemperatureBadge";
 
 interface PatientDetailProps {
   patientId: string;
@@ -62,6 +64,7 @@ interface PatientDetailProps {
   allProtocols: TreatmentProtocol[];
   allLabResults: LabResult[];
   allMessages: Message[];
+  allSymptomEntries: SymptomEntry[];
   onUpdateProfile: (p: PatientProfile) => void;
   onUpdateProtocol: (tp: TreatmentProtocol) => void;
   onUpdateCycleStatus: (protocolId: string, cycleId: string, status: CycleStatus, extra?: Partial<ChemoCycle>) => void;
@@ -612,6 +615,22 @@ function LabTrendChart({ data }: { data: ChartPoint[] }) {
   );
 }
 
+const SYMPTOM_KEYS = [
+  { key: "nausea" as const,       label: "Nausea",        emoji: "🤢" },
+  { key: "fatigue" as const,      label: "Fatigue",       emoji: "😴" },
+  { key: "pain" as const,         label: "Pain",          emoji: "😣" },
+  { key: "vomiting" as const,     label: "Vomiting",      emoji: "🤮" },
+  { key: "appetiteLoss" as const, label: "Appetite Loss", emoji: "🍽️" },
+  { key: "mouthSores" as const,   label: "Mouth Sores",   emoji: "👄" },
+];
+
+function symptomIntensityColor(v: number) {
+  if (v <= 2) return "#166534";
+  if (v <= 5) return "#92400E";
+  if (v <= 8) return "#C2410C";
+  return "#991B1B";
+}
+
 export function PatientDetail({
   patientId,
   onBack,
@@ -620,6 +639,7 @@ export function PatientDetail({
   allProtocols,
   allLabResults,
   allMessages,
+  allSymptomEntries,
   onUpdateProfile,
   onUpdateProtocol,
   onUpdateCycleStatus,
@@ -643,6 +663,11 @@ export function PatientDetail({
     ...allMessages.filter((m) => m.patientProfileId === patientId && !seedMessages.find((sm) => sm.id === m.id)),
   ].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
+  const symptomEntries = allSymptomEntries
+    .filter((e) => e.patientProfileId === patientId)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  const [showAllSymptoms, setShowAllSymptoms] = useState(false);
   const [modal, setModal] = useState<"profile" | "medications" | "protocol" | "dates" | null>(null);
   const [delayCycle, setDelayCycle] = useState<ChemoCycle | null>(null);
   const [messageText, setMessageText] = useState("");
@@ -662,11 +687,10 @@ export function PatientDetail({
     if (!protocol) return;
     const updated = {
       ...protocol,
-      items: protocol.items.map((item) =>
-        item.id === cycle.id
-          ? { ...item, status: "approved" as CycleStatus, approvedDate: TODAY, approvedBy: seedOncologist.fullName }
-          : item
-      ),
+      items: protocol.items.map((item) => {
+        if (item.id !== cycle.id || item.type !== "chemotherapy") return item;
+        return { ...item, status: "approved" as CycleStatus, approvedDate: TODAY, approvedBy: seedOncologist.fullName };
+      }),
       lastUpdatedBy: seedOncologist.fullName,
       lastUpdatedAt: new Date().toISOString(),
     };
@@ -678,11 +702,10 @@ export function PatientDetail({
     if (!protocol) return;
     const updated = {
       ...protocol,
-      items: protocol.items.map((item) =>
-        item.id === cycle.id
-          ? { ...item, status: "delayed" as CycleStatus, delayedTo: newStartDate, delayedEndDate: newEndDate, delayReason: reason }
-          : item
-      ),
+      items: protocol.items.map((item): TreatmentItem => {
+        if (item.id !== cycle.id || item.type !== "chemotherapy") return item;
+        return { ...item, status: "delayed" as CycleStatus, delayedTo: newStartDate, delayedEndDate: newEndDate, delayReason: reason };
+      }),
       lastUpdatedBy: seedOncologist.fullName,
       lastUpdatedAt: new Date().toISOString(),
     };
@@ -1123,6 +1146,54 @@ export function PatientDetail({
               </button>
             </div>
           </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Symptom Journal"
+          source="Patient-reported"
+          meta={symptomEntries.length > 0 ? `${symptomEntries.length} entr${symptomEntries.length === 1 ? "y" : "ies"}` : undefined}
+        >
+          {symptomEntries.length === 0 ? (
+            <p className="text-sm text-[#9CA3AF] text-center py-4">No symptom entries recorded yet.</p>
+          ) : (
+            <>
+              <div className="flex flex-col gap-3">
+                {(showAllSymptoms ? symptomEntries : symptomEntries.slice(0, 5)).map((entry) => (
+                  <div key={entry.id} className="rounded-2xl p-4" style={{ backgroundColor: "#F9FAFB", border: "1.5px solid #E5E7EB" }}>
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <span className="text-xs block mb-1" style={{ color: "#374151" }}>
+                          {new Date(entry.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} at {entry.time}
+                        </span>
+                        {entry.temperature != null && <TemperatureBadge temperature={entry.temperature} size="small" />}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mb-1">
+                      {SYMPTOM_KEYS.map((s) => {
+                        const val = entry[s.key];
+                        if (!val) return null;
+                        return (
+                          <span key={s.key} className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: "#F3F4F6", color: symptomIntensityColor(val) }}>
+                            {s.emoji} {s.label}: {val}/10
+                          </span>
+                        );
+                      })}
+                    </div>
+                    {entry.notes && <p className="text-xs mt-2 italic" style={{ color: "#6B7280" }}>"{entry.notes}"</p>}
+                  </div>
+                ))}
+              </div>
+              {symptomEntries.length > 5 && (
+                <button
+                  onClick={() => setShowAllSymptoms((p) => !p)}
+                  className="mt-3 w-full text-xs py-2 rounded-xl"
+                  style={{ backgroundColor: "#F5F2EE", color: "#7CAE8E", border: "1px solid #E5E2DC" }}
+                >
+                  {showAllSymptoms ? "Show less" : `Show all ${symptomEntries.length} entries`}
+                </button>
+              )}
+            </>
+          )}
         </SectionCard>
 
       </main>
