@@ -129,7 +129,7 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
           </div>
           <div className="divide-y divide-[#F5F2EE]">
             {chemoItems.map((cycle) => {
-              const isActive = cycle.status === "approved" && cycle.status !== "delayed" && cycle.startDate <= TODAY && cycle.endDate >= TODAY;
+              const isActive = cycle.status === "approved" && cycle.startDate <= TODAY && cycle.endDate >= TODAY;
               return (
                 <div key={cycle.id} className={`px-4 py-3 ${isActive ? "bg-emerald-50" : ""}`}>
                   <div className="flex items-center justify-between flex-wrap gap-1">

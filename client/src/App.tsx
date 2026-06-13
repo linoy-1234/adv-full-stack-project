@@ -358,6 +358,7 @@ export default function App() {
           allProtocols={protocols}
           allLabResults={allLabResults}
           allMessages={allMessages}
+          allSymptomEntries={allSymptomEntries}
           onUpdateProfile={handleUpdateProfile}
           onUpdateProtocol={handleUpdateProtocol}
           onUpdateCycleStatus={(protocolId, cycleId, status, extra) => {
