@@ -31,10 +31,6 @@ export function LoginPage({ onLogin, onGoToRegister, onBackToHome }: LoginPagePr
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10" style={{ backgroundColor: "#FAF8F5", position: "relative" }}>
       <RibbonBackground />
-      <div className="fixed inset-0 pointer-events-none flex items-center justify-center opacity-[0.025] select-none z-0">
-        <span className="text-[22rem] leading-none">♋</span>
-      </div>
-
       {onBackToHome && (
         <button onClick={onBackToHome} className="absolute top-6 left-6 flex items-center gap-1.5 text-sm hover:opacity-70 z-10" style={{ color: "#7CAE8E" }}>
           <ArrowLeft className="w-4 h-4" /> Back to Home
