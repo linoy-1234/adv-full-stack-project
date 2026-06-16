@@ -95,6 +95,11 @@ const patientProfileSchema = new mongoose.Schema(
       default: "waiting_for_registration",
     },
 
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+//for "deleting" the profile safetly (not really deleting just adding that the patient is not active, meaning "deleting the user")
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

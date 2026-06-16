@@ -70,6 +70,7 @@ const seedData = async () => {
       ],
       notes: "Demo patient profile created by seed script.",
       accountStatus: "waiting_for_registration",
+      isActive: true,
     });
 
     console.log("Seed completed successfully");
