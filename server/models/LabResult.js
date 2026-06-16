@@ -8,21 +8,27 @@ const labResultSchema = new mongoose.Schema(
       required: [true, "Patient is required"],
     },
 
+    cycle: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TreatmentCycle",
+      default: null,
+    },
+
     enteredBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: [true, "Lab staff user is required"],
     },
 
-    relatedCycle: {
+    updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "TreatmentCycle",
+      ref: "User",
       default: null,
     },
 
-    resultDate: {
+    testDate: {
       type: Date,
-      required: [true, "Result date is required"],
+      required: [true, "Test date is required"],
     },
 
     wbc: {
@@ -68,17 +74,18 @@ const labResultSchema = new mongoose.Schema(
       default: "",
     },
 
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-labResultSchema.index({ patient: 1, resultDate: -1 });
-labResultSchema.index({ relatedCycle: 1 });
+labResultSchema.index({ patient: 1, testDate: -1 });
+labResultSchema.index({ cycle: 1 });
 
 module.exports = mongoose.model("LabResult", labResultSchema);
 

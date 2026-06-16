@@ -7,6 +7,7 @@ const healthRoutes = require("./routes/healthRoutes");
 const authRoutes = require("./routes/authRoutes");
 const patientRoutes = require("./routes/patientRoutes");
 const treatmentRoutes = require("./routes/treatmentRoutes");
+const labRoutes = require("./routes/labRoutes");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 
@@ -25,6 +26,7 @@ app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/patients", patientRoutes);
 app.use("/api/treatments", treatmentRoutes);
+app.use("/api/labs", labRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
