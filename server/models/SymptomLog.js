@@ -1,11 +1,19 @@
 const mongoose = require("mongoose");
 
-const symptomEntrySchema = new mongoose.Schema(
+const symptomItemSchema = new mongoose.Schema(
   {
-    name: {
+    type: {
       type: String,
-      required: [true, "Symptom name is required"],
-      trim: true,
+      enum: [
+        "nausea",
+        "fatigue",
+        "pain",
+        "vomiting",
+        "appetite_loss",
+        "mouth_sores",
+        "other",
+      ],
+      required: [true, "Symptom type is required"],
     },
 
     severity: {
@@ -14,8 +22,15 @@ const symptomEntrySchema = new mongoose.Schema(
       min: [1, "Severity must be at least 1"],
       max: [10, "Severity cannot exceed 10"],
     },
+
+    customSymptom: {
+      type: String,
+      trim: true,
+      maxlength: [120, "Custom symptom cannot exceed 120 characters"],
+      default: "",
+    },
   },
-  { _id: true }
+  { _id: false }
 );
 
 const symptomLogSchema = new mongoose.Schema(
@@ -26,24 +41,24 @@ const symptomLogSchema = new mongoose.Schema(
       required: [true, "Patient is required"],
     },
 
-    createdBy: {
+    recordedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "Patient user is required"],
+      required: [true, "Recording user is required"],
     },
 
-    loggedAt: {
+    logDate: {
       type: Date,
       required: [true, "Log date is required"],
       default: Date.now,
     },
 
     symptoms: {
-      type: [symptomEntrySchema],
-      required: [true, "At least one symptom is required"],
+      type: [symptomItemSchema],
+      required: true,
       validate: {
         validator: function (value) {
-          return Array.isArray(value) && value.length > 0;
+          return value.length > 0;
         },
         message: "At least one symptom is required",
       },
@@ -55,11 +70,19 @@ const symptomLogSchema = new mongoose.Schema(
       maxlength: [1000, "Notes cannot exceed 1000 characters"],
       default: "",
     },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-symptomLogSchema.index({ patient: 1, loggedAt: -1 });
+symptomLogSchema.index({ patient: 1, logDate: -1 });
+symptomLogSchema.index({ recordedBy: 1 });
 
 module.exports = mongoose.model("SymptomLog", symptomLogSchema);
 
