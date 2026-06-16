@@ -1,5 +1,45 @@
 const mongoose = require("mongoose");
 
+const attachmentSchema = new mongoose.Schema(
+  {
+    originalName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    storedName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    fileUrl: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    mimeType: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    size: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    uploadedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+);
+
 const messageSchema = new mongoose.Schema(
   {
     patient: {
@@ -23,16 +63,14 @@ const messageSchema = new mongoose.Schema(
     text: {
       type: String,
       trim: true,
-      maxlength: [2000, "Message cannot exceed 2000 characters"],
+      maxlength: [2000, "Message text cannot exceed 2000 characters"],
       default: "",
     },
 
-    attachments: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "ClinicalDocument",
-      },
-    ],
+    attachments: {
+      type: [attachmentSchema],
+      default: [],
+    },
 
     readByPatient: {
       type: Boolean,
@@ -43,20 +81,16 @@ const messageSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
-  { timestamps: true }
-);
-
-messageSchema.pre("validate", function (next) {
-  const hasText = this.text && this.text.trim().length > 0;
-  const hasAttachments = this.attachments && this.attachments.length > 0;
-
-  if (!hasText && !hasAttachments) {
-    this.invalidate("text", "Message must include text or an attachment");
+  {
+    timestamps: true,
   }
-
-  next();
-});
+);
 
 messageSchema.index({ patient: 1, createdAt: 1 });
 messageSchema.index({ sender: 1 });
