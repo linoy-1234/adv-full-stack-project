@@ -6,6 +6,7 @@ const cors = require("cors");
 const healthRoutes = require("./routes/healthRoutes");
 const authRoutes = require("./routes/authRoutes");
 const patientRoutes = require("./routes/patientRoutes");
+const treatmentRoutes = require("./routes/treatmentRoutes");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 
@@ -23,6 +24,7 @@ app.use(express.json());
 app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/patients", patientRoutes);
+app.use("/api/treatments", treatmentRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -1,5 +1,28 @@
 const mongoose = require("mongoose");
 
+const treatmentTypeSchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      enum: ["chemotherapy", "radiation", "surgery"],
+      required: [true, "Treatment type is required"],
+    },
+
+    plannedCount: {
+      type: Number,
+      min: [0, "Planned count cannot be negative"],
+      default: 0,
+    },
+
+    notes: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+  },
+  { _id: false }
+);
+
 const medicationSchema = new mongoose.Schema(
   {
     name: {
@@ -41,29 +64,6 @@ const medicationSchema = new mongoose.Schema(
   { _id: false }
 );
 
-const treatmentTypeSchema = new mongoose.Schema(
-  {
-    type: {
-      type: String,
-      enum: ["chemotherapy", "radiation", "surgery", "immunotherapy", "other"],
-      required: [true, "Treatment type is required"],
-    },
-
-    plannedCount: {
-      type: Number,
-      min: [0, "Planned count cannot be negative"],
-      default: 0,
-    },
-
-    label: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-  },
-  { _id: false }
-);
-
 const treatmentProtocolSchema = new mongoose.Schema(
   {
     patient: {
@@ -82,6 +82,7 @@ const treatmentProtocolSchema = new mongoose.Schema(
       type: String,
       required: [true, "Protocol name is required"],
       trim: true,
+      minlength: [2, "Protocol name must be at least 2 characters"],
       maxlength: [120, "Protocol name cannot exceed 120 characters"],
     },
 
@@ -89,7 +90,6 @@ const treatmentProtocolSchema = new mongoose.Schema(
       type: String,
       required: [true, "Diagnosis is required"],
       trim: true,
-      maxlength: [200, "Diagnosis cannot exceed 200 characters"],
     },
 
     treatmentTypes: {
@@ -105,23 +105,32 @@ const treatmentProtocolSchema = new mongoose.Schema(
     notes: {
       type: String,
       trim: true,
-      maxlength: [1000, "Notes cannot exceed 1000 characters"],
       default: "",
     },
 
-    status: {
-      type: String,
-      enum: ["active", "completed", "archived"],
-      default: "active",
+    isActive: {
+      type: Boolean,
+      default: true,
     },
 
-    lastUpdatedBy: {
+    createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      required: [true, "Creator oncologist is required"],
+    },
+
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
+
+treatmentProtocolSchema.index({ patient: 1, isActive: 1 });
 
 module.exports = mongoose.model("TreatmentProtocol", treatmentProtocolSchema);
 

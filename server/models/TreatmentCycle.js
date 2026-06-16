@@ -1,50 +1,44 @@
 const mongoose = require("mongoose");
 
-const delayInfoSchema = new mongoose.Schema(
+const decisionSchema = new mongoose.Schema(
   {
-    delayedBy: {
+    decisionStatus: {
+      type: String,
+      enum: ["none", "approved", "delayed"],
+      default: "none",
+    },
+
+    decidedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      default: null,
     },
 
-    delayedAt: {
+    decidedAt: {
       type: Date,
+      default: null,
     },
 
-    reason: {
+    decisionNotes: {
       type: String,
       trim: true,
-      maxlength: [500, "Delay reason cannot exceed 500 characters"],
       default: "",
     },
 
-    previousStartDate: {
-      type: Date,
-    },
-
-    previousEndDate: {
-      type: Date,
-    },
-  },
-  { _id: false }
-);
-
-const approvalInfoSchema = new mongoose.Schema(
-  {
-    approvedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-
-    approvedAt: {
-      type: Date,
-    },
-
-    notes: {
+    delayReason: {
       type: String,
       trim: true,
-      maxlength: [500, "Approval notes cannot exceed 500 characters"],
       default: "",
+    },
+
+    delayedToStartDate: {
+      type: Date,
+      default: null,
+    },
+
+    delayedToEndDate: {
+      type: Date,
+      default: null,
     },
   },
   { _id: false }
@@ -52,16 +46,28 @@ const approvalInfoSchema = new mongoose.Schema(
 
 const treatmentCycleSchema = new mongoose.Schema(
   {
+    protocol: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TreatmentProtocol",
+      required: [true, "Treatment protocol is required"],
+    },
+
     patient: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "PatientProfile",
       required: [true, "Patient is required"],
     },
 
-    protocol: {
+    oncologist: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "TreatmentProtocol",
-      required: [true, "Treatment protocol is required"],
+      ref: "User",
+      required: [true, "Oncologist is required"],
+    },
+
+    treatmentType: {
+      type: String,
+      enum: ["chemotherapy", "radiation", "surgery"],
+      required: [true, "Treatment type is required"],
     },
 
     cycleNumber: {
@@ -70,16 +76,10 @@ const treatmentCycleSchema = new mongoose.Schema(
       min: [1, "Cycle number must be at least 1"],
     },
 
-    treatmentType: {
-      type: String,
-      enum: ["chemotherapy", "radiation", "surgery", "immunotherapy", "other"],
-      required: [true, "Treatment type is required"],
-    },
-
     title: {
       type: String,
+      required: [true, "Cycle title is required"],
       trim: true,
-      default: "",
     },
 
     startDate: {
@@ -92,40 +92,47 @@ const treatmentCycleSchema = new mongoose.Schema(
       required: [true, "End date is required"],
     },
 
+    medications: {
+      type: [String],
+      default: [],
+    },
+
     status: {
       type: String,
       enum: [
         "upcoming",
         "waiting_for_labs",
+        "pending_review",
         "approved",
+        "active",
         "completed",
         "delayed",
-        "cancelled",
       ],
       default: "upcoming",
-    },
-
-    approvalInfo: {
-      type: approvalInfoSchema,
-      default: undefined,
-    },
-
-    delayInfo: {
-      type: delayInfoSchema,
-      default: undefined,
     },
 
     notes: {
       type: String,
       trim: true,
-      maxlength: [1000, "Notes cannot exceed 1000 characters"],
       default: "",
     },
+
+    decision: {
+      type: decisionSchema,
+      default: () => ({}),
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-treatmentCycleSchema.index({ patient: 1, cycleNumber: 1, treatmentType: 1 });
+treatmentCycleSchema.index({ patient: 1, startDate: 1 });
 treatmentCycleSchema.index({ protocol: 1, cycleNumber: 1 });
 
 module.exports = mongoose.model("TreatmentCycle", treatmentCycleSchema);
