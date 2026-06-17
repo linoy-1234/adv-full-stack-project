@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { CheckCircle, Edit2, Trash2, X } from "lucide-react";
 import { PatientProfile, SymptomEntry, TODAY } from "../../utils/mockData";
-import { TemperatureBadge } from "../../components/shared/TemperatureBadge";
 
 interface SymptomJournalProps {
   profile: PatientProfile;
@@ -38,7 +37,6 @@ const intensityColor = (v: number) => {
 export function SymptomJournal({ profile, symptomEntries, onAddEntry, onDeleteEntry }: SymptomJournalProps) {
   const [date, setDate] = useState(TODAY);
   const [time, setTime] = useState("09:00");
-  const [temperature, setTemperature] = useState("");
   const [selected, setSelected] = useState<Set<SymptomKey>>(new Set());
   const [intensities, setIntensities] = useState<Record<SymptomKey, number>>({
     nausea: 5, fatigue: 5, pain: 5, vomiting: 5, appetiteLoss: 5, mouthSores: 5,
@@ -64,16 +62,13 @@ export function SymptomJournal({ profile, symptomEntries, onAddEntry, onDeleteEn
     });
   };
 
-  const tempNum = parseFloat(temperature);
-  const isTempValid = temperature === "" || (!isNaN(tempNum) && tempNum >= 34.0 && tempNum <= 42.5);
-  const canSubmit = isTempValid && (selected.size > 0 || (otherChecked && otherText.trim().length > 0));
+  const canSubmit = selected.size > 0 || (otherChecked && otherText.trim().length > 0);
 
   const resetForm = () => {
     setSelected(new Set());
     setOtherChecked(false);
     setOtherText("");
     setNotes("");
-    setTemperature("");
     setEditingId(null);
   };
 
@@ -81,7 +76,6 @@ export function SymptomJournal({ profile, symptomEntries, onAddEntry, onDeleteEn
     setEditingId(entry.id);
     setDate(entry.date);
     setTime(entry.time);
-    setTemperature(entry.temperature?.toString() ?? "");
     setNotes(entry.notes ?? "");
     const selectedSet = new Set<SymptomKey>();
     SYMPTOMS.forEach((s) => { if (entry[s.key] > 0) selectedSet.add(s.key); });
@@ -111,7 +105,6 @@ export function SymptomJournal({ profile, symptomEntries, onAddEntry, onDeleteEn
       patientProfileId: profile.id,
       date,
       time,
-      temperature: temperature ? tempNum : undefined,
       nausea: selected.has("nausea") ? intensities.nausea : 0,
       fatigue: selected.has("fatigue") ? intensities.fatigue : 0,
       pain: selected.has("pain") ? intensities.pain : 0,
@@ -177,18 +170,6 @@ export function SymptomJournal({ profile, symptomEntries, onAddEntry, onDeleteEn
           </div>
         </div>
 
-        {/* Temperature */}
-        <div className="rounded-2xl p-4" style={{ backgroundColor: "#FFFFFF", border: "2px solid #E5E7EB" }}>
-          <h3 style={{ color: "#374151" }} className="mb-3">Temperature (optional)</h3>
-          <div className="flex items-start gap-3">
-            <div className="flex-1">
-              <input type="number" step="0.1" min="34.0" max="42.5" placeholder="e.g. 37.2 (°C)" value={temperature} onChange={(e) => setTemperature(e.target.value)} className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ backgroundColor: "#F9FAFB", border: "1.5px solid #E5E7EB" }} />
-              <p className="text-xs mt-1.5" style={{ color: "#9CA3AF" }}>Normal: 36.0–37.5°C. Contact your care team if ≥38°C.</p>
-            </div>
-            {isTempValid && temperature && !isNaN(tempNum) && <div className="pt-2"><TemperatureBadge temperature={tempNum} /></div>}
-          </div>
-        </div>
-
         {/* Symptoms */}
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#FFFFFF", border: "2px solid #E5E7EB" }}>
           <h3 style={{ color: "#374151" }} className="mb-3">Which symptoms are you experiencing?</h3>
@@ -245,10 +226,6 @@ export function SymptomJournal({ profile, symptomEntries, onAddEntry, onDeleteEn
           <textarea rows={3} placeholder="Describe how you're feeling in your own words..." value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none" style={{ backgroundColor: "#F9FAFB", border: "1.5px solid #E5E7EB", color: "#374151" }} />
         </div>
 
-        {!isTempValid && temperature && (
-          <p className="text-xs text-center rounded-xl px-4 py-2" style={{ backgroundColor: "#FEF2F2", color: "#DC2626" }}>Temperature must be between 34.0°C and 42.5°C</p>
-        )}
-
         {editingId && (
           <button type="button" onClick={resetForm} className="w-full py-2.5 rounded-xl text-sm" style={{ backgroundColor: "#E5E7EB", color: "#374151" }}>
             <X className="w-4 h-4 inline mr-1" /> Cancel Edit
@@ -271,7 +248,6 @@ export function SymptomJournal({ profile, symptomEntries, onAddEntry, onDeleteEn
                       <span className="text-xs block mb-1" style={{ color: "#374151" }}>
                         {new Date(entry.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} at {entry.time}
                       </span>
-                      {entry.temperature != null && <TemperatureBadge temperature={entry.temperature} size="small" />}
                     </div>
                     <div className="flex gap-2">
                       <button type="button" onClick={() => handleEdit(entry)} className="p-1.5 rounded-lg hover:bg-white" style={{ color: "#7CAE8E" }}><Edit2 className="w-4 h-4" /></button>
