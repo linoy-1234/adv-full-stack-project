@@ -42,6 +42,18 @@ const apiLimiter = rateLimit({
 
 app.use("/api", apiLimiter);
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    success: false,
+    message: "Too many login attempts, please try again later",
+  },
+});
+
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", authLimiter);
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use("/api/health", healthRoutes);
