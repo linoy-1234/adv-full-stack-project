@@ -139,7 +139,7 @@ const sendMessage = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: "Message sent successfully",
-      data: message,
+      messageRecord: message,
     });
   } catch (error) {
     next(error);
@@ -233,7 +233,7 @@ const markMessageAsRead = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Message marked as read",
-      data: message,
+      messageRecord: message,
     });
   } catch (error) {
     next(error);
