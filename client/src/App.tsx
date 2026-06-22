@@ -12,7 +12,6 @@ import {
   LabResult,
   Message,
   SymptomEntry,
-  validateLogin,
   validateRegistration,
   UserRole,
 } from "./utils/mockData";
@@ -21,20 +20,20 @@ import { useAuth } from "./context/AuthContext";
 
 // ─── Lazy loads ───────────────────────────────────────────────────────────────
 
-const LandingPage       = lazy(() => import("./pages/auth/LandingPage").then(m => ({ default: m.LandingPage })));
-const LoginPage         = lazy(() => import("./pages/auth/LoginPage").then(m => ({ default: m.LoginPage })));
-const RegisterPage      = lazy(() => import("./pages/auth/RegisterPage").then(m => ({ default: m.RegisterPage })));
-const PatientLayout     = lazy(() => import("./pages/patient/PatientLayout").then(m => ({ default: m.PatientLayout })));
-const PatientDashboard  = lazy(() => import("./pages/patient/PatientDashboard").then(m => ({ default: m.PatientDashboard })));
-const TreatmentCycles   = lazy(() => import("./pages/patient/TreatmentCycles").then(m => ({ default: m.TreatmentCycles })));
-const BloodWork         = lazy(() => import("./pages/patient/BloodWork").then(m => ({ default: m.BloodWork })));
-const SymptomJournal    = lazy(() => import("./pages/patient/SymptomJournal").then(m => ({ default: m.SymptomJournal })));
-const PatientMessages   = lazy(() => import("./pages/patient/PatientMessages").then(m => ({ default: m.PatientMessages })));
+const LandingPage = lazy(() => import("./pages/auth/LandingPage").then(m => ({ default: m.LandingPage })));
+const LoginPage = lazy(() => import("./pages/auth/LoginPage").then(m => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import("./pages/auth/RegisterPage").then(m => ({ default: m.RegisterPage })));
+const PatientLayout = lazy(() => import("./pages/patient/PatientLayout").then(m => ({ default: m.PatientLayout })));
+const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard").then(m => ({ default: m.PatientDashboard })));
+const TreatmentCycles = lazy(() => import("./pages/patient/TreatmentCycles").then(m => ({ default: m.TreatmentCycles })));
+const BloodWork = lazy(() => import("./pages/patient/BloodWork").then(m => ({ default: m.BloodWork })));
+const SymptomJournal = lazy(() => import("./pages/patient/SymptomJournal").then(m => ({ default: m.SymptomJournal })));
+const PatientMessages = lazy(() => import("./pages/patient/PatientMessages").then(m => ({ default: m.PatientMessages })));
 const PatientProfilePage = lazy(() => import("./components/PatientProfile").then(m => ({ default: m.PatientProfile })));
 const OncologistDashboard = lazy(() => import("./pages/oncologist/OncologistDashboard").then(m => ({ default: m.OncologistDashboard })));
-const PatientDetail     = lazy(() => import("./pages/oncologist/PatientDetail").then(m => ({ default: m.PatientDetail })));
+const PatientDetail = lazy(() => import("./pages/oncologist/PatientDetail").then(m => ({ default: m.PatientDetail })));
 const LabStaffDashboard = lazy(() => import("./pages/labstaff/LabStaffDashboard").then(m => ({ default: m.LabStaffDashboard })));
-const NotFound          = lazy(() => import("./pages/NotFound").then(m => ({ default: m.NotFound })));
+const NotFound = lazy(() => import("./pages/NotFound").then(m => ({ default: m.NotFound })));
 
 // ─── Page type ────────────────────────────────────────────────────────────────
 
@@ -73,11 +72,36 @@ const PATIENT_PAGES: Page[] = [
 function SuspenseFallback() {
   return <LoadingSpinner message="Loading..." />;
 }
+function getApiErrorMessage(
+  error: unknown,
+  fallback = "Something went wrong."
+): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error
+  ) {
+    const axiosError = error as {
+      response?: {
+        data?: {
+          message?: string;
+        };
+      };
+    };
 
+    return axiosError.response?.data?.message || fallback;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
+}
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const auth = useAuth();
+  const { login: loginUser, logout: authLogout } = useAuth();
   const [page, setPage] = useState<Page>("landing");
   const [pageHistory, setPageHistory] = useState<Page[]>([]);
   const [isPending, startTransition] = useTransition();
@@ -134,6 +158,8 @@ export default function App() {
   };
 
   const logout = () => {
+    authLogout();
+
     startTransition(() => {
       setRole(null);
       setActiveProfileId(null);
@@ -216,22 +242,60 @@ export default function App() {
     return (
       <Suspense fallback={<SuspenseFallback />}>
         <LoginPage
-          onLogin={(email, password) => {
-            const result = validateLogin(email, password);
-            if (!result.success) return result.error ?? "Invalid credentials.";
-            startTransition(() => {
-              setRole(result.role!);
-              if (result.role === "patient") {
-                setActiveProfileId(result.profileId!);
-                setPage("patient-dashboard");
-              } else if (result.role === "oncologist") {
-                setPage("oncologist-dashboard");
-              } else if (result.role === "lab_staff") {
-                setPage("labstaff-dashboard");
+          onLogin={async (email, password) => {
+            try {
+              const data = await loginUser(email, password);
+              const loggedInUser = data.user;
+
+              if (loggedInUser.role === "patient") {
+                const matchingMockProfile = patientProfiles.find(
+                  (profile) =>
+                    profile.email.toLowerCase() === loggedInUser.email.toLowerCase()
+                );
+
+                if (!matchingMockProfile) {
+                  return "Login succeeded, but this patient profile is not connected to the current UI data yet.";
+                }
+
+                startTransition(() => {
+                  setRole("patient");
+                  setActiveProfileId(matchingMockProfile.id);
+                  setSelectedPatientId(null);
+                  setPageHistory([]);
+                  setPage("patient-dashboard");
+                });
+
+                return null;
               }
-              setPageHistory([]);
-            });
-            return null;
+
+              if (loggedInUser.role === "oncologist") {
+                startTransition(() => {
+                  setRole("oncologist");
+                  setActiveProfileId(null);
+                  setSelectedPatientId(null);
+                  setPageHistory([]);
+                  setPage("oncologist-dashboard");
+                });
+
+                return null;
+              }
+
+              if (loggedInUser.role === "lab_staff") {
+                startTransition(() => {
+                  setRole("lab_staff");
+                  setActiveProfileId(null);
+                  setSelectedPatientId(null);
+                  setPageHistory([]);
+                  setPage("labstaff-dashboard");
+                });
+
+                return null;
+              }
+
+              return "Unsupported user role.";
+            } catch (error) {
+              return getApiErrorMessage(error, "Invalid credentials.");
+            }
           }}
           onGoToRegister={() => navigate("register")}
           onBackToHome={() => navigate("landing")}
