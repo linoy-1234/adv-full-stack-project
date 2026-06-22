@@ -17,6 +17,7 @@ import {
   UserRole,
 } from "./utils/mockData";
 import { LoadingSpinner } from "./components/shared/LoadingSpinner";
+import { useAuth } from "./context/AuthContext";
 
 // ─── Lazy loads ───────────────────────────────────────────────────────────────
 
@@ -76,6 +77,7 @@ function SuspenseFallback() {
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const auth = useAuth();
   const [page, setPage] = useState<Page>("landing");
   const [pageHistory, setPageHistory] = useState<Page[]>([]);
   const [isPending, startTransition] = useTransition();
