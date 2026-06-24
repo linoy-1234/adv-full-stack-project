@@ -3,7 +3,11 @@ import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { RibbonBackground } from '../../components/shared/RibbonBackground';
 
 interface RegisterPageProps {
-  onRegister: (email: string, password: string) => string | null;
+  onRegister: (
+    email: string,
+    password: string,
+    confirmPassword: string
+  ) => Promise<string | null> | string | null;
   onBack: () => void;
   onBackToHome?: () => void;
 }
@@ -25,10 +29,19 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    const err = onRegister(email.trim().toLowerCase(), password);
-    setLoading(false);
-    if (err) setError(err);
+    try {
+      const err = await onRegister(
+        email.trim().toLowerCase(),
+        password,
+        confirmPassword
+      );
+
+      if (err) setError(err);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Registration failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

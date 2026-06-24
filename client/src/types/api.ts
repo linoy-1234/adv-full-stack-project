@@ -9,19 +9,35 @@ export interface User {
   isActive?: boolean;
 }
 
+export interface PatientAllergy {
+  name: string;
+  severity?: "mild" | "moderate" | "severe" | "unknown";
+  notes?: string;
+}
+
 export interface PatientProfile {
   _id: string;
   user?: string | null;
-  oncologist: string;
+  oncologist:
+    | string
+    | {
+        _id: string;
+        fullName: string;
+        email: string;
+        role: UserRole;
+      };
   fullName: string;
   email: string;
   nationalId: string;
   dateOfBirth: string;
   diagnosis: string;
   bloodType?: string;
+  allergies?: PatientAllergy[];
   notes?: string;
   accountStatus?: "waiting_for_registration" | "linked";
   isActive?: boolean;
+  createdBy?: string;
+  updatedBy?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }

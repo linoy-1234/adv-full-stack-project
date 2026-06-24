@@ -1,6 +1,7 @@
 import api from "./api";
 import type {
   ApiMessageResponse,
+  PatientAllergy,
   PatientListResponse,
   PatientResponse,
 } from "../types/api";
@@ -12,6 +13,7 @@ export interface PatientPayload {
   dateOfBirth: string;
   diagnosis: string;
   bloodType?: string;
+  allergies?: PatientAllergy[];
   notes?: string;
 }
 

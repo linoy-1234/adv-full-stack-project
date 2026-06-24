@@ -1,26 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   seedOncologist,
-  seedTreatmentProtocols,
-  seedLabResults,
-  seedMessages,
-  PatientProfile,
-  TreatmentProtocol,
-  ChemoCycle,
-  RadiationCourse,
-  SurgeryCheckpoint,
+  PatientProfile as MockPatientProfile,
   Medication,
   TreatmentItemType,
   MedicationCategory,
   MedicationRoute,
   AccountStatus,
-  getPendingAction,
   PendingAction,
   formatDate,
-  shiftDate,
   TODAY,
 } from "../../utils/mockData";
 import { RibbonBackground } from "../../components/shared/RibbonBackground";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import {
+  addPatient,
+  clearPatientsError,
+  fetchPatients,
+} from "../../store/slices/patientsSlice";
+import type { PatientProfile as ApiPatientProfile } from "../../types/api";
+import type { PatientPayload } from "../../services/patientService";
 import {
   Users,
   Plus,
@@ -42,13 +41,11 @@ import {
 interface OncologistDashboardProps {
   onSelectPatient: (id: string) => void;
   onLogout: () => void;
-  profiles: PatientProfile[];
-  onAddProfile: (p: PatientProfile) => void;
-  onAddProtocol?: (tp: TreatmentProtocol) => void;
+  mockProfilesForDetail: MockPatientProfile[];
 }
 
 function PendingBadge({ action }: { action: PendingAction }) {
-  if (action === "none") return <span className="text-xs text-[#9CA3AF]">—</span>;
+  if (action === "none") return <span className="text-xs text-[#9CA3AF]">-</span>;
   const cfg: Record<PendingAction, { label: string; color: string; icon: React.ReactNode }> = {
     waiting_labs: { label: "Waiting for labs", color: "bg-amber-100 text-amber-700", icon: <FlaskConical size={11} /> },
     labs_received: { label: "Labs received", color: "bg-blue-100 text-blue-700", icon: <FlaskConical size={11} /> },
@@ -65,7 +62,12 @@ function PendingBadge({ action }: { action: PendingAction }) {
   );
 }
 
-function AccountBadge({ status }: { status: AccountStatus }) {
+type AccountStatusLike =
+  | AccountStatus
+  | ApiPatientProfile["accountStatus"]
+  | undefined;
+
+function AccountBadge({ status }: { status: AccountStatusLike }) {
   if (status === "linked") {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
@@ -82,7 +84,7 @@ function AccountBadge({ status }: { status: AccountStatus }) {
 
 interface AddPatientModalProps {
   onClose: () => void;
-  onSave: (p: PatientProfile, tp?: TreatmentProtocol) => void;
+  onSave: (patientData: PatientPayload) => Promise<string | null>;
 }
 
 function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
@@ -117,6 +119,7 @@ function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
     notes: "",
   });
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const treatmentTypeOptions: { value: TreatmentItemType; label: string }[] = [
     { value: "chemotherapy", label: "Chemotherapy" },
@@ -124,6 +127,13 @@ function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
     { value: "surgery", label: "Surgery Checkpoint" },
     { value: "supportive", label: "Supportive Medication" },
   ];
+
+  const normalizeBloodType = (value: string) => {
+    const normalized = value.trim();
+    const allowed = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+
+    return allowed.includes(normalized) ? normalized : "unknown";
+  };
 
   const toggleType = (t: TreatmentItemType) => {
     setForm((prev) => ({
@@ -146,96 +156,49 @@ function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
   const removeMed = (id: string) =>
     setMedications((prev) => prev.filter((m) => m.id !== id));
 
-  const handleSave = () => {
-    if (!form.fullName.trim() || !form.email.trim()) {
-      setError("Full name and email are required.");
+  const handleSave = async () => {
+    if (
+      !form.fullName.trim() ||
+      !form.email.trim() ||
+      !form.nationalId.trim() ||
+      !form.dateOfBirth ||
+      !form.diagnosis.trim()
+    ) {
+      setError("Full name, email, national ID, date of birth, and diagnosis are required.");
       return;
     }
-    const now = new Date().toISOString();
-    const profileId = `pp-${Date.now()}`;
-    const newProfile: PatientProfile = {
-      id: profileId,
+
+    setSaving(true);
+    setError("");
+
+    const patientData: PatientPayload = {
       fullName: form.fullName.trim(),
       email: form.email.trim().toLowerCase(),
       nationalId: form.nationalId.trim(),
       dateOfBirth: form.dateOfBirth,
       diagnosis: form.diagnosis.trim(),
-      bloodType: form.bloodType.trim(),
-      allergies: form.allergiesRaw.split(",").map((s) => s.trim()).filter(Boolean),
-      assignedOncologistId: seedOncologist.id,
-      medications,
       notes: form.notes.trim() || undefined,
-      createdByOncologistId: seedOncologist.id,
-      lastUpdatedBy: seedOncologist.fullName,
-      lastUpdatedAt: now,
-      accountStatus: "waiting_registration",
-      currentTreatmentStatus: "Not started",
+      bloodType: normalizeBloodType(form.bloodType),
+      allergies: form.allergiesRaw
+        .split(",")
+        .map((name) => name.trim())
+        .filter(Boolean)
+        .map((name) => ({
+          name,
+          severity: "unknown" as const,
+          notes: "",
+        })),
     };
 
-    let newProtocol: TreatmentProtocol | undefined;
-    if (form.protocolName.trim() && form.treatmentTypes.length > 0) {
-      const items: (ChemoCycle | RadiationCourse | SurgeryCheckpoint)[] = [];
-      const interval = parseInt(form.chemoIntervalDays) || 21;
+    const saveError = await onSave(patientData);
 
-      if (form.treatmentTypes.includes("chemotherapy") && form.chemoStartDate) {
-        const count = parseInt(form.chemoCount) || 6;
-        for (let i = 0; i < count; i++) {
-          const start = shiftDate(form.chemoStartDate, i * interval);
-          const end = shiftDate(start, interval - 1);
-          items.push({
-            id: `cycle-new-${Date.now()}-${i}`,
-            type: "chemotherapy",
-            title: `Cycle ${i + 1}`,
-            cycleNumber: i + 1,
-            startDate: start,
-            endDate: end,
-            status: "upcoming",
-          } as ChemoCycle);
-        }
-      }
-
-      if (form.treatmentTypes.includes("radiation") && form.radStartDate && form.radEndDate) {
-        items.push({
-          id: `rad-new-${Date.now()}`,
-          type: "radiation",
-          title: "Radiation Course",
-          startDate: form.radStartDate,
-          endDate: form.radEndDate,
-          totalSessions: parseInt(form.radTotalSessions) || 25,
-          completedSessions: 0,
-          status: "upcoming",
-        } as RadiationCourse);
-      }
-
-      if (form.treatmentTypes.includes("surgery") && form.surgStartDate) {
-        const count = parseInt(form.surgCount) || 1;
-        for (let i = 0; i < count; i++) {
-          items.push({
-            id: `surg-new-${Date.now()}-${i}`,
-            type: "surgery",
-            title: count === 1 ? "Surgery Checkpoint" : `Surgery Checkpoint ${i + 1}`,
-            plannedDate: shiftDate(form.surgStartDate, i * 30),
-            status: "upcoming",
-          } as SurgeryCheckpoint);
-        }
-      }
-
-      const chemoMeds = medications.filter((m) => m.category === "chemotherapy").map((m) => m.name);
-      newProtocol = {
-        id: `tp-${Date.now()}`,
-        patientProfileId: profileId,
-        protocolName: form.protocolName.trim(),
-        diagnosis: form.diagnosis.trim(),
-        treatmentTypes: form.treatmentTypes,
-        items,
-        drugs: chemoMeds,
-        notes: form.notes.trim() || undefined,
-        lastUpdatedBy: seedOncologist.fullName,
-        lastUpdatedAt: now,
-      };
+    if (saveError) {
+      setError(saveError);
+      setSaving(false);
+      return;
     }
 
-    onSave(newProfile, newProtocol);
+    setSaving(false);
     onClose();
   };
 
@@ -266,6 +229,10 @@ function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
             <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">{error}</div>
           )}
 
+          <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg px-4 py-2 text-sm text-[#1E40AF]">
+            This phase saves the patient medical profile only. Treatment protocol and medication details will be managed in the Treatment Protocol phase.
+          </div>
+
           <section>
             <h3 className="text-sm font-semibold text-[#2C3E2D] mb-3 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#7CAE8E] text-white text-xs flex items-center justify-center font-bold">1</span>
@@ -292,12 +259,12 @@ function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
                 <label className={labelCls}>Blood Type</label>
                 <select className={inputCls} value={form.bloodType} onChange={(e) => setForm((p) => ({ ...p, bloodType: e.target.value }))}>
                   <option value="">Select</option>
-                  {["A+","A−","B+","B−","AB+","AB−","O+","O−"].map((bt) => <option key={bt} value={bt}>{bt}</option>)}
+                  {["A+","A-","B+","B-","AB+","AB-","O+","O-"].map((bt) => <option key={bt} value={bt}>{bt}</option>)}
                 </select>
               </div>
               <div className="col-span-2">
                 <label className={labelCls}>Diagnosis</label>
-                <input className={inputCls} placeholder="e.g. Breast Cancer — Stage IIIA" value={form.diagnosis} onChange={(e) => setForm((p) => ({ ...p, diagnosis: e.target.value }))} />
+                <input className={inputCls} placeholder="e.g. Breast Cancer - Stage IIIA" value={form.diagnosis} onChange={(e) => setForm((p) => ({ ...p, diagnosis: e.target.value }))} />
               </div>
               <div className="col-span-2">
                 <label className={labelCls}>Allergies (comma separated)</label>
@@ -462,7 +429,7 @@ function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
           </p>
           <div className="flex gap-2">
             <button onClick={onClose} className="px-4 py-2 rounded-lg border border-[#E5E2DC] text-sm text-[#6B7280] hover:bg-[#F5F2EE] transition-colors">Cancel</button>
-            <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-[#7CAE8E] text-white text-sm font-medium hover:bg-[#5A8A6A] transition-colors">Create Profile</button>
+            <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-lg bg-[#7CAE8E] text-white text-sm font-medium hover:bg-[#5A8A6A] transition-colors disabled:opacity-60">{saving ? "Creating..." : "Create Profile"}</button>
           </div>
         </div>
       </div>
@@ -470,16 +437,63 @@ function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
   );
 }
 
-export function OncologistDashboard({ onSelectPatient, onLogout, profiles, onAddProfile, onAddProtocol }: OncologistDashboardProps) {
+export function OncologistDashboard({ onSelectPatient, onLogout, mockProfilesForDetail }: OncologistDashboardProps) {
+  const dispatch = useAppDispatch();
+  const {
+    list: patients,
+    loading,
+    error: patientsError,
+  } = useAppSelector((state) => state.patients);
   const [showAddModal, setShowAddModal] = useState(false);
   const [search, setSearch] = useState("");
+  const [actionError, setActionError] = useState("");
 
-  const filtered = profiles.filter(
-    (p) =>
-      p.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      p.email.toLowerCase().includes(search.toLowerCase()) ||
-      p.diagnosis.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => {
+    dispatch(fetchPatients());
+  }, [dispatch]);
+
+  const filtered = patients.filter((patient) => {
+    const query = search.toLowerCase();
+
+    return (
+      patient.fullName.toLowerCase().includes(query) ||
+      patient.email.toLowerCase().includes(query) ||
+      patient.diagnosis.toLowerCase().includes(query) ||
+      patient.nationalId.toLowerCase().includes(query)
+    );
+  });
+
+  const directoryError = actionError || patientsError;
+
+  const handleCreatePatient = async (
+    patientData: PatientPayload
+  ): Promise<string | null> => {
+    try {
+      await dispatch(addPatient(patientData)).unwrap();
+      setActionError("");
+      return null;
+    } catch (error) {
+      return typeof error === "string" ? error : "Failed to create patient";
+    }
+  };
+
+  const handleOpenPatient = (patient: ApiPatientProfile) => {
+    setActionError("");
+
+    // TODO: Remove this mock-id bridge when Patient Detail is connected to backend patient IDs.
+    const matchingMockProfile = mockProfilesForDetail.find(
+      (profile) => profile.email.toLowerCase() === patient.email.toLowerCase()
+    );
+
+    if (!matchingMockProfile) {
+      setActionError(
+        "Patient detail is not connected yet for this MongoDB patient."
+      );
+      return;
+    }
+
+    onSelectPatient(matchingMockProfile.id);
+  };
 
   return (
     <div className="min-h-screen bg-[#FAF8F5]">
@@ -509,7 +523,7 @@ export function OncologistDashboard({ onSelectPatient, onLogout, profiles, onAdd
               <Users size={20} className="text-[#7CAE8E]" /> Patient Directory
             </h2>
             <p className="text-sm text-[#9CA3AF] mt-0.5">
-              {profiles.length} patient{profiles.length !== 1 ? "s" : ""} under your care · {formatDate(TODAY)}
+              {patients.length} patient{patients.length !== 1 ? "s" : ""} under your care · {formatDate(TODAY)}
             </p>
           </div>
           <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-4 py-2 bg-[#7CAE8E] text-white rounded-lg text-sm font-medium hover:bg-[#5A8A6A] transition-colors shadow-sm">
@@ -520,11 +534,27 @@ export function OncologistDashboard({ onSelectPatient, onLogout, profiles, onAdd
         <div className="mb-4">
           <input
             className="w-full max-w-sm border border-[#E5E2DC] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7CAE8E]"
-            placeholder="Search by name, email, or diagnosis…"
+            placeholder="Search by name, email, or diagnosis..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+
+        {directoryError && (
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700 flex items-center justify-between gap-3">
+            <span>{directoryError}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setActionError("");
+                dispatch(clearPatientsError());
+              }}
+              className="text-red-500 hover:text-red-700"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl shadow-sm border border-[#E5E2DC] overflow-hidden">
           <div className="grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1.5fr_0.5fr] gap-4 px-5 py-3 bg-[#F5F2EE] border-b border-[#E5E2DC] text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
@@ -536,17 +566,14 @@ export function OncologistDashboard({ onSelectPatient, onLogout, profiles, onAdd
             <span></span>
           </div>
 
-          {filtered.length === 0 ? (
+          {loading && patients.length === 0 ? (
+            <div className="px-5 py-12 text-center text-sm text-[#9CA3AF]">Loading patients...</div>
+          ) : filtered.length === 0 ? (
             <div className="px-5 py-12 text-center text-sm text-[#9CA3AF]">No patients found.</div>
           ) : (
             filtered.map((profile) => {
-              const protocol = seedTreatmentProtocols.find((p) => p.patientProfileId === profile.id);
-              const patientLabs = seedLabResults.filter((l) => l.patientProfileId === profile.id);
-              const patientMessages = seedMessages.filter((m) => m.patientProfileId === profile.id);
-              const pendingAction = getPendingAction(profile.id, patientLabs, protocol, patientMessages);
-
               return (
-                <div key={profile.id} className="grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1.5fr_0.5fr] gap-4 px-5 py-4 border-b border-[#F5F2EE] last:border-0 hover:bg-[#FAF8F5] transition-colors items-center">
+                <div key={profile._id} className="grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1.5fr_0.5fr] gap-4 px-5 py-4 border-b border-[#F5F2EE] last:border-0 hover:bg-[#FAF8F5] transition-colors items-center">
                   <div>
                     <p className="text-sm font-semibold text-[#2C3E2D]">{profile.fullName}</p>
                     <p className="text-xs text-[#9CA3AF]">{profile.email}</p>
@@ -556,16 +583,16 @@ export function OncologistDashboard({ onSelectPatient, onLogout, profiles, onAdd
                     <p className="text-sm text-[#374151] leading-snug">{profile.diagnosis || "—"}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-[#374151]">{profile.currentTreatmentStatus}</p>
+                    <p className="text-sm text-[#374151]">Treatment not connected yet</p>
                   </div>
                   <div>
                     <AccountBadge status={profile.accountStatus} />
                   </div>
                   <div>
-                    <PendingBadge action={pendingAction} />
+                    <PendingBadge action="none" />
                   </div>
                   <div className="flex justify-end">
-                    <button onClick={() => onSelectPatient(profile.id)} className="flex items-center gap-0.5 text-sm text-[#7CAE8E] hover:text-[#5A8A6A] font-medium">
+                    <button onClick={() => handleOpenPatient(profile)} className="flex items-center gap-0.5 text-sm text-[#7CAE8E] hover:text-[#5A8A6A] font-medium">
                       Open <ChevronRight size={14} />
                     </button>
                   </div>
@@ -584,7 +611,10 @@ export function OncologistDashboard({ onSelectPatient, onLogout, profiles, onAdd
       </main>
 
       {showAddModal && (
-        <AddPatientModal onClose={() => setShowAddModal(false)} onSave={(p, tp) => { onAddProfile(p); if (tp && onAddProtocol) onAddProtocol(tp); }} />
+        <AddPatientModal
+          onClose={() => setShowAddModal(false)}
+          onSave={handleCreatePatient}
+        />
       )}
     </div>
   );
