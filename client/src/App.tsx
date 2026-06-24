@@ -442,7 +442,6 @@ export default function App() {
     return (
       <Suspense fallback={<SuspenseFallback />}>
         <OncologistDashboard
-          mockProfilesForDetail={patientProfiles}
           onSelectPatient={(id) => {
             startTransition(() => {
               setSelectedPatientId(id);
@@ -463,27 +462,6 @@ export default function App() {
           patientId={selectedPatientId}
           onBack={goBack}
           onHome={() => { startTransition(() => { setPageHistory([]); setPage("oncologist-dashboard"); }); }}
-          allProfiles={patientProfiles}
-          allProtocols={protocols}
-          allLabResults={allLabResults}
-          allMessages={allMessages}
-          allSymptomEntries={allSymptomEntries}
-          onUpdateProfile={handleUpdateProfile}
-          onUpdateProtocol={handleUpdateProtocol}
-          onUpdateCycleStatus={(protocolId, cycleId, status, extra) => {
-            setProtocols((prev) => prev.map((p) => {
-              if (p.id !== protocolId) return p;
-              return {
-                ...p,
-                items: p.items.map((item) => {
-                  if (item.id !== cycleId || item.type !== "chemotherapy") return item;
-                  return { ...item, status, ...(extra ?? {}) };
-                }),
-              };
-            }));
-          }}
-          onAddLabResult={handleAddLabResult}
-          onSendMessage={handleSendMessage}
         />
       </Suspense>
     );

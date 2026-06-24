@@ -17,7 +17,16 @@ export interface PatientAllergy {
 
 export interface PatientProfile {
   _id: string;
-  user?: string | null;
+  user?:
+    | string
+    | {
+        _id: string;
+        fullName: string;
+        email: string;
+        role: UserRole;
+        isActive?: boolean;
+      }
+    | null;
   oncologist:
     | string
     | {
