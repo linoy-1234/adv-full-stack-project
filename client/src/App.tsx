@@ -12,7 +12,6 @@ import {
   LabResult,
   Message,
   SymptomEntry,
-  validateRegistration,
   UserRole,
 } from "./utils/mockData";
 import { LoadingSpinner } from "./components/shared/LoadingSpinner";
@@ -101,7 +100,11 @@ function getApiErrorMessage(
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const { login: loginUser, logout: authLogout } = useAuth();
+  const {
+    login: loginUser,
+    register: registerUser,
+    logout: authLogout,
+  } = useAuth();
   const [page, setPage] = useState<Page>("landing");
   const [pageHistory, setPageHistory] = useState<Page[]>([]);
   const [isPending, startTransition] = useTransition();
@@ -309,16 +312,58 @@ export default function App() {
     return (
       <Suspense fallback={<SuspenseFallback />}>
         <RegisterPage
-          onRegister={(email, password) => {
-            const result = validateRegistration(email, password);
-            if (!result.success) return result.error ?? "Registration failed.";
-            startTransition(() => {
-              setRole("patient");
-              setActiveProfileId(result.profileId!);
-              setPage("patient-dashboard");
-              setPageHistory([]);
-            });
-            return null;
+          onRegister={async (email, password, confirmPassword) => {
+            try {
+              const normalizedEmail = email.trim().toLowerCase();
+              const matchingMockProfile = patientProfiles.find(
+                (profile) =>
+                  profile.email.toLowerCase() === normalizedEmail
+              );
+
+              const fullName =
+                matchingMockProfile?.fullName ||
+                normalizedEmail
+                  .split("@")[0]
+                  .replace(/[._-]+/g, " ")
+                  .trim() ||
+                "Patient";
+
+              const data = await registerUser(
+                fullName,
+                normalizedEmail,
+                password,
+                confirmPassword
+              );
+
+              const registeredUser = data.user;
+
+              if (registeredUser.role !== "patient") {
+                return "Only patient accounts can register from this page.";
+              }
+
+              const mockProfileForCurrentUi = patientProfiles.find(
+                (profile) =>
+                  profile.email.toLowerCase() ===
+                  registeredUser.email.toLowerCase()
+              );
+
+              if (!mockProfileForCurrentUi) {
+                return "Registration succeeded, but this patient profile is not connected to the current UI data yet.";
+              }
+
+              startTransition(() => {
+                setRole("patient");
+                // TODO: Remove this email-based mock profile bridge when the patient dashboard/detail pages use the backend patientProfile ObjectId directly.
+                setActiveProfileId(mockProfileForCurrentUi.id);
+                setSelectedPatientId(null);
+                setPage("patient-dashboard");
+                setPageHistory([]);
+              });
+
+              return null;
+            } catch (error) {
+              return getApiErrorMessage(error, "Registration failed.");
+            }
           }}
           onBack={() => startTransition(() => setPage("login"))}
           onBackToHome={() => navigate("landing")}
@@ -397,9 +442,7 @@ export default function App() {
     return (
       <Suspense fallback={<SuspenseFallback />}>
         <OncologistDashboard
-          profiles={patientProfiles}
-          onAddProfile={handleAddProfile}
-          onAddProtocol={(tp) => setProtocols((prev) => [...prev, tp])}
+          mockProfilesForDetail={patientProfiles}
           onSelectPatient={(id) => {
             startTransition(() => {
               setSelectedPatientId(id);

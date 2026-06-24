@@ -166,11 +166,25 @@ const patientsSlice = createSlice({
         state.error = action.payload || "Failed to load patient";
       })
 
+      .addCase(addPatient.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(addPatient.fulfilled, (state, action) => {
+        state.loading = false;
         state.list.unshift(action.payload);
       })
+      .addCase(addPatient.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "Failed to create patient";
+      })
 
+      .addCase(editPatient.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(editPatient.fulfilled, (state, action) => {
+        state.loading = false;
         const updatedPatient = action.payload;
 
         state.list = state.list.map((patient) =>
@@ -181,8 +195,17 @@ const patientsSlice = createSlice({
           state.selectedPatient = updatedPatient;
         }
       })
+      .addCase(editPatient.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "Failed to update patient";
+      })
 
+      .addCase(removePatient.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(removePatient.fulfilled, (state, action) => {
+        state.loading = false;
         const deletedPatientId = action.payload;
 
         state.list = state.list.filter(
@@ -192,6 +215,10 @@ const patientsSlice = createSlice({
         if (state.selectedPatient?._id === deletedPatientId) {
           state.selectedPatient = null;
         }
+      })
+      .addCase(removePatient.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "Failed to delete patient";
       });
   },
 });
