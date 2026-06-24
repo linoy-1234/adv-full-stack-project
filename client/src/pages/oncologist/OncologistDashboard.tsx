@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   seedOncologist,
-  PatientProfile as MockPatientProfile,
   Medication,
   TreatmentItemType,
   MedicationCategory,
@@ -41,7 +40,6 @@ import {
 interface OncologistDashboardProps {
   onSelectPatient: (id: string) => void;
   onLogout: () => void;
-  mockProfilesForDetail: MockPatientProfile[];
 }
 
 function PendingBadge({ action }: { action: PendingAction }) {
@@ -437,7 +435,7 @@ function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
   );
 }
 
-export function OncologistDashboard({ onSelectPatient, onLogout, mockProfilesForDetail }: OncologistDashboardProps) {
+export function OncologistDashboard({ onSelectPatient, onLogout }: OncologistDashboardProps) {
   const dispatch = useAppDispatch();
   const {
     list: patients,
@@ -479,20 +477,7 @@ export function OncologistDashboard({ onSelectPatient, onLogout, mockProfilesFor
 
   const handleOpenPatient = (patient: ApiPatientProfile) => {
     setActionError("");
-
-    // TODO: Remove this mock-id bridge when Patient Detail is connected to backend patient IDs.
-    const matchingMockProfile = mockProfilesForDetail.find(
-      (profile) => profile.email.toLowerCase() === patient.email.toLowerCase()
-    );
-
-    if (!matchingMockProfile) {
-      setActionError(
-        "Patient detail is not connected yet for this MongoDB patient."
-      );
-      return;
-    }
-
-    onSelectPatient(matchingMockProfile.id);
+    onSelectPatient(patient._id);
   };
 
   return (
