@@ -25,6 +25,7 @@ function CycleStatusBadge({ status }: { status: string }) {
     upcoming:     { label: "Upcoming",       color: "bg-blue-100 text-blue-700",        icon: <Clock size={11} /> },
     in_progress:  { label: "In Progress",    color: "bg-emerald-100 text-emerald-700",  icon: <CheckCircle2 size={11} /> },
     postponed:    { label: "Postponed",      color: "bg-red-100 text-red-700",          icon: <AlertTriangle size={11} /> },
+    today:        { label: "Today",          color: "bg-blue-500 text-white",           icon: <Calendar size={11} /> },
   };
   const { label, color, icon } = cfg[status] ?? { label: status, color: "bg-gray-100 text-gray-600", icon: null };
   return (
@@ -217,22 +218,18 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
             <h3 className="text-sm font-semibold text-[#1E40AF]">Surgery Checkpoints</h3>
           </div>
           <div className="divide-y divide-[#F5F2EE]">
-            {surgItems.map((surg) => {
-              const isTodays = surg.plannedDate === todayValue;
-              return (
-                <div key={surg.id} className={`px-4 py-3 ${isTodays ? "bg-blue-50" : ""}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {isTodays && <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full font-medium">Today</span>}
-                      <span className="text-sm font-medium text-[#2C3E2D]">{surg.title}</span>
-                      <CycleStatusBadge status={surg.status} />
-                    </div>
-                    <span className="text-xs text-[#9CA3AF]">{formatDate(surg.plannedDate)}</span>
+            {surgItems.map((surg) => (
+              <div key={surg.id} className={`px-4 py-3 ${surg.status === "today" ? "bg-blue-50" : surg.status === "completed" ? "bg-gray-50" : ""}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-[#2C3E2D]">{surg.title}</span>
+                    <CycleStatusBadge status={surg.status} />
                   </div>
-                  {surg.notes && <p className="text-xs text-[#9CA3AF] mt-0.5">{surg.notes}</p>}
+                  <span className="text-xs text-[#9CA3AF]">{formatDate(surg.plannedDate)}</span>
                 </div>
-              );
-            })}
+                {surg.notes && <p className="text-xs text-[#9CA3AF] mt-0.5">{surg.notes}</p>}
+              </div>
+            ))}
           </div>
         </div>
       )}

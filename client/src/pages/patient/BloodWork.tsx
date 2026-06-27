@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   PatientProfile,
   LabResult,
@@ -6,7 +7,7 @@ import {
   LAB_NORMS,
   formatDate,
 } from "../../utils/mockData";
-import { FlaskConical, Info } from "lucide-react";
+import { ChevronDown, ChevronUp, FlaskConical, Info } from "lucide-react";
 
 interface BloodWorkProps {
   profile: PatientProfile;
@@ -42,73 +43,11 @@ function LabValueRow({ field, value }: { field: LabFieldKey; value: number }) {
   );
 }
 
-type ChartPoint = { date: string; WBC?: number; Neutrophils?: number; Hemoglobin?: number };
-
-function BloodWorkChart({ data }: { data: ChartPoint[] }) {
-  const W = 600; const H = 150; const PAD = { top: 10, right: 10, bottom: 28, left: 32 };
-  const innerW = W - PAD.left - PAD.right;
-  const innerH = H - PAD.top - PAD.bottom;
-  const series = [
-    { key: "WBC" as const, stroke: "#7CAE8E" },
-    { key: "Neutrophils" as const, stroke: "#F59E0B" },
-    { key: "Hemoglobin" as const, stroke: "#60A5FA" },
-  ];
-  const allVals = data.flatMap((d) => series.map((s) => d[s.key] ?? null).filter((v) => v !== null)) as number[];
-  const minV = Math.min(...allVals, 1.5) - 0.5;
-  const maxV = Math.max(...allVals, 15) + 0.5;
-  const xScale = (i: number) => PAD.left + (data.length < 2 ? innerW / 2 : (i / (data.length - 1)) * innerW);
-  const yScale = (v: number) => PAD.top + innerH - ((v - minV) / (maxV - minV)) * innerH;
-  const pathD = (key: keyof ChartPoint) =>
-    data.reduce((acc, d, i) => {
-      const v = d[key] as number | undefined;
-      if (v == null) return acc;
-      const x = xScale(i); const y = yScale(v);
-      return acc === "" ? `M${x},${y}` : `${acc} L${x},${y}`;
-    }, "");
-  return (
-    <div className="bg-white border border-[#E5E2DC] rounded-2xl p-5">
-      <p className="text-sm font-semibold text-[#2C3E2D] mb-4">Trends Over Time</p>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 160 }}>
-        <line x1={PAD.left} y1={yScale(4.0)} x2={W - PAD.right} y2={yScale(4.0)} stroke="#F59E0B" strokeWidth={1} strokeDasharray="4 3" />
-        <line x1={PAD.left} y1={yScale(1.5)} x2={W - PAD.right} y2={yScale(1.5)} stroke="#EF4444" strokeWidth={1} strokeDasharray="4 3" />
-        {series.map((s) => (
-          <path key={s.key} d={pathD(s.key)} fill="none" stroke={s.stroke} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-        ))}
-        {series.map((s) =>
-          data.map((d, i) => {
-            const v = d[s.key] as number | undefined;
-            if (v == null) return null;
-            return <circle key={`${s.key}-${i}`} cx={xScale(i)} cy={yScale(v)} r={3} fill={s.stroke} />;
-          })
-        )}
-        {data.map((d, i) => (
-          <text key={`xl-${i}`} x={xScale(i)} y={H - 6} textAnchor="middle" fontSize={9} fill="#9CA3AF">{d.date.split("_")[0]}</text>
-        ))}
-        {[minV, (minV + maxV) / 2, maxV].map((v, i) => (
-          <text key={`yl-${i}`} x={PAD.left - 4} y={yScale(v) + 3} textAnchor="end" fontSize={9} fill="#9CA3AF">{v.toFixed(1)}</text>
-        ))}
-      </svg>
-      <div className="flex gap-4 mt-2 text-xs text-[#9CA3AF]">
-        {series.map((s) => (
-          <span key={s.key} className="flex items-center gap-1">
-            <span className="w-3 h-0.5 inline-block" style={{ backgroundColor: s.stroke }} /> {s.key}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export function BloodWork({ profile, labResults }: BloodWorkProps) {
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const sortedLabs = [...labResults].sort((a, b) => b.date.localeCompare(a.date));
   const latest = sortedLabs[0];
-
-  const chartData = [...sortedLabs].reverse().map((l, i) => ({
-    date: `${formatDate(l.date).split(" ").slice(0, 2).join(" ")}_${i}`,
-    WBC: l.wbc,
-    Neutrophils: l.neutrophils,
-    Hemoglobin: l.hemoglobin,
-  }));
 
   return (
     <div className="flex flex-col gap-5">
@@ -157,16 +96,21 @@ export function BloodWork({ profile, labResults }: BloodWorkProps) {
             </div>
           )}
 
-          {/* Trend chart */}
-          {chartData.length > 1 && <BloodWorkChart data={chartData} />}
-
-          {/* History */}
+          {/* History — collapsible */}
           {sortedLabs.length > 1 && (
             <div className="bg-white border border-[#E5E2DC] rounded-2xl overflow-hidden">
-              <div className="px-5 py-3 bg-[#F5F2EE] border-b border-[#E5E2DC]">
-                <p className="text-sm font-semibold text-[#2C3E2D]">Lab History</p>
-              </div>
-              {sortedLabs.slice(1).map((lab) => (
+              <button
+                onClick={() => setHistoryExpanded((v) => !v)}
+                className="w-full px-5 py-3 bg-[#F5F2EE] border-b border-[#E5E2DC] flex items-center justify-between hover:bg-[#EDE9E3] transition-colors"
+              >
+                <p className="text-sm font-semibold text-[#2C3E2D]">
+                  Lab History ({sortedLabs.length - 1} older result{sortedLabs.length - 1 !== 1 ? "s" : ""})
+                </p>
+                {historyExpanded
+                  ? <ChevronUp size={14} className="text-[#9CA3AF]" />
+                  : <ChevronDown size={14} className="text-[#9CA3AF]" />}
+              </button>
+              {historyExpanded && sortedLabs.slice(1).map((lab) => (
                 <div key={lab.id} className="px-5 py-3 border-b border-[#F5F2EE] last:border-0">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-medium text-[#2C3E2D]">{formatDate(lab.date)}</p>
