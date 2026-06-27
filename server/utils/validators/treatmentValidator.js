@@ -110,6 +110,7 @@ const cycleSchema = Joi.object({
       "active",
       "completed",
       "delayed",
+      "cancelled",
       "in_progress",
       "postponed"
     )
@@ -221,6 +222,7 @@ const updateCycleSchema = Joi.object({
       "active",
       "completed",
       "delayed",
+      "cancelled",
       "in_progress",
       "postponed"
     ),

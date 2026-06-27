@@ -37,6 +37,7 @@ export interface CyclePayload {
     | "active"
     | "completed"
     | "delayed"
+    | "cancelled"
     | "in_progress"
     | "postponed";
   notes?: string;
