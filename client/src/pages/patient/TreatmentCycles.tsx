@@ -5,9 +5,9 @@ import {
   RadiationCourse,
   SurgeryCheckpoint,
   formatDate,
-  TODAY,
 } from "../../utils/mockData";
 import { Calendar, CheckCircle2, Clock, Syringe, Zap, Scissors, AlertTriangle, Info } from "lucide-react";
+import { todayIso } from "../../utils/treatmentDisplay";
 
 interface TreatmentCyclesProps {
   profile: PatientProfile;
@@ -18,7 +18,9 @@ function CycleStatusBadge({ status }: { status: string }) {
   const cfg: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
     completed:    { label: "Completed",      color: "bg-gray-100 text-gray-600",        icon: <CheckCircle2 size={11} /> },
     approved:     { label: "Approved",       color: "bg-emerald-100 text-emerald-700",  icon: <CheckCircle2 size={11} /> },
-    waiting_labs: { label: "Pending labs",   color: "bg-amber-100 text-amber-700",      icon: <Clock size={11} /> },
+    active:       { label: "Active",         color: "bg-emerald-100 text-emerald-700",  icon: <CheckCircle2 size={11} /> },
+    waiting_labs: { label: "Waiting for labs", color: "bg-amber-100 text-amber-700",    icon: <Clock size={11} /> },
+    ready_for_review: { label: "Ready for Review", color: "bg-violet-100 text-violet-700", icon: <CheckCircle2 size={11} /> },
     delayed:      { label: "Delayed",        color: "bg-red-100 text-red-700",          icon: <AlertTriangle size={11} /> },
     upcoming:     { label: "Upcoming",       color: "bg-blue-100 text-blue-700",        icon: <Clock size={11} /> },
     in_progress:  { label: "In Progress",    color: "bg-emerald-100 text-emerald-700",  icon: <CheckCircle2 size={11} /> },
@@ -48,6 +50,8 @@ function TypeBadge({ type }: { type: string }) {
 }
 
 export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
+  const todayValue = todayIso();
+
   if (!protocol) {
     return (
       <div className="flex flex-col gap-5">
@@ -75,8 +79,8 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
   const currentItem = items.find((item) => {
     if (item.type === "chemotherapy") {
       const c = item as ChemoCycle;
-      if (c.status !== "approved") return false;
-      return c.startDate <= TODAY && c.endDate >= TODAY;
+      if ((c.status as string) !== "active") return false;
+      return c.startDate <= todayValue && c.endDate >= todayValue;
     }
     if (item.type === "radiation") {
       const r = item as RadiationCourse;
@@ -129,7 +133,9 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
           </div>
           <div className="divide-y divide-[#F5F2EE]">
             {chemoItems.map((cycle) => {
-              const isActive = cycle.status === "approved" && cycle.startDate <= TODAY && cycle.endDate >= TODAY;
+              const status = cycle.status as string;
+              const isActive = status === "active" && cycle.startDate <= todayValue && cycle.endDate >= todayValue;
+              const hasDelayedContext = Boolean(cycle.delayedTo || cycle.delayReason);
               return (
                 <div key={cycle.id} className={`px-4 py-3 ${isActive ? "bg-emerald-50" : ""}`}>
                   <div className="flex items-center justify-between flex-wrap gap-1">
@@ -141,19 +147,22 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
                       <CycleStatusBadge status={cycle.status} />
                     </div>
                     <span className="text-xs text-[#9CA3AF]">
-                      {cycle.status === "delayed" && cycle.delayedTo
+                      {hasDelayedContext && cycle.delayedTo
                         ? `Delayed → ${formatDate(cycle.delayedTo)}${cycle.delayedEndDate ? ` – ${formatDate(cycle.delayedEndDate)}` : ""}`
                         : `${formatDate(cycle.startDate)} – ${formatDate(cycle.endDate)}`}
                     </span>
                   </div>
-                  {cycle.status === "approved" && cycle.approvedBy && (
+                  {["approved", "active", "completed"].includes(status) && cycle.approvedBy && (
                     <p className="text-xs text-emerald-600 mt-0.5">Approved by {cycle.approvedBy} · {formatDate(cycle.approvedDate || "")}</p>
                   )}
-                  {cycle.status === "delayed" && cycle.delayReason && (
+                  {hasDelayedContext && cycle.delayReason && (
                     <p className="text-xs text-red-600 mt-0.5">Reason: {cycle.delayReason}</p>
                   )}
-                  {cycle.status === "waiting_labs" && (
+                  {status === "waiting_labs" && (
                     <p className="text-xs text-amber-600 mt-0.5">Awaiting lab results before oncologist can review this cycle.</p>
+                  )}
+                  {status === "ready_for_review" && (
+                    <p className="text-xs text-violet-600 mt-0.5">Lab results received. Ready for oncologist review.</p>
                   )}
                   {cycle.notes && <p className="text-xs text-[#9CA3AF] mt-0.5">{cycle.notes}</p>}
                 </div>
@@ -209,7 +218,7 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
           </div>
           <div className="divide-y divide-[#F5F2EE]">
             {surgItems.map((surg) => {
-              const isTodays = surg.plannedDate === TODAY;
+              const isTodays = surg.plannedDate === todayValue;
               return (
                 <div key={surg.id} className={`px-4 py-3 ${isTodays ? "bg-blue-50" : ""}`}>
                   <div className="flex items-center justify-between">

@@ -9,10 +9,10 @@ import {
   SurgeryCheckpoint,
   Medication,
   formatDate,
-  TODAY,
 } from "../../utils/mockData";
 import { PatientNavPage } from "../../App";
 import { Calendar, Pill, MessageCircle, FlaskConical, Clock, CheckSquare, Square, Info } from "lucide-react";
+import { todayIso } from "../../utils/treatmentDisplay";
 
 interface PatientDashboardProps {
   profile: PatientProfile;
@@ -52,28 +52,33 @@ function MedCheckRow({ med }: { med: Medication }) {
 }
 
 export function PatientDashboard({ profile, protocol, latestLab, unreadMessages, onNavigate }: PatientDashboardProps) {
-  const today = new Date(TODAY);
+  const todayValue = todayIso();
+  const today = new Date(todayValue);
   const todayLabel = today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
   // Derive today's treatment item from protocol
   const todayItem = protocol?.items.find((item) => {
     if (item.type === "chemotherapy") {
       const c = item as ChemoCycle;
-      return c.startDate <= TODAY && c.endDate >= TODAY && (c.status === "approved" || c.status === "waiting_labs" || c.status === "upcoming");
+      const status = c.status as string;
+      return c.startDate <= todayValue && c.endDate >= todayValue && ["approved", "active", "waiting_labs", "ready_for_review"].includes(status);
     }
     if (item.type === "radiation") {
       const r = item as RadiationCourse;
-      return r.status === "in_progress" && r.startDate <= TODAY && r.endDate >= TODAY;
+      return r.status === "in_progress" && r.startDate <= todayValue && r.endDate >= todayValue;
     }
     if (item.type === "surgery") {
       const s = item as SurgeryCheckpoint;
-      return s.plannedDate === TODAY && s.status === "upcoming";
+      return s.plannedDate === todayValue && s.status === "upcoming";
     }
     return false;
   });
 
   const nextItem = !todayItem && protocol?.items.find((item) => {
-    if (item.type === "chemotherapy") return (item as ChemoCycle).status === "upcoming" || (item as ChemoCycle).status === "waiting_labs";
+    if (item.type === "chemotherapy") {
+      const status = (item as ChemoCycle).status as string;
+      return ["upcoming", "waiting_labs", "ready_for_review", "approved", "active"].includes(status);
+    }
     if (item.type === "radiation") return (item as RadiationCourse).status === "in_progress";
     if (item.type === "surgery") return (item as SurgeryCheckpoint).status === "upcoming";
     return false;
@@ -120,7 +125,11 @@ export function PatientDashboard({ profile, protocol, latestLab, unreadMessages,
               🌿 {todayItem.type === "chemotherapy" ? `Chemotherapy — ${todayItem.title}` : todayItem.type === "radiation" ? "Radiation Session Today" : `Surgery: ${todayItem.title}`}
             </div>
             <p className="text-sm mb-3" style={{ color: "#166534" }}>
-              You have a scheduled treatment today. Please follow your oncologist's instructions and attend your clinic appointment.
+              {todayItem.type === "chemotherapy" && (todayItem as ChemoCycle).status === "waiting_labs"
+                ? "Your care team is waiting for lab results before this treatment can be reviewed."
+                : todayItem.type === "chemotherapy" && ((todayItem as ChemoCycle).status as string) === "ready_for_review"
+                ? "Your lab results have been received and this treatment is ready for oncologist review."
+                : "You have a scheduled treatment today. Please follow your oncologist's instructions and attend your clinic appointment."}
             </p>
             {allMeds.length > 0 && (
               <>

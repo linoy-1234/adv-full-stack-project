@@ -5,7 +5,7 @@ export interface User {
   fullName: string;
   email: string;
   role: UserRole;
-  patientProfile?: string | null;
+  patientProfile?: string | { _id: string; fullName?: string; email?: string } | null;
   isActive?: boolean;
 }
 
@@ -45,8 +45,8 @@ export interface PatientProfile {
   notes?: string;
   accountStatus?: "waiting_for_registration" | "linked";
   isActive?: boolean;
-  createdBy?: string;
-  updatedBy?: string | null;
+  createdBy?: string | User;
+  updatedBy?: string | User | null;
   createdAt?: string;
   updatedAt?: string;
 }

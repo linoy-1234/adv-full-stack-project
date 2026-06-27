@@ -143,7 +143,9 @@ const hydrateProtocolResponse = async (protocolId) => {
   const cycles = await TreatmentCycle.find({
     protocol: protocolId,
     isActive: true,
-  }).sort({ startDate: 1, cycleNumber: 1 });
+  })
+    .sort({ startDate: 1, cycleNumber: 1 })
+    .populate("decision.decidedBy", "fullName email role");
 
   return { protocol, cycles };
 };
@@ -240,7 +242,9 @@ const getPatientTreatmentProtocol = async (req, res, next) => {
     const cycles = await TreatmentCycle.find({
       protocol: protocol._id,
       isActive: true,
-    }).sort({ startDate: 1, cycleNumber: 1 });
+    })
+      .sort({ startDate: 1, cycleNumber: 1 })
+      .populate("decision.decidedBy", "fullName email role");
 
     res.status(200).json({
       success: true,
@@ -403,7 +407,9 @@ const getProtocolCycles = async (req, res, next) => {
     const cycles = await TreatmentCycle.find({
       protocol: protocol._id,
       isActive: true,
-    }).sort({ startDate: 1, cycleNumber: 1 });
+    })
+      .sort({ startDate: 1, cycleNumber: 1 })
+      .populate("decision.decidedBy", "fullName email role");
 
     res.status(200).json({
       success: true,

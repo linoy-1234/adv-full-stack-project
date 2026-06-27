@@ -2,7 +2,6 @@ import { AlertTriangle, CheckCircle, Droplets, Layers, User, Pill, Info, Stethos
 import {
   PatientProfile as PatientProfileType,
   TreatmentProtocol,
-  seedOncologist,
   formatDate,
 } from "../utils/mockData";
 
@@ -71,7 +70,7 @@ export function PatientProfile({ profile, protocol }: PatientProfileProps) {
           <Row label="Email" value={profile.email} />
           <Row label="Date of Birth" value={profile.dateOfBirth ? formatDate(profile.dateOfBirth) : "—"} />
           <Row label="Diagnosis" value={profile.diagnosis} />
-          <Row label="Oncologist" value={seedOncologist.fullName} />
+          <Row label="Oncologist" value={profile.oncologistName || "Assigned oncologist"} />
         </div>
         <div className="mt-3">
           <SourceLabel text="Created by oncologist" />
