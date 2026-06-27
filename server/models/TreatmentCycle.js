@@ -107,6 +107,7 @@ const treatmentCycleSchema = new mongoose.Schema(
         "active",
         "completed",
         "delayed",
+        "cancelled",
         "in_progress",
         "postponed",
       ],
@@ -139,6 +140,23 @@ const treatmentCycleSchema = new mongoose.Schema(
     decision: {
       type: decisionSchema,
       default: () => ({}),
+    },
+
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+
+    cancelledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    cancelReason: {
+      type: String,
+      trim: true,
+      default: "",
     },
 
     isActive: {

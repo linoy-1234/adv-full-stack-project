@@ -77,6 +77,7 @@ export type TreatmentCycleStatus =
   | "active"
   | "completed"
   | "delayed"
+  | "cancelled"
   | "in_progress"
   | "postponed";
 
@@ -173,6 +174,10 @@ export interface TreatmentCycleRecord {
   status: TreatmentCycleStatus;
   notes?: string;
   decision?: TreatmentDecision;
+  cancelledAt?: string | null;
+  cancelledBy?: string | User | null;
+  cancelReason?: string;
+  isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

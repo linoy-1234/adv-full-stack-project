@@ -91,13 +91,78 @@ const findLinkedCycle = async (cycleId, patientId) => {
   });
 };
 
-const moveCycleToPendingReview = async (cycle) => {
+const dateKey = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  return new Date(value).toISOString().slice(0, 10);
+};
+
+const getEffectiveCycleStartDate = (cycle) => {
+  if (
+    cycle.decision?.delayedToStartDate &&
+    ["delayed", "approved", "pending_review", "waiting_for_labs"].includes(cycle.status)
+  ) {
+    return cycle.decision.delayedToStartDate;
+  }
+
+  return cycle.startDate || cycle.plannedDate;
+};
+
+const getAttemptDayRange = (cycle) => {
+  const effectiveStartKey = dateKey(getEffectiveCycleStartDate(cycle));
+
+  if (!effectiveStartKey) {
+    return null;
+  }
+
+  const start = new Date(`${effectiveStartKey}T00:00:00.000Z`);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+
+  return { start, end };
+};
+
+const countValidAttemptLabs = async (cycle) => {
+  const attemptRange = getAttemptDayRange(cycle);
+
+  if (!attemptRange) {
+    return 0;
+  }
+
+  return LabResult.countDocuments({
+    cycle: cycle._id,
+    isActive: true,
+    testDate: {
+      $gte: attemptRange.start,
+      $lt: attemptRange.end,
+    },
+  });
+};
+
+const reconcileCycleLabReviewStatus = async (cycle) => {
   if (!cycle) {
     return;
   }
 
-  if (["waiting_for_labs", "upcoming", "delayed"].includes(cycle.status)) {
+  if (["approved", "cancelled", "completed", "active"].includes(cycle.status)) {
+    return;
+  }
+
+  const validLabsCount = await countValidAttemptLabs(cycle);
+
+  if (
+    validLabsCount > 0 &&
+    ["waiting_for_labs", "upcoming", "delayed"].includes(cycle.status)
+  ) {
     cycle.status = "pending_review";
+    await cycle.save();
+    return;
+  }
+
+  if (validLabsCount === 0 && cycle.status === "pending_review") {
+    cycle.status = "waiting_for_labs";
     await cycle.save();
   }
 };
@@ -149,7 +214,7 @@ const createLabResult = async (req, res, next) => {
       notes: req.body.notes,
     });
 
-    await moveCycleToPendingReview(linkedCycle);
+    await reconcileCycleLabReviewStatus(linkedCycle);
 
     res.status(201).json({
       success: true,
@@ -263,6 +328,8 @@ const updateLabResult = async (req, res, next) => {
       });
     }
 
+    const previousCycleId = labResult.cycle;
+
     if (req.body.cycleId !== undefined) {
       const cycleId = req.body.cycleId || null;
       const linkedCycle = await findLinkedCycle(cycleId, labResult.patient);
@@ -282,8 +349,6 @@ const updateLabResult = async (req, res, next) => {
       }
 
       labResult.cycle = linkedCycle ? linkedCycle._id : null;
-
-      await moveCycleToPendingReview(linkedCycle);
     }
 
     const fieldsToUpdate = [
@@ -306,6 +371,19 @@ const updateLabResult = async (req, res, next) => {
     labResult.updatedBy = req.user._id;
 
     await labResult.save();
+
+    const cycleIdsToReconcile = [
+      previousCycleId,
+      labResult.cycle,
+    ]
+      .filter(Boolean)
+      .map((cycleId) => cycleId.toString());
+    const uniqueCycleIds = Array.from(new Set(cycleIdsToReconcile));
+
+    for (const cycleId of uniqueCycleIds) {
+      const cycle = await TreatmentCycle.findById(cycleId);
+      await reconcileCycleLabReviewStatus(cycle);
+    }
 
     res.status(200).json({
       success: true,
@@ -340,21 +418,8 @@ const deleteLabResult = async (req, res, next) => {
     await labResult.save();
 
     if (linkedCycleId) {
-      const remainingLabResults = await LabResult.countDocuments({
-        cycle: linkedCycleId,
-        isActive: true,
-      });
-
       const cycle = await TreatmentCycle.findById(linkedCycleId);
-
-      if (
-        cycle &&
-        cycle.status === "pending_review" &&
-        remainingLabResults === 0
-      ) {
-        cycle.status = "waiting_for_labs";
-        await cycle.save();
-      }
+      await reconcileCycleLabReviewStatus(cycle);
     }
 
     res.status(200).json({

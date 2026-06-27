@@ -86,6 +86,53 @@ const normalizeMedications = (medications = []) =>
     };
   });
 
+const countableTreatmentTypes = ["chemotherapy", "radiation", "surgery"];
+
+const calculatePlannedCount = (type, cycles) => {
+  if (type === "radiation") {
+    return cycles
+      .filter((cycle) => cycle.treatmentType === type)
+      .reduce((sum, cycle) => sum + (cycle.totalSessions || 0), 0);
+  }
+
+  return cycles.filter((cycle) => cycle.treatmentType === type).length;
+};
+
+const syncProtocolPlannedCounts = async (protocol, updatedBy) => {
+  const activeCycles = await TreatmentCycle.find({
+    protocol: protocol._id,
+    isActive: true,
+  });
+
+  const existingTypes = protocol.treatmentTypes.map((entry) =>
+    typeof entry.toObject === "function" ? entry.toObject() : entry
+  );
+  const existingTypeNames = existingTypes.map((entry) => entry.type);
+  const activeTypeNames = countableTreatmentTypes.filter(
+    (type) => calculatePlannedCount(type, activeCycles) > 0
+  );
+  const typeNames = Array.from(new Set([...existingTypeNames, ...activeTypeNames]));
+
+  protocol.treatmentTypes = typeNames.map((type) => {
+    const existing = existingTypes.find((entry) => entry.type === type) || {
+      type,
+      notes: "",
+    };
+
+    if (!countableTreatmentTypes.includes(type)) {
+      return existing;
+    }
+
+    return {
+      ...existing,
+      plannedCount: calculatePlannedCount(type, activeCycles),
+    };
+  });
+
+  protocol.updatedBy = updatedBy || protocol.updatedBy;
+  await protocol.save();
+};
+
 const hydrateProtocolResponse = async (protocolId) => {
   const protocol = await TreatmentProtocol.findById(protocolId)
     .populate("patient", "fullName email nationalId diagnosis bloodType allergies")
@@ -327,6 +374,7 @@ const createCycle = async (req, res, next) => {
       patient: protocol.patient,
       oncologist: req.user._id,
     });
+    await syncProtocolPlannedCounts(protocol, req.user._id);
     const payload = await hydrateProtocolResponse(protocol._id);
 
     res.status(201).json({
@@ -403,6 +451,7 @@ const updateCycle = async (req, res, next) => {
 
     Object.assign(cycle, req.body);
     await cycle.save();
+    await syncProtocolPlannedCounts(protocol, req.user._id);
     const payload = await hydrateProtocolResponse(protocol._id);
 
     res.status(200).json({
@@ -449,12 +498,17 @@ const deleteCycle = async (req, res, next) => {
       });
     }
 
+    cycle.status = "cancelled";
     cycle.isActive = false;
+    cycle.cancelledAt = new Date();
+    cycle.cancelledBy = req.user._id;
+    cycle.cancelReason = req.body?.cancelReason || "Removed from roadmap";
     await cycle.save();
+    await syncProtocolPlannedCounts(protocol, req.user._id);
 
     res.status(200).json({
       success: true,
-      message: "Treatment cycle deleted successfully",
+      message: "Treatment item removed from roadmap",
     });
   } catch (error) {
     next(error);

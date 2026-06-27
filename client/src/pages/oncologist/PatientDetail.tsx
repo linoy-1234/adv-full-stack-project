@@ -191,6 +191,8 @@ const labelCls =
 const bloodTypes = ["unknown", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const toDateInputValue = (date?: string | null) => (date ? date.slice(0, 10) : "");
+const isSameDateKey = (left?: string | null, right?: string | null) =>
+  !!left && !!right && toDateInputValue(left) === toDateInputValue(right);
 
 const getAllergyNames = (allergies?: PatientAllergy[]) =>
   (allergies ?? []).map((allergy) => allergy.name).filter(Boolean);
@@ -363,23 +365,93 @@ const sortCycles = (cycles: TreatmentCycleRecord[]) =>
     return dateA.localeCompare(dateB) || a.cycleNumber - b.cycleNumber;
   });
 
-const getChemoDisplayStatus = (cycle: TreatmentCycleRecord): ChemoDisplayStatus => {
+const getEffectiveCycleDates = (cycle: TreatmentCycleRecord) => {
+  const delayedStart = toDateInputValue(cycle.decision?.delayedToStartDate);
+  const delayedEnd = toDateInputValue(cycle.decision?.delayedToEndDate);
+  const useDelayedDates =
+    !!delayedStart &&
+    (cycle.status === "delayed" ||
+      cycle.status === "pending_review" ||
+      cycle.status === "waiting_for_labs" ||
+      cycle.status === "approved" ||
+      cycle.decision?.decisionStatus === "delayed");
+  const startDate = useDelayedDates
+    ? delayedStart
+    : toDateInputValue(cycle.startDate || cycle.plannedDate);
+  const endDate = useDelayedDates
+    ? delayedEnd || delayedStart
+    : toDateInputValue(cycle.endDate || cycle.plannedDate || cycle.startDate);
+
+  return { startDate, endDate };
+};
+
+const hasValidLinkedLabForCurrentAttempt = (
+  cycle: TreatmentCycleRecord,
+  labResults: ApiLabResult[]
+) => {
+  const { startDate } = getEffectiveCycleDates(cycle);
+
+  return labResults.some(
+    (lab) =>
+      lab.cycle?._id === cycle._id &&
+      lab.isActive !== false &&
+      isSameDateKey(lab.testDate, startDate)
+  );
+};
+
+const getRoadmapItemTitle = (cycle: TreatmentCycleRecord) => {
+  if (cycle.treatmentType === "chemotherapy") {
+    return cycle.title || `Cycle ${cycle.cycleNumber}`;
+  }
+
+  if (cycle.treatmentType === "radiation") {
+    return cycle.title && !/^cycle\b/i.test(cycle.title)
+      ? cycle.title
+      : cycle.cycleNumber > 1
+      ? `Radiation Course ${cycle.cycleNumber}`
+      : "Radiation Course";
+  }
+
+  if (cycle.treatmentType === "surgery") {
+    return cycle.title && !/^cycle\b/i.test(cycle.title) && cycle.title !== "Surgery Checkpoint"
+      ? cycle.title
+      : `Surgery Checkpoint ${cycle.cycleNumber}`;
+  }
+
+  return cycle.title;
+};
+
+const getChemoDisplayStatus = (
+  cycle: TreatmentCycleRecord,
+  labResults: ApiLabResult[]
+): ChemoDisplayStatus => {
   const status = cycle.status;
+  const today = todayIso();
+  const { startDate, endDate } = getEffectiveCycleDates(cycle);
+  const hasValidLab = hasValidLinkedLabForCurrentAttempt(cycle, labResults);
+  const hasArrived = !!startDate && startDate <= today;
 
   if (status === "completed") return "completed";
-  if (status === "pending_review") return "ready_for_review";
-  if (status === "waiting_for_labs") return "waiting_labs";
-  if (status === "delayed") return "delayed";
-  if (status === "active") return "active";
+  if (status === "pending_review") {
+    if (hasValidLab) return "ready_for_review";
+    return hasArrived ? "waiting_labs" : "upcoming";
+  }
+  if (status === "waiting_for_labs") return hasArrived ? "waiting_labs" : "upcoming";
+  if (status === "delayed") return hasArrived ? "waiting_labs" : "delayed";
+  if (status === "active") {
+    if (endDate && endDate < today) return "completed";
+    if (startDate && endDate && startDate <= today && endDate >= today) return "active";
+    return "approved";
+  }
   if (status === "approved") {
-    const today = todayIso();
-    if (toDateInputValue(cycle.startDate) <= today && toDateInputValue(cycle.endDate) >= today) {
+    if (endDate && endDate < today) return "completed";
+    if (startDate && endDate && startDate <= today && endDate >= today) {
       return "active";
     }
     return "approved";
   }
 
-  return "upcoming";
+  return hasArrived ? "waiting_labs" : "upcoming";
 };
 
 const toCyclePayload = (cycle: TreatmentCycleRecord): Partial<CyclePayload> => ({
@@ -392,7 +464,6 @@ const toCyclePayload = (cycle: TreatmentCycleRecord): Partial<CyclePayload> => (
   totalSessions: cycle.totalSessions || 0,
   completedSessions: cycle.completedSessions || 0,
   medications: cycle.medications || [],
-  status: cycle.status,
   notes: cycle.notes || "",
 });
 
@@ -451,7 +522,7 @@ const buildInitialCycles = (result: ProtocolFormResult): CyclePayload[] => {
       makeGeneratedCycle(
         "surgery",
         index + 1,
-        index === 0 ? "Surgery Checkpoint" : `Surgery Checkpoint ${index + 1}`,
+        `Surgery Checkpoint ${index + 1}`,
         plannedDate,
         plannedDate,
         { plannedDate }
@@ -1307,17 +1378,23 @@ function EditTreatmentDatesModal({
 }: {
   cycles: TreatmentCycleRecord[];
   onClose: () => void;
-  onSave: (cycles: TreatmentCycleRecord[]) => Promise<void>;
+  onSave: (cycles: TreatmentCycleRecord[], removedCycleIds: string[]) => Promise<void>;
 }) {
   const [items, setItems] = useState<TreatmentCycleRecord[]>(
     cycles.map((cycle) => ({ ...cycle }))
   );
+  const [removedCycleIds, setRemovedCycleIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const updateItem = (id: string, field: keyof TreatmentCycleRecord, value: string | number) => {
     setItems((current) =>
       current.map((item) => (item._id === id ? { ...item, [field]: value } : item))
     );
+  };
+
+  const removeItem = (id: string) => {
+    setItems((current) => current.filter((item) => item._id !== id));
+    setRemovedCycleIds((current) => (current.includes(id) ? current : [...current, id]));
   };
 
   const updateChemoStartDate = (changedId: string, newStart: string) => {
@@ -1353,7 +1430,7 @@ function EditTreatmentDatesModal({
 
   const saveDates = async () => {
     setSaving(true);
-    await onSave(items);
+    await onSave(items, removedCycleIds);
     setSaving(false);
     onClose();
   };
@@ -1377,18 +1454,31 @@ function EditTreatmentDatesModal({
         <div className="px-6 py-4 max-h-[65vh] overflow-y-auto space-y-3">
           {items.map((item) => (
             <div key={item._id} className="bg-white border border-[#E5E2DC] rounded-xl p-3 space-y-2">
-              <div className="flex items-center gap-2">
-                {item.treatmentType === "chemotherapy" && (
-                  <Syringe size={13} className="text-[#7CAE8E]" />
-                )}
-                {item.treatmentType === "radiation" && (
-                  <Zap size={13} className="text-amber-500" />
-                )}
-                {item.treatmentType === "surgery" && (
-                  <Scissors size={13} className="text-blue-500" />
-                )}
-                <span className="text-sm font-medium text-[#2C3E2D]">{item.title}</span>
-                <span className="text-xs text-[#9CA3AF]">({item.treatmentType})</span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  {item.treatmentType === "chemotherapy" && (
+                    <Syringe size={13} className="text-[#7CAE8E]" />
+                  )}
+                  {item.treatmentType === "radiation" && (
+                    <Zap size={13} className="text-amber-500" />
+                  )}
+                  {item.treatmentType === "surgery" && (
+                    <Scissors size={13} className="text-blue-500" />
+                  )}
+                  <span className="text-sm font-medium text-[#2C3E2D]">
+                    {getRoadmapItemTitle(item)}
+                  </span>
+                  <span className="text-xs text-[#9CA3AF]">({item.treatmentType})</span>
+                </div>
+                <button
+                  onClick={() => removeItem(item._id)}
+                  className="text-[#9CA3AF] hover:text-red-500"
+                  disabled={saving}
+                  title="Remove from roadmap"
+                  aria-label={`Remove ${getRoadmapItemTitle(item)} from roadmap`}
+                >
+                  <X size={14} />
+                </button>
               </div>
 
               {item.treatmentType === "chemotherapy" && (
@@ -1805,7 +1895,7 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
         makeGeneratedCycle(
           "surgery",
           index + 1,
-          index === 0 ? "Surgery Checkpoint" : `Surgery Checkpoint ${index + 1}`,
+          `Surgery Checkpoint ${index + 1}`,
           plannedDate,
           plannedDate,
           { plannedDate }
@@ -1851,11 +1941,18 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
     }
   };
 
-  const handleSaveDates = async (updatedCycles: TreatmentCycleRecord[]) => {
+  const handleSaveDates = async (
+    updatedCycles: TreatmentCycleRecord[],
+    removedCycleIds: string[]
+  ) => {
     setSavingTreatment(true);
     setTreatmentError("");
 
     try {
+      for (const cycleId of removedCycleIds) {
+        await deleteCycle(cycleId);
+      }
+
       for (const cycle of updatedCycles) {
         const payload = toCyclePayload(cycle);
         if (cycle.treatmentType === "surgery") {
@@ -2253,8 +2350,10 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
               ) : (
                 <div className="space-y-2">
                   {chemoCycles.map((cycle) => {
-                    const displayStatus = getChemoDisplayStatus(cycle);
+                    const displayStatus = getChemoDisplayStatus(cycle, labResults);
                     const isExpanded = expandedCycle === cycle._id;
+                    const { startDate: effectiveStart, endDate: effectiveEnd } =
+                      getEffectiveCycleDates(cycle);
                     const delayedStart = toDateInputValue(cycle.decision?.delayedToStartDate);
                     const delayedEnd = toDateInputValue(cycle.decision?.delayedToEndDate);
                     const effectiveDateStr =
@@ -2262,7 +2361,9 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
                         ? `Delayed to ${formatDate(delayedStart)}${
                             delayedEnd ? ` - ${formatDate(delayedEnd)}` : ""
                           }`
-                        : `${formatDate(cycle.startDate)} - ${formatDate(cycle.endDate)}`;
+                        : `${formatDate(effectiveStart || cycle.startDate)} - ${formatDate(
+                            effectiveEnd || cycle.endDate
+                          )}`;
 
                     return (
                       <div key={cycle._id} className="border border-[#E5E2DC] rounded-xl overflow-hidden">
@@ -2273,7 +2374,7 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
                           <div className="flex items-center gap-3 flex-wrap">
                             <Syringe size={14} className="text-[#7CAE8E] shrink-0" />
                             <span className="text-sm font-medium text-[#2C3E2D]">
-                              {cycle.title}
+                              {getRoadmapItemTitle(cycle)}
                             </span>
                             <CycleDisplayBadge displayStatus={displayStatus} />
                             <span className="text-xs text-[#9CA3AF]">{effectiveDateStr}</span>
@@ -2290,8 +2391,8 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
                             {displayStatus === "upcoming" && (
                               <div className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
                                 <p>
-                                  Scheduled: {formatDate(cycle.startDate)} -{" "}
-                                  {formatDate(cycle.endDate)}
+                                  Scheduled: {formatDate(effectiveStart || cycle.startDate)} -{" "}
+                                  {formatDate(effectiveEnd || cycle.endDate)}
                                 </p>
                                 <p className="text-xs mt-1 text-blue-600">
                                   No action required yet.
@@ -2390,7 +2491,7 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-medium text-[#2C3E2D]">
-                            {cycle.title}
+                            {getRoadmapItemTitle(cycle)}
                           </span>
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
                             {cycle.status.replace(/_/g, " ")}
@@ -2418,7 +2519,7 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-medium text-[#2C3E2D]">
-                            {cycle.title}
+                            {getRoadmapItemTitle(cycle)}
                           </span>
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                             {cycle.status}
