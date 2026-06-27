@@ -195,10 +195,52 @@ export interface TreatmentProtocolResponse {
   message?: string;
 }
 
+export interface ApiLabResultCycle {
+  _id: string;
+  title: string;
+  cycleNumber: number;
+  treatmentType: string;
+  status: TreatmentCycleStatus;
+  startDate: string;
+  endDate: string;
+}
+
+export interface ApiLabResultUser {
+  _id: string;
+  fullName: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface ApiLabResult {
+  _id: string;
+  patient: string;
+  cycle: ApiLabResultCycle | null;
+  enteredBy: ApiLabResultUser;
+  updatedBy: ApiLabResultUser | null;
+  testDate: string;
+  wbc: number;
+  neutrophils: number;
+  hemoglobin: number;
+  platelets: number;
+  alt: number;
+  creatinine: number;
+  notes: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LabResultResponse {
+  success: boolean;
+  message?: string;
+  labResult: ApiLabResult;
+}
+
 export interface LabResultsResponse {
   success: boolean;
   count: number;
-  labResults: unknown[];
+  labResults: ApiLabResult[];
 }
 
 export interface MessagesResponse {
