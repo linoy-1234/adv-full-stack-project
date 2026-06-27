@@ -1320,6 +1320,37 @@ function EditTreatmentDatesModal({
     );
   };
 
+  const updateChemoStartDate = (changedId: string, newStart: string) => {
+    setItems((current) => {
+      const changedItem = current.find((item) => item._id === changedId);
+      if (!changedItem) return current;
+
+      const oldStart = toDateInputValue(changedItem.startDate);
+      if (!oldStart || !newStart) return current;
+
+      const deltaDays = Math.round(
+        (new Date(newStart).getTime() - new Date(oldStart).getTime()) / 86_400_000
+      );
+      if (deltaDays === 0) return current;
+
+      // Chemo cycles sorted by cycleNumber; shift the changed one and everything after it
+      const changedCycleNumber = changedItem.cycleNumber;
+
+      return current.map((item) => {
+        if (item.treatmentType !== "chemotherapy") return item;
+        if (item.cycleNumber < changedCycleNumber) return item;
+
+        const s = toDateInputValue(item.startDate);
+        const e = toDateInputValue(item.endDate);
+        return {
+          ...item,
+          startDate: s ? shiftDate(s, deltaDays) : item.startDate,
+          endDate: e ? shiftDate(e, deltaDays) : item.endDate,
+        };
+      });
+    });
+  };
+
   const saveDates = async () => {
     setSaving(true);
     await onSave(items);
@@ -1368,7 +1399,7 @@ function EditTreatmentDatesModal({
                       className={inputCls}
                       type="date"
                       value={toDateInputValue(item.startDate)}
-                      onChange={(event) => updateItem(item._id, "startDate", event.target.value)}
+                      onChange={(event) => updateChemoStartDate(item._id, event.target.value)}
                     />
                   </div>
                   <div>
