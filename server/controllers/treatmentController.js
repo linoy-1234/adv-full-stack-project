@@ -26,6 +26,13 @@ const getAuthorizedPatient = async (req, patientId) => {
     });
   }
 
+  if (req.user.role === "lab_staff") {
+    return PatientProfile.findOne({
+      _id: patientId,
+      isActive: true,
+    });
+  }
+
   return null;
 };
 

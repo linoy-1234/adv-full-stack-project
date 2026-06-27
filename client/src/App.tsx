@@ -1,7 +1,6 @@
 import { useState, lazy, Suspense, useTransition } from "react";
 import {
   seedOncologist,
-  seedLabStaff,
   seedPatientProfiles,
   seedTreatmentProtocols,
   seedLabResults,
@@ -9,7 +8,6 @@ import {
   seedSymptomEntries,
   PatientProfile,
   TreatmentProtocol,
-  LabResult,
   Message,
   SymptomEntry,
   UserRole,
@@ -117,15 +115,11 @@ export default function App() {
   // Mutable state (simulating backend collections)
   const [patientProfiles, setPatientProfiles] = useState<PatientProfile[]>(seedPatientProfiles);
   const [protocols, setProtocols] = useState<TreatmentProtocol[]>(seedTreatmentProtocols);
-  const [extraLabResults, setExtraLabResults] = useState<LabResult[]>([]);
   const [extraMessages, setExtraMessages] = useState<Message[]>([]);
   const [extraSymptomEntries, setExtraSymptomEntries] = useState<SymptomEntry[]>([]);
 
-  // All data merged
-  const allLabResults = [
-    ...seedLabResults,
-    ...extraLabResults.filter((l) => !seedLabResults.find((sl) => sl.id === l.id)),
-  ];
+  // TODO(patient-phase): connect BloodWork to real API; currently uses seed mock data
+  const allLabResults = [...seedLabResults];
   const allMessages = [
     ...seedMessages,
     ...extraMessages.filter((m) => !seedMessages.find((sm) => sm.id === m.id)),
@@ -190,30 +184,6 @@ export default function App() {
 
   const handleUpdateProtocol = (tp: TreatmentProtocol) => {
     setProtocols((prev) => prev.map((x) => (x.id === tp.id ? tp : x)));
-  };
-
-  const handleAddLabResult = (lr: LabResult) => {
-    setExtraLabResults((prev) => {
-      const filtered = prev.filter((x) => x.id !== lr.id);
-      return [...filtered, lr];
-    });
-    // If linked to a waiting_labs cycle, update that cycle to ready for review
-    if (lr.linkedCycleId) {
-      const protocol = protocols.find((p) => p.patientProfileId === lr.patientProfileId);
-      if (protocol) {
-        const updatedItems = protocol.items.map((item) => {
-          if (item.id === lr.linkedCycleId && item.type === "chemotherapy") {
-            return { ...item, labResultId: lr.id };
-          }
-          return item;
-        });
-        handleUpdateProtocol({ ...protocol, items: updatedItems });
-      }
-    }
-  };
-
-  const handleDeleteLabResult = (id: string) => {
-    setExtraLabResults((prev) => prev.filter((l) => l.id !== id));
   };
 
   const handleSendMessage = (m: Message) => {
@@ -471,13 +441,7 @@ export default function App() {
   if (page === "labstaff-dashboard" && role === "lab_staff") {
     return (
       <Suspense fallback={<SuspenseFallback />}>
-        <LabStaffDashboard
-          labStaffName={seedLabStaff.fullName}
-          onLogout={logout}
-          extraLabResults={extraLabResults}
-          onAddLabResult={handleAddLabResult}
-          onDeleteLabResult={handleDeleteLabResult}
-        />
+        <LabStaffDashboard onLogout={logout} />
       </Suspense>
     );
   }

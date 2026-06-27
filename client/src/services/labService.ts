@@ -1,5 +1,5 @@
 import api from "./api";
-import type { ApiMessageResponse, LabResultsResponse } from "../types/api";
+import type { ApiMessageResponse, LabResultsResponse, LabResultResponse } from "../types/api";
 
 export interface LabResultPayload {
   cycleId?: string | null;
@@ -31,8 +31,8 @@ export const getMyLabs = async (): Promise<LabResultsResponse> => {
 export const createLabResult = async (
   patientId: string,
   labData: LabResultPayload
-): Promise<LabResultsResponse> => {
-  const { data } = await api.post<LabResultsResponse>(
+): Promise<LabResultResponse> => {
+  const { data } = await api.post<LabResultResponse>(
     `/labs/patients/${patientId}`,
     labData
   );
@@ -50,8 +50,8 @@ export const getLabResultById = async (
 export const updateLabResult = async (
   labResultId: string,
   labData: Partial<LabResultPayload>
-): Promise<LabResultsResponse> => {
-  const { data } = await api.put<LabResultsResponse>(
+): Promise<LabResultResponse> => {
+  const { data } = await api.put<LabResultResponse>(
     `/labs/${labResultId}`,
     labData
   );

@@ -23,7 +23,8 @@ import {
 } from "lucide-react";
 
 import { RibbonBackground } from "../../components/shared/RibbonBackground";
-import { formatDate, shiftDate } from "../../utils/mockData";
+import { formatDate, shiftDate, getLabStatus, LAB_NORMS, type LabFieldKey } from "../../utils/mockData";
+import { getPatientLabs } from "../../services/labService";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   clearPatientsError,
@@ -45,6 +46,7 @@ import {
 } from "../../services/treatmentService";
 import type { PatientPayload } from "../../services/patientService";
 import type {
+  ApiLabResult,
   PatientAllergy,
   PatientProfile as ApiPatientProfile,
   TreatmentCycleRecord,
@@ -386,7 +388,7 @@ const toCyclePayload = (cycle: TreatmentCycleRecord): Partial<CyclePayload> => (
   title: cycle.title,
   startDate: toDateInputValue(cycle.startDate),
   endDate: toDateInputValue(cycle.endDate),
-  plannedDate: toDateInputValue(cycle.plannedDate),
+  plannedDate: toDateInputValue(cycle.plannedDate) || undefined,
   totalSessions: cycle.totalSessions || 0,
   completedSessions: cycle.completedSessions || 0,
   medications: cycle.medications || [],
@@ -1601,10 +1603,21 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
   const [expandedCycle, setExpandedCycle] = useState<string | null>(null);
   const [cycleToDelay, setCycleToDelay] = useState<TreatmentCycleRecord | null>(null);
 
+  const [labResults, setLabResults] = useState<ApiLabResult[]>([]);
+  const [labsLoading, setLabsLoading] = useState(false);
+
   useEffect(() => {
     dispatch(clearPatientsError());
     dispatch(fetchPatientById(patientId));
   }, [dispatch, patientId]);
+
+  useEffect(() => {
+    setLabsLoading(true);
+    getPatientLabs(patientId)
+      .then((res) => setLabResults(res.labResults))
+      .catch(() => setLabResults([]))
+      .finally(() => setLabsLoading(false));
+  }, [patientId]);
 
   const applyTreatmentResponse = (response: TreatmentProtocolResponse) => {
     setProtocol(response.protocol || null);
@@ -2397,9 +2410,78 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
               title="Lab Results - Lab Staff Entry"
               source="Lab results entered by Lab Staff"
             >
-              <PhasePlaceholder icon={<FlaskConical size={16} />}>
-                Lab results will be connected in the Labs phase.
-              </PhasePlaceholder>
+              {labsLoading ? (
+                <p className="text-sm text-[#9CA3AF] py-4 text-center">Loading lab results…</p>
+              ) : labResults.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-6 text-[#9CA3AF]">
+                  <FlaskConical size={22} className="opacity-40" />
+                  <p className="text-sm">No lab results have been entered yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {[...labResults]
+                    .sort((a, b) =>
+                      (a.testDate ?? "").localeCompare(b.testDate ?? "") < 0 ? 1 : -1
+                    )
+                    .map((lab) => {
+                      const dateStr = (lab.testDate ?? "").split("T")[0];
+                      const enteredByName = lab.enteredBy?.fullName ?? "Unknown";
+                      return (
+                        <div
+                          key={lab._id}
+                          className="bg-[#F5F2EE] border border-[#E5E2DC] rounded-xl p-4"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-semibold text-[#2C3E2D]">
+                                {formatDate(dateStr)}
+                              </span>
+                              {lab.cycle && (
+                                <span className="text-xs text-[#7CAE8E] bg-[#F0F7F3] border border-[#C8D9CC] px-2 py-0.5 rounded-full">
+                                  {lab.cycle.title}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-[#9CA3AF] shrink-0">
+                              by {enteredByName}
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-xs mb-2">
+                            {(["wbc", "neutrophils", "hemoglobin", "platelets", "alt", "creatinine"] as LabFieldKey[]).map(
+                              (field) => {
+                                const val = lab[field];
+                                const status = getLabStatus(field, val);
+                                const norm = LAB_NORMS[field];
+                                const colorCls =
+                                  status === "normal"
+                                    ? "text-emerald-700 bg-emerald-50"
+                                    : status === "low"
+                                    ? "text-amber-700 bg-amber-50"
+                                    : "text-red-700 bg-red-50";
+                                return (
+                                  <div key={field} className="flex items-center gap-2">
+                                    <span className="text-[#9CA3AF] w-20 capitalize shrink-0">
+                                      {field}
+                                    </span>
+                                    <span
+                                      className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${colorCls}`}
+                                      title={`Normal: ${norm.min}–${norm.max}`}
+                                    >
+                                      {val}
+                                    </span>
+                                  </div>
+                                );
+                              }
+                            )}
+                          </div>
+                          {lab.notes && (
+                            <p className="text-xs text-[#9CA3AF] mt-1">{lab.notes}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
             </SectionCard>
 
             <SectionCard title="Messages & Documents">
