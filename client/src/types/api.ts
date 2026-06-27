@@ -63,6 +63,120 @@ export interface ApiMessageResponse {
   message: string;
 }
 
+export type TreatmentKind =
+  | "chemotherapy"
+  | "radiation"
+  | "surgery"
+  | "supportive";
+
+export type TreatmentCycleStatus =
+  | "upcoming"
+  | "waiting_for_labs"
+  | "pending_review"
+  | "approved"
+  | "active"
+  | "completed"
+  | "delayed"
+  | "in_progress"
+  | "postponed";
+
+export type TreatmentMedicationCategory =
+  | "chemotherapy"
+  | "supportive"
+  | "chronic"
+  | "other";
+
+export interface TreatmentTypeRecord {
+  type: TreatmentKind;
+  plannedCount: number;
+  notes?: string;
+}
+
+export interface TreatmentMedicationRecord {
+  id?: string;
+  _id?: string;
+  name: string;
+  dose?: string;
+  route?: string;
+  frequency?: string;
+  timing?: string;
+  schedule?: string;
+  category?: TreatmentMedicationCategory;
+  notes?: string;
+}
+
+export interface TreatmentDecision {
+  decisionStatus?: "none" | "approved" | "delayed";
+  decidedBy?:
+    | string
+    | {
+        _id: string;
+        fullName: string;
+        email?: string;
+        role?: UserRole;
+      }
+    | null;
+  decidedAt?: string | null;
+  decisionNotes?: string;
+  delayReason?: string;
+  delayedToStartDate?: string | null;
+  delayedToEndDate?: string | null;
+}
+
+export interface TreatmentProtocolRecord {
+  _id: string;
+  patient:
+    | string
+    | {
+        _id: string;
+        fullName: string;
+        email: string;
+        nationalId: string;
+        diagnosis: string;
+        bloodType?: string;
+        allergies?: PatientAllergy[];
+      };
+  oncologist:
+    | string
+    | {
+        _id: string;
+        fullName: string;
+        email: string;
+        role: UserRole;
+      };
+  protocolName: string;
+  diagnosis: string;
+  treatmentTypes: TreatmentTypeRecord[];
+  medications: TreatmentMedicationRecord[];
+  drugs?: string[];
+  notes?: string;
+  createdBy?: string | User;
+  updatedBy?: string | User | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface TreatmentCycleRecord {
+  _id: string;
+  protocol: string;
+  patient: string;
+  oncologist: string;
+  treatmentType: Exclude<TreatmentKind, "supportive">;
+  cycleNumber: number;
+  title: string;
+  startDate: string;
+  endDate: string;
+  plannedDate?: string;
+  totalSessions?: number;
+  completedSessions?: number;
+  medications?: string[];
+  status: TreatmentCycleStatus;
+  notes?: string;
+  decision?: TreatmentDecision;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface PatientListResponse {
   success: boolean;
   count: number;
@@ -76,8 +190,8 @@ export interface PatientResponse {
 
 export interface TreatmentProtocolResponse {
   success: boolean;
-  protocol?: unknown;
-  cycles?: unknown[];
+  protocol?: TreatmentProtocolRecord;
+  cycles?: TreatmentCycleRecord[];
   message?: string;
 }
 
