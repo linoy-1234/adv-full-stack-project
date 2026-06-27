@@ -27,9 +27,11 @@ import { formatDate, shiftDate, getLabStatus, LAB_NORMS, type LabFieldKey } from
 import {
   getChemoDisplayStatus,
   getEffectiveCycleDates,
+  getSurgeryDisplayStatus,
   toDateInputValue,
   todayIso,
   type ChemoDisplayStatus,
+  type SurgeryDisplayStatus,
 } from "../../utils/treatmentDisplay";
 import { getPatientLabs } from "../../services/labService";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
@@ -1544,6 +1546,81 @@ function EditTreatmentDatesModal({
   );
 }
 
+function LabTrendChart({ labResults }: { labResults: ApiLabResult[] }) {
+  const sorted = [...labResults].sort((a, b) =>
+    (a.testDate ?? "").localeCompare(b.testDate ?? "")
+  );
+
+  type Point = { date: string; WBC: number; Neutrophils: number; Hemoglobin: number };
+  const data: Point[] = sorted.map((l, i) => ({
+    date: `${formatDate((l.testDate ?? "").split("T")[0]).split(" ").slice(0, 2).join(" ")}_${i}`,
+    WBC: l.wbc,
+    Neutrophils: l.neutrophils,
+    Hemoglobin: l.hemoglobin,
+  }));
+
+  if (data.length < 2) return null;
+
+  const W = 600; const H = 150;
+  const PAD = { top: 10, right: 10, bottom: 28, left: 32 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+  const series = [
+    { key: "WBC" as const, stroke: "#7CAE8E" },
+    { key: "Neutrophils" as const, stroke: "#F59E0B" },
+    { key: "Hemoglobin" as const, stroke: "#60A5FA" },
+  ];
+  const allVals = data.flatMap((d) => series.map((s) => d[s.key])).filter((v) => !isNaN(v));
+  const minV = Math.min(...allVals, 1.5) - 0.5;
+  const maxV = Math.max(...allVals, 15) + 0.5;
+  const xScale = (i: number) =>
+    PAD.left + (data.length < 2 ? innerW / 2 : (i / (data.length - 1)) * innerW);
+  const yScale = (v: number) =>
+    PAD.top + innerH - ((v - minV) / (maxV - minV)) * innerH;
+  const pathD = (key: keyof Point) =>
+    data.reduce((acc, d, i) => {
+      const x = xScale(i); const y = yScale(d[key] as number);
+      return acc === "" ? `M${x},${y}` : `${acc} L${x},${y}`;
+    }, "");
+
+  return (
+    <div className="mt-4 pt-4 border-t border-[#F5F2EE]">
+      <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-3">
+        Trends Over Time
+      </p>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 160 }}>
+        <line x1={PAD.left} y1={yScale(4.0)} x2={W - PAD.right} y2={yScale(4.0)} stroke="#F59E0B" strokeWidth={1} strokeDasharray="4 3" />
+        <line x1={PAD.left} y1={yScale(1.5)} x2={W - PAD.right} y2={yScale(1.5)} stroke="#EF4444" strokeWidth={1} strokeDasharray="4 3" />
+        {series.map((s) => (
+          <path key={s.key} d={pathD(s.key)} fill="none" stroke={s.stroke} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        ))}
+        {series.map((s) =>
+          data.map((d, i) => (
+            <circle key={`${s.key}-${i}`} cx={xScale(i)} cy={yScale(d[s.key])} r={3} fill={s.stroke} />
+          ))
+        )}
+        {data.map((d, i) => (
+          <text key={`xl-${i}`} x={xScale(i)} y={H - 6} textAnchor="middle" fontSize={9} fill="#9CA3AF">
+            {d.date.split("_")[0]}
+          </text>
+        ))}
+        {[minV, (minV + maxV) / 2, maxV].map((v, i) => (
+          <text key={`yl-${i}`} x={PAD.left - 4} y={yScale(v) + 3} textAnchor="end" fontSize={9} fill="#9CA3AF">
+            {v.toFixed(1)}
+          </text>
+        ))}
+      </svg>
+      <div className="flex gap-4 mt-2 text-xs text-[#9CA3AF]">
+        {series.map((s) => (
+          <span key={s.key} className="flex items-center gap-1">
+            <span className="w-3 h-0.5 inline-block" style={{ backgroundColor: s.stroke }} /> {s.key}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DelayCycleModal({
   cycle,
   onClose,
@@ -1653,6 +1730,7 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
 
   const [labResults, setLabResults] = useState<ApiLabResult[]>([]);
   const [labsLoading, setLabsLoading] = useState(false);
+  const [labHistoryExpanded, setLabHistoryExpanded] = useState(false);
 
   useEffect(() => {
     dispatch(clearPatientsError());
@@ -2407,66 +2485,87 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
                     );
                   })}
 
-                  {radiationCycles.map((cycle) => (
-                    <div
-                      key={cycle._id}
-                      className="flex items-start gap-3 p-3 bg-[#F5F2EE] rounded-xl border border-[#E5E2DC]"
-                    >
-                      <div className="mt-0.5">
-                        <Zap size={14} className="text-amber-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium text-[#2C3E2D]">
-                            {getRoadmapItemTitle(cycle)}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                            {cycle.status.replace(/_/g, " ")}
-                          </span>
+                  {radiationCycles.map((cycle) => {
+                    const radStart = toDateInputValue(cycle.startDate);
+                    const radEnd   = toDateInputValue(cycle.endDate);
+                    const radToday = todayIso();
+                    const radDone  = cycle.status === "completed" || (!!radEnd && radEnd < radToday);
+                    const radActive = !radDone && !!radStart && !!radEnd && radStart <= radToday && radEnd >= radToday;
+                    const radLabel  = radDone ? "Completed" : radActive ? "Active" : "Upcoming";
+                    const radCls    = radDone
+                      ? "bg-gray-100 text-gray-600"
+                      : radActive
+                      ? "bg-amber-500 text-white"
+                      : "bg-blue-100 text-blue-700";
+                    return (
+                      <div
+                        key={cycle._id}
+                        className={`flex items-start gap-3 p-3 rounded-xl border border-[#E5E2DC] ${radActive ? "bg-amber-50" : radDone ? "bg-gray-50" : "bg-[#F5F2EE]"}`}
+                      >
+                        <div className="mt-0.5">
+                          <Zap size={14} className="text-amber-500" />
                         </div>
-                        <div className="text-xs text-[#9CA3AF] mt-0.5">
-                          {formatDate(cycle.startDate)} - {formatDate(cycle.endDate)} -{" "}
-                          {cycle.completedSessions || 0}/{cycle.totalSessions || 0} sessions
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-[#2C3E2D]">
+                              {getRoadmapItemTitle(cycle)}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${radCls}`}>
+                              {radLabel}
+                            </span>
+                          </div>
+                          <div className="text-xs text-[#9CA3AF] mt-0.5">
+                            {formatDate(cycle.startDate)} – {formatDate(cycle.endDate)} ·{" "}
+                            {cycle.completedSessions || 0}/{cycle.totalSessions || 0} sessions
+                          </div>
+                          {cycle.notes && (
+                            <p className="text-xs text-[#9CA3AF] mt-0.5">{cycle.notes}</p>
+                          )}
                         </div>
-                        {cycle.notes && (
-                          <p className="text-xs text-[#9CA3AF] mt-0.5">{cycle.notes}</p>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
-                  {surgeryCycles.map((cycle) => (
-                    <div
-                      key={cycle._id}
-                      className="flex items-start gap-3 p-3 bg-[#F5F2EE] rounded-xl border border-[#E5E2DC]"
-                    >
-                      <div className="mt-0.5">
-                        <Scissors size={14} className="text-blue-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium text-[#2C3E2D]">
-                            {getRoadmapItemTitle(cycle)}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                            {cycle.status}
-                          </span>
+                  {surgeryCycles.map((cycle) => {
+                    const surgDisplay = getSurgeryDisplayStatus(cycle);
+                    const surgCfg: Record<SurgeryDisplayStatus, { label: string; cls: string }> = {
+                      upcoming:  { label: "Upcoming",  cls: "bg-blue-100 text-blue-700" },
+                      today:     { label: "Today",     cls: "bg-blue-500 text-white" },
+                      completed: { label: "Completed", cls: "bg-gray-100 text-gray-600" },
+                    };
+                    return (
+                      <div
+                        key={cycle._id}
+                        className={`flex items-start gap-3 p-3 rounded-xl border border-[#E5E2DC] ${surgDisplay === "today" ? "bg-blue-50" : surgDisplay === "completed" ? "bg-gray-50" : "bg-[#F5F2EE]"}`}
+                      >
+                        <div className="mt-0.5">
+                          <Scissors size={14} className="text-blue-500" />
                         </div>
-                        <div className="text-xs text-[#9CA3AF] mt-0.5">
-                          Planned: {formatDate(cycle.plannedDate || cycle.startDate)}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-[#2C3E2D]">
+                              {getRoadmapItemTitle(cycle)}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${surgCfg[surgDisplay].cls}`}>
+                              {surgCfg[surgDisplay].label}
+                            </span>
+                          </div>
+                          <div className="text-xs text-[#9CA3AF] mt-0.5">
+                            Planned: {formatDate(cycle.plannedDate || cycle.startDate)}
+                          </div>
+                          {cycle.notes && (
+                            <p className="text-xs text-[#9CA3AF] mt-0.5">{cycle.notes}</p>
+                          )}
                         </div>
-                        {cycle.notes && (
-                          <p className="text-xs text-[#9CA3AF] mt-0.5">{cycle.notes}</p>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </SectionCard>
 
             <SectionCard
-              title="Lab Results - Lab Staff Entry"
+              title="Lab Results — Lab Staff Entry"
               source="Lab results entered by Lab Staff"
             >
               {labsLoading ? (
@@ -2476,71 +2575,119 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
                   <FlaskConical size={22} className="opacity-40" />
                   <p className="text-sm">No lab results have been entered yet.</p>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {[...labResults]
-                    .sort((a, b) =>
-                      (a.testDate ?? "").localeCompare(b.testDate ?? "") < 0 ? 1 : -1
-                    )
-                    .map((lab) => {
-                      const dateStr = (lab.testDate ?? "").split("T")[0];
-                      const enteredByName = lab.enteredBy?.fullName ?? "Unknown";
-                      return (
-                        <div
-                          key={lab._id}
-                          className="bg-[#F5F2EE] border border-[#E5E2DC] rounded-xl p-4"
-                        >
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-semibold text-[#2C3E2D]">
-                                {formatDate(dateStr)}
-                              </span>
-                              {lab.cycle && (
-                                <span className="text-xs text-[#7CAE8E] bg-[#F0F7F3] border border-[#C8D9CC] px-2 py-0.5 rounded-full">
-                                  {lab.cycle.title}
+              ) : (() => {
+                const sorted = [...labResults].sort((a, b) =>
+                  (b.testDate ?? "").localeCompare(a.testDate ?? "")
+                );
+                const latest = sorted[0];
+                const older = sorted.slice(1);
+                const fieldLabels: Record<string, string> = {
+                  wbc: "WBC", neutrophils: "Neutrophils", hemoglobin: "Hemoglobin",
+                  platelets: "Platelets", alt: "ALT", creatinine: "Creatinine",
+                };
+                return (
+                  <div className="space-y-4">
+                    {/* Latest Results */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
+                          Latest Results — {formatDate((latest.testDate ?? "").split("T")[0])}
+                        </p>
+                        <span className="text-xs text-[#9CA3AF]">
+                          by {latest.enteredBy?.fullName ?? "Unknown"}
+                          {latest.cycle && ` · ${latest.cycle.title}`}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(["wbc", "neutrophils", "hemoglobin", "platelets", "alt", "creatinine"] as LabFieldKey[]).map((field) => {
+                          const val = latest[field];
+                          const status = getLabStatus(field, val);
+                          const norm = LAB_NORMS[field];
+                          const colorCls = status === "normal"
+                            ? "text-emerald-700 bg-emerald-50"
+                            : status === "low"
+                            ? "text-amber-700 bg-amber-50"
+                            : "text-red-700 bg-red-50";
+                          return (
+                            <div key={field} className="bg-[#F5F2EE] rounded-lg px-3 py-2">
+                              <p className="text-xs text-[#9CA3AF] mb-0.5">{fieldLabels[field]}</p>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-sm font-semibold px-1.5 py-0.5 rounded ${colorCls}`}>
+                                  {val}
                                 </span>
-                              )}
+                              </div>
+                              <p className="text-[10px] text-[#9CA3AF] mt-0.5">
+                                Normal: {norm.min}–{norm.max}
+                              </p>
                             </div>
-                            <p className="text-xs text-[#9CA3AF] shrink-0">
-                              by {enteredByName}
-                            </p>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2 text-xs mb-2">
-                            {(["wbc", "neutrophils", "hemoglobin", "platelets", "alt", "creatinine"] as LabFieldKey[]).map(
-                              (field) => {
-                                const val = lab[field];
-                                const status = getLabStatus(field, val);
-                                const norm = LAB_NORMS[field];
-                                const colorCls =
-                                  status === "normal"
-                                    ? "text-emerald-700 bg-emerald-50"
-                                    : status === "low"
-                                    ? "text-amber-700 bg-amber-50"
-                                    : "text-red-700 bg-red-50";
-                                return (
-                                  <div key={field} className="flex items-center gap-2">
-                                    <span className="text-[#9CA3AF] w-20 capitalize shrink-0">
-                                      {field}
-                                    </span>
-                                    <span
-                                      className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${colorCls}`}
-                                      title={`Normal: ${norm.min}–${norm.max}`}
-                                    >
-                                      {val}
-                                    </span>
+                          );
+                        })}
+                      </div>
+                      {latest.notes && (
+                        <p className="text-xs text-[#9CA3AF] mt-2">Note: {latest.notes}</p>
+                      )}
+                    </div>
+
+                    {/* Trend chart */}
+                    <LabTrendChart labResults={labResults} />
+
+                    {/* Lab History (collapsible) */}
+                    {older.length > 0 && (
+                      <div className="border border-[#E5E2DC] rounded-xl overflow-hidden">
+                        <button
+                          onClick={() => setLabHistoryExpanded((v) => !v)}
+                          className="w-full flex items-center justify-between px-4 py-2.5 bg-[#F5F2EE] hover:bg-[#EDE9E3] transition-colors text-left"
+                        >
+                          <span className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
+                            Lab History ({older.length} older result{older.length !== 1 ? "s" : ""})
+                          </span>
+                          {labHistoryExpanded
+                            ? <ChevronUp size={13} className="text-[#9CA3AF]" />
+                            : <ChevronDown size={13} className="text-[#9CA3AF]" />
+                          }
+                        </button>
+                        {labHistoryExpanded && (
+                          <div className="divide-y divide-[#F5F2EE]">
+                            {older.map((lab) => {
+                              const dateStr = (lab.testDate ?? "").split("T")[0];
+                              return (
+                                <div key={lab._id} className="px-4 py-3">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-semibold text-[#2C3E2D]">{formatDate(dateStr)}</span>
+                                      {lab.cycle && (
+                                        <span className="text-xs text-[#7CAE8E] bg-[#F0F7F3] border border-[#C8D9CC] px-2 py-0.5 rounded-full">
+                                          {lab.cycle.title}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-xs text-[#9CA3AF]">by {lab.enteredBy?.fullName ?? "Unknown"}</span>
                                   </div>
-                                );
-                              }
-                            )}
+                                  <div className="grid grid-cols-3 gap-2 text-xs">
+                                    {(["wbc", "neutrophils", "hemoglobin", "platelets", "alt", "creatinine"] as LabFieldKey[]).map((field) => {
+                                      const val = lab[field];
+                                      const status = getLabStatus(field, val);
+                                      const norm = LAB_NORMS[field];
+                                      const colorCls = status === "normal" ? "text-emerald-700 bg-emerald-50" : status === "low" ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
+                                      return (
+                                        <div key={field} className="flex items-center gap-1.5">
+                                          <span className="text-[#9CA3AF] w-20 capitalize shrink-0">{fieldLabels[field]}</span>
+                                          <span className={`inline-block px-1.5 py-0.5 rounded font-medium ${colorCls}`} title={`Normal: ${norm.min}–${norm.max}`}>{val}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                  {lab.notes && <p className="text-xs text-[#9CA3AF] mt-1">{lab.notes}</p>}
+                                </div>
+                              );
+                            })}
                           </div>
-                          {lab.notes && (
-                            <p className="text-xs text-[#9CA3AF] mt-1">{lab.notes}</p>
-                          )}
-                        </div>
-                      );
-                    })}
-                </div>
-              )}
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </SectionCard>
 
             <SectionCard title="Messages & Documents">

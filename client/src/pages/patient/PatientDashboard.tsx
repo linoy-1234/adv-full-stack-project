@@ -221,20 +221,6 @@ export function PatientDashboard({ profile, protocol, latestLab, unreadMessages,
         </button>
       </div>
 
-      {/* Medications today */}
-      {allMeds.length > 0 && !todayItem && (
-        <div className="bg-white rounded-2xl border border-[#E5E2DC] p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold" style={{ color: "#2C3E2D" }}>All Medications</p>
-            <span className="text-xs text-[#9CA3AF] bg-[#F5F2EE] px-2 py-0.5 rounded-full border border-[#E5E2DC]">
-              Medication list created by your oncologist
-            </span>
-          </div>
-          <div className="flex flex-col gap-2">
-            {allMeds.map((med) => <MedCheckRow key={med.id} med={med} />)}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

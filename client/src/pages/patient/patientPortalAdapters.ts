@@ -21,6 +21,7 @@ import type {
 import {
   getChemoDisplayStatus,
   getEffectiveCycleDates,
+  getSurgeryDisplayStatus,
   toDateInputValue,
   todayIso,
 } from "../../utils/treatmentDisplay";
@@ -179,10 +180,8 @@ const adaptCycle = (
 
   if (cycle.treatmentType === "radiation") {
     const today = todayIso();
-    const isInProgress =
-      ["active", "approved", "in_progress"].includes(cycle.status) &&
-      startDate <= today &&
-      endDate >= today;
+    const isCompleted = cycle.status === "completed" || (!!endDate && endDate < today);
+    const isActive = !isCompleted && !!startDate && !!endDate && startDate <= today && endDate >= today;
 
     return {
       id: cycle._id,
@@ -192,12 +191,7 @@ const adaptCycle = (
       endDate,
       totalSessions: cycle.totalSessions || 0,
       completedSessions: cycle.completedSessions || 0,
-      status:
-        cycle.status === "completed"
-          ? "completed"
-          : isInProgress
-          ? "in_progress"
-          : "upcoming",
+      status: isCompleted ? "completed" : isActive ? "in_progress" : "upcoming",
       notes: cycle.notes,
     } as RadiationCourse;
   }
@@ -207,12 +201,7 @@ const adaptCycle = (
     type: "surgery",
     title: getRoadmapItemTitle(cycle),
     plannedDate: toDateInputValue(cycle.plannedDate || cycle.startDate),
-    status:
-      cycle.status === "completed"
-        ? "completed"
-        : cycle.status === "delayed" || cycle.status === "postponed"
-        ? "postponed"
-        : "upcoming",
+    status: getSurgeryDisplayStatus(cycle),
     notes: cycle.notes,
   } as SurgeryCheckpoint;
 };

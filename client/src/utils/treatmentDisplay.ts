@@ -51,6 +51,19 @@ export const hasValidLinkedLabForCurrentAttempt = (
   );
 };
 
+export type SurgeryDisplayStatus = "upcoming" | "today" | "completed";
+
+export const getSurgeryDisplayStatus = (
+  cycle: TreatmentCycleRecord
+): SurgeryDisplayStatus => {
+  const today = todayIso();
+  const plannedStr = toDateInputValue(cycle.plannedDate || cycle.startDate);
+  if (cycle.status === "completed" || (plannedStr && plannedStr < today))
+    return "completed";
+  if (plannedStr && plannedStr === today) return "today";
+  return "upcoming";
+};
+
 export const getChemoDisplayStatus = (
   cycle: TreatmentCycleRecord,
   labResults: ApiLabResult[]

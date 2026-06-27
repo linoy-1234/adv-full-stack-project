@@ -115,7 +115,7 @@ export interface SurgeryCheckpoint {
   type: "surgery";
   title: string;
   plannedDate: string;
-  status: "upcoming" | "completed" | "postponed";
+  status: "upcoming" | "completed" | "postponed" | "today";
   notes?: string;
 }
 
