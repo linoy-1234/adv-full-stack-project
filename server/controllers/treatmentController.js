@@ -65,6 +65,35 @@ const requireOncologist = (req, res) => {
   return true;
 };
 
+const normalizeMedications = (medications = []) =>
+  medications.map((medication) => {
+    const frequency = medication.frequency || medication.schedule || "";
+    const timing = medication.timing || "";
+
+    return {
+      ...medication,
+      id: medication.id || new mongoose.Types.ObjectId().toString(),
+      frequency,
+      timing,
+      schedule: medication.schedule || [frequency, timing].filter(Boolean).join(" - "),
+    };
+  });
+
+const hydrateProtocolResponse = async (protocolId) => {
+  const protocol = await TreatmentProtocol.findById(protocolId)
+    .populate("patient", "fullName email nationalId diagnosis bloodType allergies")
+    .populate("oncologist", "fullName email role")
+    .populate("createdBy", "fullName email role")
+    .populate("updatedBy", "fullName email role");
+
+  const cycles = await TreatmentCycle.find({
+    protocol: protocolId,
+    isActive: true,
+  }).sort({ startDate: 1, cycleNumber: 1 });
+
+  return { protocol, cycles };
+};
+
 const createTreatmentProtocol = async (req, res, next) => {
   try {
     if (!requireOncologist(req, res)) return;
@@ -98,7 +127,8 @@ const createTreatmentProtocol = async (req, res, next) => {
       protocolName: req.body.protocolName,
       diagnosis: req.body.diagnosis,
       treatmentTypes: req.body.treatmentTypes,
-      medications: req.body.medications,
+      medications: normalizeMedications(req.body.medications),
+      drugs: req.body.drugs,
       notes: req.body.notes,
       createdBy: req.user._id,
       updatedBy: req.user._id,
@@ -111,13 +141,13 @@ const createTreatmentProtocol = async (req, res, next) => {
       oncologist: req.user._id,
     }));
 
-    const cycles = await TreatmentCycle.insertMany(cyclesToCreate);
+    await TreatmentCycle.insertMany(cyclesToCreate);
+    const payload = await hydrateProtocolResponse(protocol._id);
 
     res.status(201).json({
       success: true,
       message: "Treatment protocol created successfully",
-      protocol,
-      cycles,
+      ...payload,
     });
   } catch (error) {
     next(error);
@@ -142,7 +172,9 @@ const getPatientTreatmentProtocol = async (req, res, next) => {
       isActive: true,
     })
       .populate("patient", "fullName email nationalId diagnosis bloodType allergies")
-      .populate("oncologist", "fullName email role");
+      .populate("oncologist", "fullName email role")
+      .populate("createdBy", "fullName email role")
+      .populate("updatedBy", "fullName email role");
 
     if (!protocol) {
       return res.status(404).json({
@@ -210,17 +242,24 @@ const updateTreatmentProtocol = async (req, res, next) => {
       });
     }
 
+    const updates = { ...req.body };
+
+    if (updates.medications) {
+      updates.medications = normalizeMedications(updates.medications);
+    }
+
     Object.assign(protocol, {
-      ...req.body,
+      ...updates,
       updatedBy: req.user._id,
     });
 
     await protocol.save();
+    const payload = await hydrateProtocolResponse(protocol._id);
 
     res.status(200).json({
       success: true,
       message: "Treatment protocol updated successfully",
-      protocol,
+      ...payload,
     });
   } catch (error) {
     next(error);
@@ -281,11 +320,12 @@ const createCycle = async (req, res, next) => {
       patient: protocol.patient,
       oncologist: req.user._id,
     });
+    const payload = await hydrateProtocolResponse(protocol._id);
 
     res.status(201).json({
       success: true,
       message: "Treatment cycle created successfully",
-      cycle,
+      ...payload,
     });
   } catch (error) {
     next(error);
@@ -356,11 +396,12 @@ const updateCycle = async (req, res, next) => {
 
     Object.assign(cycle, req.body);
     await cycle.save();
+    const payload = await hydrateProtocolResponse(protocol._id);
 
     res.status(200).json({
       success: true,
       message: "Treatment cycle updated successfully",
-      cycle,
+      ...payload,
     });
   } catch (error) {
     next(error);
@@ -440,18 +481,11 @@ const approveCycle = async (req, res, next) => {
       });
     }
 
-    if (["upcoming", "waiting_for_labs"].includes(cycle.status)) {
+    if (cycle.status !== "pending_review") {
       return res.status(400).json({
         success: false,
         message:
           "Cycle cannot be approved yet. It must be pending review after lab results are available.",
-      });
-    }
-
-    if (cycle.status === "completed") {
-      return res.status(400).json({
-        success: false,
-        message: "Completed cycles cannot be approved again",
       });
     }
 
@@ -467,11 +501,12 @@ const approveCycle = async (req, res, next) => {
     };
 
     await cycle.save();
+    const payload = await hydrateProtocolResponse(protocol._id);
 
     res.status(200).json({
       success: true,
       message: "Cycle approved successfully",
-      cycle,
+      ...payload,
     });
   } catch (error) {
     next(error);
@@ -505,18 +540,11 @@ const delayCycle = async (req, res, next) => {
       });
     }
 
-    if (["upcoming", "waiting_for_labs"].includes(cycle.status)) {
+    if (cycle.status !== "pending_review") {
       return res.status(400).json({
         success: false,
         message:
           "Cycle cannot be delayed from this status. It must be pending review first.",
-      });
-    }
-
-    if (cycle.status === "completed") {
-      return res.status(400).json({
-        success: false,
-        message: "Completed cycles cannot be delayed",
       });
     }
 
@@ -534,11 +562,12 @@ const delayCycle = async (req, res, next) => {
     };
 
     await cycle.save();
+    const payload = await hydrateProtocolResponse(protocol._id);
 
     res.status(200).json({
       success: true,
       message: "Cycle delayed successfully",
-      cycle,
+      ...payload,
     });
   } catch (error) {
     next(error);

@@ -4,7 +4,7 @@ const treatmentTypeSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ["chemotherapy", "radiation", "surgery"],
+      enum: ["chemotherapy", "radiation", "surgery", "supportive"],
       required: [true, "Treatment type is required"],
     },
 
@@ -25,6 +25,12 @@ const treatmentTypeSchema = new mongoose.Schema(
 
 const medicationSchema = new mongoose.Schema(
   {
+    id: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
     name: {
       type: String,
       required: [true, "Medication name is required"],
@@ -44,6 +50,18 @@ const medicationSchema = new mongoose.Schema(
     },
 
     schedule: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    frequency: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    timing: {
       type: String,
       trim: true,
       default: "",
@@ -99,6 +117,11 @@ const treatmentProtocolSchema = new mongoose.Schema(
 
     medications: {
       type: [medicationSchema],
+      default: [],
+    },
+
+    drugs: {
+      type: [String],
       default: [],
     },
 

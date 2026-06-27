@@ -2,7 +2,7 @@ const Joi = require("joi");
 
 const treatmentTypeSchema = Joi.object({
   type: Joi.string()
-    .valid("chemotherapy", "radiation", "surgery")
+    .valid("chemotherapy", "radiation", "surgery", "supportive")
     .required(),
 
   plannedCount: Joi.number()
@@ -17,6 +17,11 @@ const treatmentTypeSchema = Joi.object({
 });
 
 const medicationSchema = Joi.object({
+  id: Joi.string()
+    .allow("")
+    .max(80)
+    .default(""),
+
   name: Joi.string()
     .min(2)
     .max(100)
@@ -33,6 +38,16 @@ const medicationSchema = Joi.object({
     .default(""),
 
   schedule: Joi.string()
+    .allow("")
+    .max(160)
+    .default(""),
+
+  frequency: Joi.string()
+    .allow("")
+    .max(160)
+    .default(""),
+
+  timing: Joi.string()
     .allow("")
     .max(160)
     .default(""),
@@ -73,6 +88,19 @@ const cycleSchema = Joi.object({
     .items(Joi.string().max(100))
     .default([]),
 
+  plannedDate: Joi.date()
+    .allow(null),
+
+  totalSessions: Joi.number()
+    .integer()
+    .min(0)
+    .default(0),
+
+  completedSessions: Joi.number()
+    .integer()
+    .min(0)
+    .default(0),
+
   status: Joi.string()
     .valid(
       "upcoming",
@@ -81,7 +109,9 @@ const cycleSchema = Joi.object({
       "approved",
       "active",
       "completed",
-      "delayed"
+      "delayed",
+      "in_progress",
+      "postponed"
     )
     .default("upcoming"),
 
@@ -111,6 +141,10 @@ const createTreatmentProtocolSchema = Joi.object({
     .items(medicationSchema)
     .default([]),
 
+  drugs: Joi.array()
+    .items(Joi.string().max(100))
+    .default([]),
+
   notes: Joi.string()
     .allow("")
     .max(1000)
@@ -138,6 +172,9 @@ const updateTreatmentProtocolSchema = Joi.object({
   medications: Joi.array()
     .items(medicationSchema),
 
+  drugs: Joi.array()
+    .items(Joi.string().max(100)),
+
   notes: Joi.string()
     .allow("")
     .max(1000),
@@ -164,6 +201,17 @@ const updateCycleSchema = Joi.object({
   medications: Joi.array()
     .items(Joi.string().max(100)),
 
+  plannedDate: Joi.date()
+    .allow(null),
+
+  totalSessions: Joi.number()
+    .integer()
+    .min(0),
+
+  completedSessions: Joi.number()
+    .integer()
+    .min(0),
+
   status: Joi.string()
     .valid(
       "upcoming",
@@ -172,7 +220,9 @@ const updateCycleSchema = Joi.object({
       "approved",
       "active",
       "completed",
-      "delayed"
+      "delayed",
+      "in_progress",
+      "postponed"
     ),
 
   notes: Joi.string()

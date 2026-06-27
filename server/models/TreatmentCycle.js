@@ -107,8 +107,27 @@ const treatmentCycleSchema = new mongoose.Schema(
         "active",
         "completed",
         "delayed",
+        "in_progress",
+        "postponed",
       ],
       default: "upcoming",
+    },
+
+    plannedDate: {
+      type: Date,
+      default: null,
+    },
+
+    totalSessions: {
+      type: Number,
+      min: [0, "Total sessions cannot be negative"],
+      default: 0,
+    },
+
+    completedSessions: {
+      type: Number,
+      min: [0, "Completed sessions cannot be negative"],
+      default: 0,
     },
 
     notes: {

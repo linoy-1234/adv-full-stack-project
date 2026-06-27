@@ -2,15 +2,18 @@ import api from "./api";
 import type { ApiMessageResponse, TreatmentProtocolResponse } from "../types/api";
 
 export interface TreatmentTypePayload {
-  type: "chemotherapy" | "radiation" | "surgery";
+  type: "chemotherapy" | "radiation" | "surgery" | "supportive";
   plannedCount: number;
   notes?: string;
 }
 
 export interface MedicationPayload {
+  id?: string;
   name: string;
   dose?: string;
   route?: string;
+  frequency?: string;
+  timing?: string;
   schedule?: string;
   category?: "chemotherapy" | "supportive" | "chronic" | "other";
   notes?: string;
@@ -22,6 +25,9 @@ export interface CyclePayload {
   title: string;
   startDate: string;
   endDate: string;
+  plannedDate?: string;
+  totalSessions?: number;
+  completedSessions?: number;
   medications?: string[];
   status?:
     | "upcoming"
@@ -30,7 +36,9 @@ export interface CyclePayload {
     | "approved"
     | "active"
     | "completed"
-    | "delayed";
+    | "delayed"
+    | "in_progress"
+    | "postponed";
   notes?: string;
 }
 
@@ -39,6 +47,7 @@ export interface ProtocolPayload {
   diagnosis: string;
   treatmentTypes: TreatmentTypePayload[];
   medications?: MedicationPayload[];
+  drugs?: string[];
   notes?: string;
   cycles?: CyclePayload[];
 }
