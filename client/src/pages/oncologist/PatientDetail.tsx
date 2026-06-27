@@ -55,7 +55,6 @@ import type {
   TreatmentProtocolRecord,
   TreatmentProtocolResponse,
   TreatmentTypeRecord,
-  User,
 } from "../../types/api";
 
 interface PatientDetailProps {
@@ -199,7 +198,7 @@ const normalizeBloodType = (value?: string) => {
   return bloodTypes.includes(normalized) ? normalized : "unknown";
 };
 
-const getPersonName = (value?: string | User | null) => {
+const getPersonName = (value?: string | { fullName?: string } | null) => {
   if (typeof value === "object" && value?.fullName) return value.fullName;
   return "";
 };
@@ -324,6 +323,36 @@ const medicationToPayload = (medication: MedicationFormRecord): MedicationPayloa
   category: medication.category,
   notes: medication.notes.trim(),
 });
+
+const emptyMedicationForm = (): MedicationFormRecord => ({
+  id: "",
+  name: "",
+  dose: "",
+  route: "IV",
+  frequency: "",
+  timing: "",
+  category: "chemotherapy",
+  notes: "",
+});
+
+const prepareMedicationDraft = (
+  medication: MedicationFormRecord
+): MedicationFormRecord | null => {
+  const name = medication.name.trim();
+
+  if (!name) return null;
+
+  return {
+    ...medication,
+    id: medication.id || `med-${Date.now()}`,
+    name,
+    dose: medication.dose.trim(),
+    route: medication.route.trim(),
+    frequency: medication.frequency.trim(),
+    timing: medication.timing.trim(),
+    notes: medication.notes.trim(),
+  };
+};
 
 const sortCycles = (cycles: TreatmentCycleRecord[]) =>
   [...cycles].sort((a, b) => {
@@ -685,48 +714,58 @@ function EditMedicationsModal({
     initialMedications.map((medication) => ({ ...medication }))
   );
   const [medForm, setMedForm] = useState<MedicationFormRecord>({
-    id: "",
-    name: "",
-    dose: "",
-    route: "IV",
-    frequency: "",
-    timing: "",
-    category: "chemotherapy",
-    notes: "",
+    ...emptyMedicationForm(),
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const addMedication = () => {
-    if (!medForm.name.trim()) return;
+    const draft = prepareMedicationDraft(medForm);
+
+    if (!draft) return;
 
     setMedications((current) => [
       ...current,
-      {
-        ...medForm,
-        id: medForm.id || `med-${Date.now()}`,
-        name: medForm.name.trim(),
-      },
+      draft,
     ]);
-    setMedForm({
-      id: "",
-      name: "",
-      dose: "",
-      route: "IV",
-      frequency: "",
-      timing: "",
-      category: "chemotherapy",
-      notes: "",
-    });
+    setMedForm(emptyMedicationForm());
+    setError("");
   };
 
   const removeMedication = (id: string) =>
     setMedications((current) => current.filter((medication) => medication.id !== id));
 
+  const updateMedication = (
+    id: string,
+    field: keyof MedicationFormRecord,
+    value: string
+  ) => {
+    setMedications((current) =>
+      current.map((medication) =>
+        medication.id === id ? { ...medication, [field]: value } : medication
+      )
+    );
+  };
+
   const saveMedications = async () => {
+    const draft = prepareMedicationDraft(medForm);
+    const medicationsToSave = draft ? [...medications, draft] : medications;
+
     setSaving(true);
-    await onSave(medications);
-    setSaving(false);
-    onClose();
+    setError("");
+
+    try {
+      await onSave(medicationsToSave);
+      setSaving(false);
+      onClose();
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Failed to save medications"
+      );
+      setSaving(false);
+    }
   };
 
   return (
@@ -746,31 +785,112 @@ function EditMedicationsModal({
         </div>
 
         <div className="px-6 py-4 max-h-[70vh] overflow-y-auto space-y-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           {medications.map((medication) => (
             <div
               key={medication.id}
-              className="flex items-center justify-between bg-white rounded-lg px-3 py-2.5 border border-[#E5E2DC]"
+              className="bg-white rounded-xl px-3 py-3 border border-[#E5E2DC] space-y-2"
             >
-              <div>
-                <p className="text-sm font-medium text-[#2C3E2D]">
-                  {medication.name}
-                  {medication.dose && (
-                    <span className="text-[#9CA3AF] font-normal"> - {medication.dose}</span>
-                  )}
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
+                  Medication
                 </p>
-                <p className="text-xs text-[#9CA3AF]">
-                  {[medication.route, medication.frequency, medication.category]
-                    .filter(Boolean)
-                    .join(" - ")}
-                </p>
+                <button
+                  onClick={() => removeMedication(medication.id)}
+                  className="text-[#9CA3AF] hover:text-red-500"
+                  disabled={saving}
+                >
+                  <X size={14} />
+                </button>
               </div>
-              <button
-                onClick={() => removeMedication(medication.id)}
-                className="text-[#9CA3AF] hover:text-red-500"
-                disabled={saving}
-              >
-                <X size={14} />
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className={labelCls}>Name</label>
+                  <input
+                    className={inputCls}
+                    value={medication.name}
+                    onChange={(event) =>
+                      updateMedication(medication.id, "name", event.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Dose</label>
+                  <input
+                    className={inputCls}
+                    value={medication.dose}
+                    onChange={(event) =>
+                      updateMedication(medication.id, "dose", event.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Route</label>
+                  <select
+                    className={inputCls}
+                    value={medication.route}
+                    onChange={(event) =>
+                      updateMedication(medication.id, "route", event.target.value)
+                    }
+                  >
+                    {["IV", "oral", "subcutaneous", "topical", "other"].map((route) => (
+                      <option key={route} value={route}>
+                        {route}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Category</label>
+                  <select
+                    className={inputCls}
+                    value={medication.category}
+                    onChange={(event) =>
+                      updateMedication(medication.id, "category", event.target.value)
+                    }
+                  >
+                    <option value="chemotherapy">Chemotherapy</option>
+                    <option value="supportive">Supportive</option>
+                    <option value="chronic">Chronic</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Frequency</label>
+                  <input
+                    className={inputCls}
+                    value={medication.frequency}
+                    onChange={(event) =>
+                      updateMedication(medication.id, "frequency", event.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Timing</label>
+                  <input
+                    className={inputCls}
+                    value={medication.timing}
+                    onChange={(event) =>
+                      updateMedication(medication.id, "timing", event.target.value)
+                    }
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className={labelCls}>Notes</label>
+                  <input
+                    className={inputCls}
+                    value={medication.notes}
+                    onChange={(event) =>
+                      updateMedication(medication.id, "notes", event.target.value)
+                    }
+                  />
+                </div>
+              </div>
             </div>
           ))}
 
@@ -1538,7 +1658,9 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
   };
 
   const handleSaveMedications = async (medications: MedicationFormRecord[]) => {
-    if (!protocol) return;
+    if (!protocol) {
+      throw new Error("Create a treatment protocol before saving medications");
+    }
 
     setSavingTreatment(true);
     setTreatmentError("");
@@ -1555,7 +1677,9 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
       });
       applyTreatmentResponse(response);
     } catch (error) {
-      setTreatmentError(getApiErrorMessage(error, "Failed to save medications"));
+      const message = getApiErrorMessage(error, "Failed to save medications");
+      setTreatmentError(message);
+      throw new Error(message);
     } finally {
       setSavingTreatment(false);
     }
