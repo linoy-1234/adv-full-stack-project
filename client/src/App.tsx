@@ -1,19 +1,27 @@
-import { useState, lazy, Suspense, useTransition } from "react";
+import { useEffect, useState, lazy, Suspense, useTransition } from "react";
 import {
-  seedOncologist,
   seedPatientProfiles,
-  seedTreatmentProtocols,
-  seedLabResults,
   seedMessages,
   seedSymptomEntries,
   PatientProfile,
   TreatmentProtocol,
+  LabResult,
   Message,
   SymptomEntry,
   UserRole,
 } from "./utils/mockData";
 import { LoadingSpinner } from "./components/shared/LoadingSpinner";
 import { useAuth } from "./context/AuthContext";
+import { getMyLabs } from "./services/labService";
+import { getPatientById } from "./services/patientService";
+import { getMyProtocol } from "./services/treatmentService";
+import {
+  adaptLabResult,
+  adaptPatientProfile,
+  adaptTreatmentProtocol,
+  getUserPatientProfileId,
+} from "./pages/patient/patientPortalAdapters";
+import type { TreatmentProtocolResponse } from "./types/api";
 
 // ─── Lazy loads ───────────────────────────────────────────────────────────────
 
@@ -114,12 +122,14 @@ export default function App() {
 
   // Mutable state (simulating backend collections)
   const [patientProfiles, setPatientProfiles] = useState<PatientProfile[]>(seedPatientProfiles);
-  const [protocols, setProtocols] = useState<TreatmentProtocol[]>(seedTreatmentProtocols);
   const [extraMessages, setExtraMessages] = useState<Message[]>([]);
   const [extraSymptomEntries, setExtraSymptomEntries] = useState<SymptomEntry[]>([]);
+  const [patientPortalProfile, setPatientPortalProfile] = useState<PatientProfile | null>(null);
+  const [patientPortalProtocol, setPatientPortalProtocol] = useState<TreatmentProtocol | undefined>(undefined);
+  const [patientPortalLabs, setPatientPortalLabs] = useState<LabResult[]>([]);
+  const [patientPortalLoading, setPatientPortalLoading] = useState(false);
+  const [patientPortalError, setPatientPortalError] = useState("");
 
-  // TODO(patient-phase): connect BloodWork to real API; currently uses seed mock data
-  const allLabResults = [...seedLabResults];
   const allMessages = [
     ...seedMessages,
     ...extraMessages.filter((m) => !seedMessages.find((sm) => sm.id === m.id)),
@@ -128,6 +138,89 @@ export default function App() {
     ...seedSymptomEntries,
     ...extraSymptomEntries.filter((e) => !seedSymptomEntries.find((se) => se.id === e.id)),
   ];
+
+  useEffect(() => {
+    if (role !== "patient" || !activeProfileId) {
+      setPatientPortalProfile(null);
+      setPatientPortalProtocol(undefined);
+      setPatientPortalLabs([]);
+      setPatientPortalError("");
+      setPatientPortalLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadPatientPortalData = async () => {
+      setPatientPortalLoading(true);
+      setPatientPortalError("");
+
+      try {
+        const protocolRequest = getMyProtocol().catch((error: unknown) => {
+          const status =
+            typeof error === "object" &&
+            error !== null &&
+            "response" in error &&
+            typeof (error as { response?: { status?: number } }).response?.status === "number"
+              ? (error as { response?: { status?: number } }).response?.status
+              : undefined;
+
+          if (status === 404) {
+            return { success: false } as TreatmentProtocolResponse;
+          }
+
+          throw error;
+        });
+
+        const [profileResponse, labsResponse, protocolResponse] =
+          await Promise.all([
+            getPatientById(activeProfileId),
+            getMyLabs(),
+            protocolRequest,
+          ]);
+
+        if (cancelled) return;
+
+        const apiLabs = labsResponse.labResults || [];
+        const apiProtocol = protocolResponse.protocol || null;
+        const adaptedLabs = apiLabs
+          .map(adaptLabResult)
+          .sort((a, b) => b.date.localeCompare(a.date));
+
+        setPatientPortalLabs(adaptedLabs);
+        setPatientPortalProtocol(
+          apiProtocol
+            ? adaptTreatmentProtocol(
+                apiProtocol,
+                protocolResponse.cycles || [],
+                apiLabs
+              )
+            : undefined
+        );
+        setPatientPortalProfile(
+          adaptPatientProfile(profileResponse.patient, apiProtocol)
+        );
+      } catch (error) {
+        if (cancelled) return;
+        setPatientPortalProfile(null);
+        setPatientPortalProtocol(undefined);
+        setPatientPortalLabs([]);
+        setPatientPortalError(
+          getApiErrorMessage(error, "Failed to load patient portal data.")
+        );
+      } finally {
+        if (!cancelled) {
+          setPatientPortalLoading(false);
+        }
+      }
+    };
+
+    loadPatientPortalData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [role, activeProfileId]);
 
   const navigate = (next: Page) => {
     startTransition(() => {
@@ -182,10 +275,6 @@ export default function App() {
     setPatientProfiles((prev) => prev.map((x) => (x.id === p.id ? p : x)));
   };
 
-  const handleUpdateProtocol = (tp: TreatmentProtocol) => {
-    setProtocols((prev) => prev.map((x) => (x.id === tp.id ? tp : x)));
-  };
-
   const handleSendMessage = (m: Message) => {
     setExtraMessages((prev) => [...prev, m]);
   };
@@ -221,18 +310,15 @@ export default function App() {
               const loggedInUser = data.user;
 
               if (loggedInUser.role === "patient") {
-                const matchingMockProfile = patientProfiles.find(
-                  (profile) =>
-                    profile.email.toLowerCase() === loggedInUser.email.toLowerCase()
-                );
+                const patientProfileId = getUserPatientProfileId(loggedInUser);
 
-                if (!matchingMockProfile) {
-                  return "Login succeeded, but this patient profile is not connected to the current UI data yet.";
+                if (!patientProfileId) {
+                  return "Login succeeded, but this patient account is not linked to a patient profile yet.";
                 }
 
                 startTransition(() => {
                   setRole("patient");
-                  setActiveProfileId(matchingMockProfile.id);
+                  setActiveProfileId(patientProfileId);
                   setSelectedPatientId(null);
                   setPageHistory([]);
                   setPage("patient-dashboard");
@@ -311,20 +397,15 @@ export default function App() {
                 return "Only patient accounts can register from this page.";
               }
 
-              const mockProfileForCurrentUi = patientProfiles.find(
-                (profile) =>
-                  profile.email.toLowerCase() ===
-                  registeredUser.email.toLowerCase()
-              );
+              const patientProfileId = getUserPatientProfileId(registeredUser);
 
-              if (!mockProfileForCurrentUi) {
-                return "Registration succeeded, but this patient profile is not connected to the current UI data yet.";
+              if (!patientProfileId) {
+                return "Registration succeeded, but this patient account is not linked to a patient profile yet.";
               }
 
               startTransition(() => {
                 setRole("patient");
-                // TODO: Remove this email-based mock profile bridge when the patient dashboard/detail pages use the backend patientProfile ObjectId directly.
-                setActiveProfileId(mockProfileForCurrentUi.id);
+                setActiveProfileId(patientProfileId);
                 setSelectedPatientId(null);
                 setPage("patient-dashboard");
                 setPageHistory([]);
@@ -344,10 +425,24 @@ export default function App() {
 
   // ─── Patient Portal ─────────────────────────────────────────────────────────
   if (PATIENT_PAGES.includes(page) && role === "patient" && activeProfileId) {
-    const profile = patientProfiles.find((p) => p.id === activeProfileId)!;
-    const protocol = protocols.find((p) => p.patientProfileId === activeProfileId);
-    const patientLabs = allLabResults.filter((l) => l.patientProfileId === activeProfileId).sort((a, b) => b.date.localeCompare(a.date));
-    const patientMessages = allMessages.filter((m) => m.patientProfileId === activeProfileId);
+    if (patientPortalLoading || !patientPortalProfile) {
+      return (
+        <Suspense fallback={<SuspenseFallback />}>
+          <LoadingSpinner
+            message={patientPortalError || "Loading patient portal..."}
+          />
+        </Suspense>
+      );
+    }
+
+    const profile = patientPortalProfile;
+    const protocol = patientPortalProtocol;
+    const patientLabs = patientPortalLabs;
+    const mockProfileForUnconnectedSections =
+      patientProfiles.find(
+        (p) => p.email.toLowerCase() === profile.email.toLowerCase()
+      ) || profile;
+    const patientMessages = allMessages.filter((m) => m.patientProfileId === mockProfileForUnconnectedSections.id);
     const unreadFromOnco = patientMessages.filter((m) => m.senderRole === "oncologist" && !m.read);
 
     return (
@@ -378,7 +473,7 @@ export default function App() {
           )}
           {page === "patient-journal" && (
             <SymptomJournal
-              profile={profile}
+              profile={mockProfileForUnconnectedSections}
               symptomEntries={allSymptomEntries}
               onAddEntry={handleAddSymptomEntry}
               onDeleteEntry={handleDeleteSymptomEntry}
@@ -386,11 +481,11 @@ export default function App() {
           )}
           {page === "patient-messages" && (
             <PatientMessages
-              profile={profile}
+              profile={mockProfileForUnconnectedSections}
               messages={patientMessages}
               onSend={(text) => handleSendMessage({
                 id: `msg-${Date.now()}`,
-                patientProfileId: profile.id,
+                patientProfileId: mockProfileForUnconnectedSections.id,
                 sender: profile.fullName,
                 senderRole: "patient",
                 text,

@@ -90,6 +90,8 @@ const getPatients = async (req, res, next) => {
 
     const patients = await PatientProfile.find(filter)
       .populate("oncologist", "fullName email role")
+      .populate("createdBy", "fullName email role")
+      .populate("updatedBy", "fullName email role")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -106,7 +108,9 @@ const getPatientById = async (req, res, next) => {
   try {
     const patient = await PatientProfile.findById(req.params.id)
       .populate("oncologist", "fullName email role")
-      .populate("user", "fullName email role isActive");
+      .populate("user", "fullName email role isActive")
+      .populate("createdBy", "fullName email role")
+      .populate("updatedBy", "fullName email role");
 
     if (!patient || !patient.isActive) {
       return res.status(404).json({

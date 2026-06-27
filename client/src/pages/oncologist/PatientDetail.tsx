@@ -24,6 +24,13 @@ import {
 
 import { RibbonBackground } from "../../components/shared/RibbonBackground";
 import { formatDate, shiftDate, getLabStatus, LAB_NORMS, type LabFieldKey } from "../../utils/mockData";
+import {
+  getChemoDisplayStatus,
+  getEffectiveCycleDates,
+  toDateInputValue,
+  todayIso,
+  type ChemoDisplayStatus,
+} from "../../utils/treatmentDisplay";
 import { getPatientLabs } from "../../services/labService";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
@@ -68,14 +75,6 @@ interface PatientDetailProps {
 type ModalName = "profile" | "medications" | "protocol" | "dates" | null;
 type MedicationCategory = TreatmentMedicationCategory;
 type TreatmentItemType = TreatmentKind;
-type ChemoDisplayStatus =
-  | "upcoming"
-  | "approved"
-  | "delayed"
-  | "completed"
-  | "waiting_labs"
-  | "ready_for_review"
-  | "active";
 
 interface MedicationFormRecord {
   id: string;
@@ -189,10 +188,6 @@ const inputCls =
 const labelCls =
   "block text-xs font-semibold text-[#6B7280] mb-1 uppercase tracking-wide";
 const bloodTypes = ["unknown", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-const todayIso = () => new Date().toISOString().slice(0, 10);
-const toDateInputValue = (date?: string | null) => (date ? date.slice(0, 10) : "");
-const isSameDateKey = (left?: string | null, right?: string | null) =>
-  !!left && !!right && toDateInputValue(left) === toDateInputValue(right);
 
 const getAllergyNames = (allergies?: PatientAllergy[]) =>
   (allergies ?? []).map((allergy) => allergy.name).filter(Boolean);
@@ -365,40 +360,6 @@ const sortCycles = (cycles: TreatmentCycleRecord[]) =>
     return dateA.localeCompare(dateB) || a.cycleNumber - b.cycleNumber;
   });
 
-const getEffectiveCycleDates = (cycle: TreatmentCycleRecord) => {
-  const delayedStart = toDateInputValue(cycle.decision?.delayedToStartDate);
-  const delayedEnd = toDateInputValue(cycle.decision?.delayedToEndDate);
-  const useDelayedDates =
-    !!delayedStart &&
-    (cycle.status === "delayed" ||
-      cycle.status === "pending_review" ||
-      cycle.status === "waiting_for_labs" ||
-      cycle.status === "approved" ||
-      cycle.decision?.decisionStatus === "delayed");
-  const startDate = useDelayedDates
-    ? delayedStart
-    : toDateInputValue(cycle.startDate || cycle.plannedDate);
-  const endDate = useDelayedDates
-    ? delayedEnd || delayedStart
-    : toDateInputValue(cycle.endDate || cycle.plannedDate || cycle.startDate);
-
-  return { startDate, endDate };
-};
-
-const hasValidLinkedLabForCurrentAttempt = (
-  cycle: TreatmentCycleRecord,
-  labResults: ApiLabResult[]
-) => {
-  const { startDate } = getEffectiveCycleDates(cycle);
-
-  return labResults.some(
-    (lab) =>
-      lab.cycle?._id === cycle._id &&
-      lab.isActive !== false &&
-      isSameDateKey(lab.testDate, startDate)
-  );
-};
-
 const getRoadmapItemTitle = (cycle: TreatmentCycleRecord) => {
   if (cycle.treatmentType === "chemotherapy") {
     return cycle.title || `Cycle ${cycle.cycleNumber}`;
@@ -420,40 +381,6 @@ const getRoadmapItemTitle = (cycle: TreatmentCycleRecord) => {
 
   return cycle.title;
 };
-
-const getChemoDisplayStatus = (
-  cycle: TreatmentCycleRecord,
-  labResults: ApiLabResult[]
-): ChemoDisplayStatus => {
-  const status = cycle.status;
-  const today = todayIso();
-  const { startDate, endDate } = getEffectiveCycleDates(cycle);
-  const hasValidLab = hasValidLinkedLabForCurrentAttempt(cycle, labResults);
-  const hasArrived = !!startDate && startDate <= today;
-
-  if (status === "completed") return "completed";
-  if (status === "pending_review") {
-    if (hasValidLab) return "ready_for_review";
-    return hasArrived ? "waiting_labs" : "upcoming";
-  }
-  if (status === "waiting_for_labs") return hasArrived ? "waiting_labs" : "upcoming";
-  if (status === "delayed") return hasArrived ? "waiting_labs" : "delayed";
-  if (status === "active") {
-    if (endDate && endDate < today) return "completed";
-    if (startDate && endDate && startDate <= today && endDate >= today) return "active";
-    return "approved";
-  }
-  if (status === "approved") {
-    if (endDate && endDate < today) return "completed";
-    if (startDate && endDate && startDate <= today && endDate >= today) {
-      return "active";
-    }
-    return "approved";
-  }
-
-  return hasArrived ? "waiting_labs" : "upcoming";
-};
-
 const toCyclePayload = (cycle: TreatmentCycleRecord): Partial<CyclePayload> => ({
   treatmentType: cycle.treatmentType,
   cycleNumber: cycle.cycleNumber,

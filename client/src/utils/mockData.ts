@@ -155,6 +155,7 @@ export interface LabResult {
   enteredBy: string;
   enteredAt: string;
   linkedCycleId?: string;
+  linkedCycleLabel?: string;
 }
 
 export const LAB_NORMS = {
@@ -197,6 +198,7 @@ export interface PatientProfile {
   bloodType: string;
   allergies: string[];
   assignedOncologistId: string;
+  oncologistName?: string;
   medications: Medication[];
   notes?: string;
   createdByOncologistId: string;
