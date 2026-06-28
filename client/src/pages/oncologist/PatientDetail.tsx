@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  Activity,
   AlertTriangle,
   ArrowLeft,
   Calendar,
@@ -22,6 +21,7 @@ import {
 } from "lucide-react";
 import { MessagesPanel } from "../../components/shared/MessagesPanel";
 import { ClinicalDocumentsPanel } from "../../components/shared/ClinicalDocumentsPanel";
+import { SymptomJournalPanel } from "../../components/shared/SymptomJournalPanel";
 
 import { RibbonBackground } from "../../components/shared/RibbonBackground";
 import { formatDate, shiftDate, getLabStatus, LAB_NORMS, type LabFieldKey } from "../../utils/mockData";
@@ -2695,11 +2695,7 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
 
             <ClinicalDocumentsPanel patientId={patientId} canManage={true} />
 
-            <SectionCard title="Symptom Journal" source="Patient-reported">
-              <PhasePlaceholder icon={<Activity size={16} />}>
-                Symptom entries will be connected in the Symptoms phase.
-              </PhasePlaceholder>
-            </SectionCard>
+            <SymptomJournalPanel patientId={patientId} />
           </>
         )}
       </main>

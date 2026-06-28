@@ -1,5 +1,9 @@
 import api from "./api";
-import type { ApiMessageResponse, SymptomLogsResponse } from "../types/api";
+import type {
+  ApiMessageResponse,
+  SymptomLogsResponse,
+  SymptomLogResponse,
+} from "../types/api";
 
 export type SymptomType =
   | "nausea"
@@ -29,8 +33,8 @@ export const getMySymptoms = async (): Promise<SymptomLogsResponse> => {
 
 export const createSymptomLog = async (
   symptomData: SymptomLogPayload
-): Promise<SymptomLogsResponse> => {
-  const { data } = await api.post<SymptomLogsResponse>(
+): Promise<SymptomLogResponse> => {
+  const { data } = await api.post<SymptomLogResponse>(
     "/symptoms/my",
     symptomData
   );
@@ -61,8 +65,8 @@ export const getSymptomLogById = async (
 export const updateSymptomLog = async (
   symptomLogId: string,
   symptomData: Partial<SymptomLogPayload>
-): Promise<SymptomLogsResponse> => {
-  const { data } = await api.put<SymptomLogsResponse>(
+): Promise<SymptomLogResponse> => {
+  const { data } = await api.put<SymptomLogResponse>(
     `/symptoms/${symptomLogId}`,
     symptomData
   );
