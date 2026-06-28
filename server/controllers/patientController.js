@@ -1,5 +1,8 @@
 const User = require("../models/User");
 const PatientProfile = require("../models/PatientProfile");
+const TreatmentProtocol = require("../models/TreatmentProtocol");
+const TreatmentCycle = require("../models/TreatmentCycle");
+const Message = require("../models/Message");
 
 const buildPatientResponse = (patient) => {
   return {
@@ -94,10 +97,75 @@ const getPatients = async (req, res, next) => {
       .populate("updatedBy", "fullName email role")
       .sort({ createdAt: -1 });
 
+    const patientIds = patients.map((p) => p._id);
+
+    const [protocols, actionableCycles, unreadMsgAgg] = await Promise.all([
+      TreatmentProtocol.find({
+        patient: { $in: patientIds },
+        isActive: true,
+      }).select("patient protocolName treatmentTypes"),
+
+      TreatmentCycle.find({
+        patient: { $in: patientIds },
+        isActive: true,
+        status: { $in: ["waiting_for_labs", "pending_review", "delayed"] },
+      }).select("patient status"),
+
+      Message.aggregate([
+        {
+          $match: {
+            patient: { $in: patientIds },
+            senderRole: "patient",
+            readByOncologist: false,
+            isActive: true,
+          },
+        },
+        { $group: { _id: "$patient", count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const protocolMap = {};
+    for (const protocol of protocols) {
+      protocolMap[protocol.patient.toString()] = {
+        protocolName: protocol.protocolName,
+        treatmentTypes: protocol.treatmentTypes.map((t) => t.type),
+      };
+    }
+
+    // Higher number = higher priority; keeps the most urgent status per patient
+    const CYCLE_PRIORITY = { pending_review: 3, waiting_for_labs: 2, delayed: 1 };
+    const cycleStatusMap = {};
+    for (const cycle of actionableCycles) {
+      const pid = cycle.patient.toString();
+      const incoming = CYCLE_PRIORITY[cycle.status] ?? 0;
+      const current = CYCLE_PRIORITY[cycleStatusMap[pid]] ?? 0;
+      if (incoming > current) cycleStatusMap[pid] = cycle.status;
+    }
+
+    const patientsWithUnread = new Set(
+      unreadMsgAgg.filter((e) => e.count > 0).map((e) => e._id.toString())
+    );
+
+    const computePendingAction = (patientId) => {
+      const pid = patientId.toString();
+      if (patientsWithUnread.has(pid)) return "unread_message";
+      const cycleStatus = cycleStatusMap[pid];
+      if (cycleStatus === "pending_review") return "cycle_ready_review";
+      if (cycleStatus === "waiting_for_labs") return "waiting_labs";
+      if (cycleStatus === "delayed") return "treatment_delayed";
+      return "none";
+    };
+
+    const result = patients.map((patient) => ({
+      ...buildPatientResponse(patient),
+      treatmentSummary: protocolMap[patient._id.toString()] || null,
+      pendingAction: computePendingAction(patient._id),
+    }));
+
     res.status(200).json({
       success: true,
-      count: patients.length,
-      patients: patients.map(buildPatientResponse),
+      count: result.length,
+      patients: result,
     });
   } catch (error) {
     next(error);
