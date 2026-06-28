@@ -248,16 +248,85 @@ export interface LabResultsResponse {
   labResults: ApiLabResult[];
 }
 
+export interface MessageAttachmentRecord {
+  originalName: string;
+  storedName: string;
+  fileUrl: string;
+  mimeType: string;
+  size: number;
+  uploadedAt: string;
+}
+
+export interface MessageRecord {
+  _id: string;
+  patient: string;
+  sender:
+    | { _id: string; fullName: string; email: string; role: UserRole }
+    | string;
+  senderRole: "patient" | "oncologist";
+  text: string;
+  attachments?: MessageAttachmentRecord[];
+  readByPatient: boolean;
+  readByOncologist: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MessagesResponse {
   success: boolean;
   count: number;
-  messages: unknown[];
+  messages: MessageRecord[];
 }
 
 export interface MessageRecordResponse {
   success: boolean;
   message: string;
-  messageRecord: unknown;
+  messageRecord: MessageRecord;
+}
+
+export type DocumentType =
+  | "visit_summary"
+  | "medical_certificate"
+  | "prescription"
+  | "other";
+
+export interface ClinicalDocumentRecord {
+  _id: string;
+  patient: string;
+  uploadedBy:
+    | { _id: string; fullName: string; email: string; role: UserRole }
+    | string;
+  title: string;
+  originalName: string;
+  publicId: string;
+  fileUrl: string;
+  mimeType: string;
+  size: number;
+  documentType: DocumentType;
+  description?: string;
+  isActive: boolean;
+  deletedAt?: string | null;
+  deletedBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentsResponse {
+  success: boolean;
+  count: number;
+  documents: ClinicalDocumentRecord[];
+}
+
+export interface DocumentResponse {
+  success: boolean;
+  message?: string;
+  document: ClinicalDocumentRecord;
+}
+
+export interface DocumentUrlResponse {
+  success: boolean;
+  fileUrl: string;
 }
 
 export interface SymptomLogsResponse {
