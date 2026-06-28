@@ -111,7 +111,10 @@ export function PatientLayout({ patientName, patientId, children, currentPage, o
                 <span style={{ color: isActive ? "#7CAE8E" : "#9CA3AF" }}>{item.icon}</span>
                 <span className="text-sm flex-1">{item.label}</span>
                 {item.page === "patient-messages" && unreadMessages > 0 && (
-                  <span className="text-xs px-1.5 py-0.5 rounded-full shrink-0" style={{ backgroundColor: "#7CAE8E", color: "#FFFFFF" }}>
+                  <span
+                    className="text-xs px-1.5 py-0.5 rounded-full shrink-0 font-bold"
+                    style={{ backgroundColor: "#EF4444", color: "#FFFFFF" }}
+                  >
                     {unreadMessages}
                   </span>
                 )}

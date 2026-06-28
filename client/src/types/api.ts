@@ -329,6 +329,16 @@ export interface DocumentUrlResponse {
   fileUrl: string;
 }
 
+export interface UnreadCountResponse {
+  success: boolean;
+  count: number;
+}
+
+export interface UnreadCountsResponse {
+  success: boolean;
+  counts: Record<string, number>;
+}
+
 export interface SymptomLogsResponse {
   success: boolean;
   count: number;

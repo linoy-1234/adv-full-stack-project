@@ -10,6 +10,7 @@ import {
   formatDate,
   TODAY,
 } from "../../utils/mockData";
+import { getOncologistUnreadCounts } from "../../services/messageService";
 import { RibbonBackground } from "../../components/shared/RibbonBackground";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
@@ -445,10 +446,17 @@ export function OncologistDashboard({ onSelectPatient, onLogout }: OncologistDas
   const [showAddModal, setShowAddModal] = useState(false);
   const [search, setSearch] = useState("");
   const [actionError, setActionError] = useState("");
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     dispatch(fetchPatients());
   }, [dispatch]);
+
+  useEffect(() => {
+    getOncologistUnreadCounts()
+      .then((res) => setUnreadCounts(res.counts))
+      .catch(() => setUnreadCounts({}));
+  }, []);
 
   const filtered = patients.filter((patient) => {
     const query = search.toLowerCase();
@@ -560,7 +568,18 @@ export function OncologistDashboard({ onSelectPatient, onLogout }: OncologistDas
               return (
                 <div key={profile._id} className="grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1.5fr_0.5fr] gap-4 px-5 py-4 border-b border-[#F5F2EE] last:border-0 hover:bg-[#FAF8F5] transition-colors items-center">
                   <div>
-                    <p className="text-sm font-semibold text-[#2C3E2D]">{profile.fullName}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-[#2C3E2D]">{profile.fullName}</p>
+                      {(unreadCounts[profile._id] ?? 0) > 0 && (
+                        <span
+                          title={`${unreadCounts[profile._id]} unread message${unreadCounts[profile._id] === 1 ? "" : "s"}`}
+                          className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold leading-none"
+                          style={{ backgroundColor: "#EF4444", color: "#ffffff" }}
+                        >
+                          {unreadCounts[profile._id]}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-[#9CA3AF]">{profile.email}</p>
                     {profile.nationalId && <p className="text-xs text-[#9CA3AF]">ID: {profile.nationalId}</p>}
                   </div>

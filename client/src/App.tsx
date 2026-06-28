@@ -15,6 +15,7 @@ import { useAuth } from "./context/AuthContext";
 import { getMyLabs } from "./services/labService";
 import { getPatientById } from "./services/patientService";
 import { getMyProtocol } from "./services/treatmentService";
+import { getMyUnreadCount } from "./services/messageService";
 import {
   adaptLabResult,
   adaptPatientProfile,
@@ -129,6 +130,7 @@ export default function App() {
   const [patientPortalLabs, setPatientPortalLabs] = useState<LabResult[]>([]);
   const [patientPortalLoading, setPatientPortalLoading] = useState(false);
   const [patientPortalError, setPatientPortalError] = useState("");
+  const [patientUnreadCount, setPatientUnreadCount] = useState(0);
 
   const allMessages = [
     ...seedMessages,
@@ -146,6 +148,7 @@ export default function App() {
       setPatientPortalLabs([]);
       setPatientPortalError("");
       setPatientPortalLoading(false);
+      setPatientUnreadCount(0);
       return;
     }
 
@@ -172,14 +175,17 @@ export default function App() {
           throw error;
         });
 
-        const [profileResponse, labsResponse, protocolResponse] =
+        const [profileResponse, labsResponse, protocolResponse, unreadResponse] =
           await Promise.all([
             getPatientById(activeProfileId),
             getMyLabs(),
             protocolRequest,
+            getMyUnreadCount().catch(() => ({ success: true, count: 0 })),
           ]);
 
         if (cancelled) return;
+
+        setPatientUnreadCount(unreadResponse.count ?? 0);
 
         const apiLabs = labsResponse.labResults || [];
         const apiProtocol = protocolResponse.protocol || null;
@@ -450,7 +456,7 @@ export default function App() {
           onNavigate={handlePatientNavigation}
           onLogout={logout}
           onBack={page !== "patient-dashboard" ? goBack : undefined}
-          unreadMessages={unreadFromOnco.length}
+          unreadMessages={patientUnreadCount}
         >
           {page === "patient-dashboard" && (
             <PatientDashboard
@@ -476,7 +482,10 @@ export default function App() {
             />
           )}
           {page === "patient-messages" && (
-            <PatientMessages patientId={activeProfileId} />
+            <PatientMessages
+              patientId={activeProfileId}
+              onUnreadCountChange={setPatientUnreadCount}
+            />
           )}
           {page === "patient-profile" && (
             <PatientProfilePage profile={profile} protocol={protocol} />
