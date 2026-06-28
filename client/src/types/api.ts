@@ -49,6 +49,11 @@ export interface PatientProfile {
   updatedBy?: string | User | null;
   createdAt?: string;
   updatedAt?: string;
+  treatmentSummary?: {
+    protocolName: string;
+    treatmentTypes: string[];
+  } | null;
+  pendingAction?: "waiting_labs" | "labs_received" | "cycle_ready_review" | "unread_message" | "treatment_delayed" | "none";
 }
 
 export interface AuthResponse {

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  seedOncologist,
   Medication,
   TreatmentItemType,
   MedicationCategory,
@@ -10,6 +9,7 @@ import {
   formatDate,
   TODAY,
 } from "../../utils/mockData";
+import { useAuth } from "../../context/AuthContext";
 import { getOncologistUnreadCounts } from "../../services/messageService";
 import { RibbonBackground } from "../../components/shared/RibbonBackground";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
@@ -84,9 +84,10 @@ function AccountBadge({ status }: { status: AccountStatusLike }) {
 interface AddPatientModalProps {
   onClose: () => void;
   onSave: (patientData: PatientPayload) => Promise<string | null>;
+  oncologistName: string;
 }
 
-function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
+function AddPatientModal({ onClose, onSave, oncologistName }: AddPatientModalProps) {
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -424,7 +425,7 @@ function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
 
         <div className="flex items-center justify-between px-6 py-4 border-t border-[#E5E2DC]">
           <p className="text-xs text-[#9CA3AF]">
-            Assigned oncologist: <strong>{seedOncologist.fullName}</strong>
+            Assigned oncologist: <strong>{oncologistName}</strong>
           </p>
           <div className="flex gap-2">
             <button onClick={onClose} className="px-4 py-2 rounded-lg border border-[#E5E2DC] text-sm text-[#6B7280] hover:bg-[#F5F2EE] transition-colors">Cancel</button>
@@ -437,6 +438,7 @@ function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
 }
 
 export function OncologistDashboard({ onSelectPatient, onLogout }: OncologistDashboardProps) {
+  const { user: authUser } = useAuth();
   const dispatch = useAppDispatch();
   const {
     list: patients,
@@ -500,7 +502,7 @@ export function OncologistDashboard({ onSelectPatient, onLogout }: OncologistDas
             </div>
             <div>
               <h1 className="text-base font-semibold text-[#2C3E2D]">Onco+Log</h1>
-              <p className="text-xs text-[#9CA3AF]">{seedOncologist.fullName} · {seedOncologist.department}</p>
+              <p className="text-xs text-[#9CA3AF]">{authUser?.fullName ?? "Oncologist"}</p>
             </div>
           </div>
           <button onClick={onLogout} className="flex items-center gap-1.5 text-sm text-[#9CA3AF] hover:text-[#6B7280] transition-colors">
@@ -587,13 +589,26 @@ export function OncologistDashboard({ onSelectPatient, onLogout }: OncologistDas
                     <p className="text-sm text-[#374151] leading-snug">{profile.diagnosis || "—"}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-[#374151]">Treatment not connected yet</p>
+                    {profile.treatmentSummary ? (
+                      <>
+                        <p className="text-sm font-medium text-[#374151] leading-snug">{profile.treatmentSummary.protocolName}</p>
+                        {profile.treatmentSummary.treatmentTypes.length > 0 && (
+                          <p className="text-xs text-[#9CA3AF]">
+                            {profile.treatmentSummary.treatmentTypes
+                              .map((t) => t.charAt(0).toUpperCase() + t.slice(1))
+                              .join(" · ")}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm text-[#9CA3AF]">No active treatment protocol</p>
+                    )}
                   </div>
                   <div>
                     <AccountBadge status={profile.accountStatus} />
                   </div>
                   <div>
-                    <PendingBadge action="none" />
+                    <PendingBadge action={profile.pendingAction ?? "none"} />
                   </div>
                   <div className="flex justify-end">
                     <button onClick={() => handleOpenPatient(profile)} className="flex items-center gap-0.5 text-sm text-[#7CAE8E] hover:text-[#5A8A6A] font-medium">
@@ -618,6 +633,7 @@ export function OncologistDashboard({ onSelectPatient, onLogout }: OncologistDas
         <AddPatientModal
           onClose={() => setShowAddModal(false)}
           onSave={handleCreatePatient}
+          oncologistName={authUser?.fullName ?? "Oncologist"}
         />
       )}
     </div>
