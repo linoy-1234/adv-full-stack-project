@@ -122,7 +122,7 @@ export default function App() {
 
   // Mutable state (simulating backend collections)
   const [patientProfiles, setPatientProfiles] = useState<PatientProfile[]>(seedPatientProfiles);
-  const [extraMessages, setExtraMessages] = useState<Message[]>([]);
+  const [extraMessages] = useState<Message[]>([]);
   const [extraSymptomEntries, setExtraSymptomEntries] = useState<SymptomEntry[]>([]);
   const [patientPortalProfile, setPatientPortalProfile] = useState<PatientProfile | null>(null);
   const [patientPortalProtocol, setPatientPortalProtocol] = useState<TreatmentProtocol | undefined>(undefined);
@@ -273,10 +273,6 @@ export default function App() {
 
   const handleUpdateProfile = (p: PatientProfile) => {
     setPatientProfiles((prev) => prev.map((x) => (x.id === p.id ? p : x)));
-  };
-
-  const handleSendMessage = (m: Message) => {
-    setExtraMessages((prev) => [...prev, m]);
   };
 
   const handleAddSymptomEntry = (e: SymptomEntry) => {
@@ -480,19 +476,7 @@ export default function App() {
             />
           )}
           {page === "patient-messages" && (
-            <PatientMessages
-              profile={mockProfileForUnconnectedSections}
-              messages={patientMessages}
-              onSend={(text) => handleSendMessage({
-                id: `msg-${Date.now()}`,
-                patientProfileId: mockProfileForUnconnectedSections.id,
-                sender: profile.fullName,
-                senderRole: "patient",
-                text,
-                createdAt: new Date().toISOString(),
-                read: false,
-              })}
-            />
+            <PatientMessages patientId={activeProfileId} />
           )}
           {page === "patient-profile" && (
             <PatientProfilePage profile={profile} protocol={protocol} />

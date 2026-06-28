@@ -13,6 +13,7 @@ const treatmentRoutes = require("./routes/treatmentRoutes");
 const labRoutes = require("./routes/labRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const symptomRoutes = require("./routes/symptomRoutes");
+const documentRoutes = require("./routes/documentRoutes");
 
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
@@ -63,6 +64,7 @@ app.use("/api/treatments", treatmentRoutes);
 app.use("/api/labs", labRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/symptoms", symptomRoutes);
+app.use("/api/documents", documentRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -11,7 +11,6 @@ import {
   FlaskConical,
   Home,
   Info,
-  MessageSquare,
   Pencil,
   Pill,
   Scissors,
@@ -21,6 +20,8 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
+import { MessagesPanel } from "../../components/shared/MessagesPanel";
+import { ClinicalDocumentsPanel } from "../../components/shared/ClinicalDocumentsPanel";
 
 import { RibbonBackground } from "../../components/shared/RibbonBackground";
 import { formatDate, shiftDate, getLabStatus, LAB_NORMS, type LabFieldKey } from "../../utils/mockData";
@@ -2690,11 +2691,9 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
               })()}
             </SectionCard>
 
-            <SectionCard title="Messages & Documents">
-              <PhasePlaceholder icon={<MessageSquare size={16} />}>
-                Messages and documents will be connected in the Messages phase.
-              </PhasePlaceholder>
-            </SectionCard>
+            <MessagesPanel patientId={patientId} />
+
+            <ClinicalDocumentsPanel patientId={patientId} canManage={true} />
 
             <SectionCard title="Symptom Journal" source="Patient-reported">
               <PhasePlaceholder icon={<Activity size={16} />}>

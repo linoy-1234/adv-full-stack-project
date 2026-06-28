@@ -1,5 +1,12 @@
 const mongoose = require("mongoose");
 
+const DOCUMENT_TYPES = [
+  "visit_summary",
+  "medical_certificate",
+  "prescription",
+  "other",
+];
+
 const clinicalDocumentSchema = new mongoose.Schema(
   {
     patient: {
@@ -14,17 +21,11 @@ const clinicalDocumentSchema = new mongoose.Schema(
       required: [true, "Uploader is required"],
     },
 
-    message: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Message",
-      default: null,
-    },
-
     title: {
       type: String,
       trim: true,
       maxlength: [120, "Title cannot exceed 120 characters"],
-      default: "",
+      required: [true, "Title is required"],
     },
 
     originalName: {
@@ -33,15 +34,15 @@ const clinicalDocumentSchema = new mongoose.Schema(
       trim: true,
     },
 
-    fileName: {
+    publicId: {
       type: String,
-      required: [true, "Stored file name is required"],
+      required: [true, "Cloudinary public ID is required"],
       trim: true,
     },
 
-    filePath: {
+    fileUrl: {
       type: String,
-      required: [true, "File path is required"],
+      required: [true, "File URL is required"],
       trim: true,
     },
 
@@ -59,21 +60,31 @@ const clinicalDocumentSchema = new mongoose.Schema(
 
     documentType: {
       type: String,
-      enum: [
-        "visit_summary",
-        "care_instructions",
-        "treatment_document",
-        "lab_document",
-        "other",
-      ],
+      enum: DOCUMENT_TYPES,
       default: "other",
     },
 
-    notes: {
+    description: {
       type: String,
       trim: true,
-      maxlength: [1000, "Notes cannot exceed 1000 characters"],
+      maxlength: [1000, "Description cannot exceed 1000 characters"],
       default: "",
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
   },
   { timestamps: true }
@@ -83,5 +94,3 @@ clinicalDocumentSchema.index({ patient: 1, createdAt: -1 });
 clinicalDocumentSchema.index({ uploadedBy: 1 });
 
 module.exports = mongoose.model("ClinicalDocument", clinicalDocumentSchema);
-
-//saves the information on the file, not the file itself (for example: the name of the file, file type, his size...)
