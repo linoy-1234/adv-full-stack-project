@@ -3,9 +3,13 @@ import { ClinicalDocumentsPanel } from "../../components/shared/ClinicalDocument
 
 interface PatientMessagesProps {
   patientId: string;
+  onUnreadCountChange?: (count: number) => void;
 }
 
-export function PatientMessages({ patientId }: PatientMessagesProps) {
+export function PatientMessages({
+  patientId,
+  onUnreadCountChange,
+}: PatientMessagesProps) {
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -17,7 +21,10 @@ export function PatientMessages({ patientId }: PatientMessagesProps) {
         </p>
       </div>
 
-      <MessagesPanel patientId={patientId} />
+      <MessagesPanel
+        patientId={patientId}
+        onUnreadCountChange={onUnreadCountChange}
+      />
 
       <ClinicalDocumentsPanel patientId={patientId} canManage={false} />
     </div>
