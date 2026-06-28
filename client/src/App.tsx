@@ -2,12 +2,10 @@ import { useEffect, useState, lazy, Suspense, useTransition } from "react";
 import {
   seedPatientProfiles,
   seedMessages,
-  seedSymptomEntries,
   PatientProfile,
   TreatmentProtocol,
   LabResult,
   Message,
-  SymptomEntry,
   UserRole,
 } from "./utils/mockData";
 import { LoadingSpinner } from "./components/shared/LoadingSpinner";
@@ -124,7 +122,6 @@ export default function App() {
   // Mutable state (simulating backend collections)
   const [patientProfiles, setPatientProfiles] = useState<PatientProfile[]>(seedPatientProfiles);
   const [extraMessages] = useState<Message[]>([]);
-  const [extraSymptomEntries, setExtraSymptomEntries] = useState<SymptomEntry[]>([]);
   const [patientPortalProfile, setPatientPortalProfile] = useState<PatientProfile | null>(null);
   const [patientPortalProtocol, setPatientPortalProtocol] = useState<TreatmentProtocol | undefined>(undefined);
   const [patientPortalLabs, setPatientPortalLabs] = useState<LabResult[]>([]);
@@ -136,11 +133,6 @@ export default function App() {
     ...seedMessages,
     ...extraMessages.filter((m) => !seedMessages.find((sm) => sm.id === m.id)),
   ];
-  const allSymptomEntries = [
-    ...seedSymptomEntries,
-    ...extraSymptomEntries.filter((e) => !seedSymptomEntries.find((se) => se.id === e.id)),
-  ];
-
   useEffect(() => {
     if (role !== "patient" || !activeProfileId) {
       setPatientPortalProfile(null);
@@ -281,16 +273,6 @@ export default function App() {
     setPatientProfiles((prev) => prev.map((x) => (x.id === p.id ? p : x)));
   };
 
-  const handleAddSymptomEntry = (e: SymptomEntry) => {
-    setExtraSymptomEntries((prev) => {
-      const filtered = prev.filter((x) => x.id !== e.id);
-      return [...filtered, e];
-    });
-  };
-
-  const handleDeleteSymptomEntry = (id: string) => {
-    setExtraSymptomEntries((prev) => prev.filter((e) => e.id !== id));
-  };
 
   // ─── Landing ────────────────────────────────────────────────────────────────
   if (page === "landing") {
@@ -474,12 +456,7 @@ export default function App() {
             <BloodWork profile={profile} labResults={patientLabs} />
           )}
           {page === "patient-journal" && (
-            <SymptomJournal
-              profile={mockProfileForUnconnectedSections}
-              symptomEntries={allSymptomEntries}
-              onAddEntry={handleAddSymptomEntry}
-              onDeleteEntry={handleDeleteSymptomEntry}
-            />
+            <SymptomJournal />
           )}
           {page === "patient-messages" && (
             <PatientMessages
