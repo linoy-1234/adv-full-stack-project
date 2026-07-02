@@ -310,7 +310,7 @@ export function MessagesPanel({
     if (!trimmed || sending) return;
     setSending(true);
     try {
-      await sendMessage(patientId, trimmed, []);
+      await sendMessage(patientId, trimmed);
       setText("");
       await loadMessages();
     } catch {

@@ -1,15 +1,9 @@
 const mongoose = require("mongoose");
-const fs = require("fs");
 
 const PatientProfile = require("../models/PatientProfile");
 const Message = require("../models/Message");
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
-
-const cleanupUploadedFiles = (files) => {
-  if (!files || files.length === 0) return;
-  files.forEach((file) => { fs.unlink(file.path, () => {}); });
-};
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -47,26 +41,11 @@ const getAuthorizedMessage = async (req, messageId) => {
   return message;
 };
 
-const buildAttachments = (files) => {
-  if (!files || files.length === 0) return [];
-  return files.map((file) => ({
-    originalName: file.originalname,
-    storedName: file.filename,
-    fileUrl: `/uploads/${file.filename}`,
-    mimeType: file.mimetype,
-    size: file.size,
-    uploadedAt: new Date(),
-  }));
-};
-
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
 const sendMessage = async (req, res, next) => {
   try {
-    const uploadedFiles = req.files || [];
-
     if (!["patient", "oncologist"].includes(req.user.role)) {
-      cleanupUploadedFiles(uploadedFiles);
       return res.status(403).json({
         success: false,
         message: "Only patients and oncologists can send messages",
@@ -77,28 +56,18 @@ const sendMessage = async (req, res, next) => {
     const patient = await getAuthorizedPatient(req, patientId);
 
     if (!patient) {
-      cleanupUploadedFiles(uploadedFiles);
       return res.status(404).json({
         success: false,
         message: "Patient was not found or access is denied",
       });
     }
 
-    if (uploadedFiles.length > 0 && req.user.role !== "oncologist") {
-      cleanupUploadedFiles(uploadedFiles);
-      return res.status(403).json({
-        success: false,
-        message: "Only oncologists can attach clinical documents",
-      });
-    }
-
     const text = req.body.text ? req.body.text.trim() : "";
-    const attachments = buildAttachments(uploadedFiles);
 
-    if (!text && attachments.length === 0) {
+    if (!text) {
       return res.status(400).json({
         success: false,
-        message: "Message text or attachment is required",
+        message: "Message text is required",
       });
     }
 
@@ -107,7 +76,6 @@ const sendMessage = async (req, res, next) => {
       sender: req.user._id,
       senderRole: req.user.role,
       text,
-      attachments,
       readByPatient: req.user.role === "patient",
       readByOncologist: req.user.role === "oncologist",
     });

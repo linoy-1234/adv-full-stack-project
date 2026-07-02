@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   Navigate,
   Route,
@@ -7,12 +7,9 @@ import {
   useParams,
 } from "react-router-dom";
 import {
-  seedPatientProfiles,
-  seedMessages,
   PatientProfile,
   TreatmentProtocol,
   LabResult,
-  Message,
 } from "./utils/mockData";
 import { LoadingSpinner } from "./components/shared/LoadingSpinner";
 import { useAuth } from "./context/AuthContext";
@@ -27,7 +24,7 @@ import {
   adaptPatientProfile,
   adaptTreatmentProtocol,
   getUserPatientProfileId,
-} from "./pages/patient/patientPortalAdapters";
+} from "./utils/patientPortalAdapters";
 import type { TreatmentProtocolResponse, UserRole } from "./types/api";
 
 const LandingPage = lazy(() =>
@@ -152,15 +149,11 @@ function getRoleDashboardPath(role: UserRole): string {
 
 interface PatientPortalPageProps {
   page: PatientNavPage;
-  patientProfiles: PatientProfile[];
-  allMessages: Message[];
   onLogout: () => void;
 }
 
 function PatientPortalPage({
   page,
-  patientProfiles,
-  allMessages,
   onLogout,
 }: PatientPortalPageProps) {
   const { user } = useAuth();
@@ -278,16 +271,6 @@ function PatientPortalPage({
   const profile = patientPortalProfile;
   const protocol = patientPortalProtocol;
   const patientLabs = patientPortalLabs;
-  const mockProfileForUnconnectedSections =
-    patientProfiles.find(
-      (p) => p.email.toLowerCase() === profile.email.toLowerCase()
-    ) || profile;
-  const patientMessages = allMessages.filter(
-    (m) => m.patientProfileId === mockProfileForUnconnectedSections.id
-  );
-  const unreadFromOnco = patientMessages.filter(
-    (m) => m.senderRole === "oncologist" && !m.read
-  );
 
   const handlePatientNavigation = (navPage: PatientNavPage) => {
     navigate(PATIENT_PATHS[navPage]);
@@ -312,7 +295,7 @@ function PatientPortalPage({
           profile={profile}
           protocol={protocol}
           latestLab={patientLabs[0]}
-          unreadMessages={unreadFromOnco}
+          unreadMessagesCount={patientUnreadCount}
           onNavigate={handlePatientNavigation}
         />
       )}
@@ -360,19 +343,6 @@ export default function App() {
     logout: authLogout,
   } = useAuth();
   const navigate = useNavigate();
-
-  const [patientProfiles] = useState<PatientProfile[]>(seedPatientProfiles);
-  const [extraMessages] = useState<Message[]>([]);
-
-  const allMessages = useMemo(
-    () => [
-      ...seedMessages,
-      ...extraMessages.filter(
-        (m) => !seedMessages.find((seedMessage) => seedMessage.id === m.id)
-      ),
-    ],
-    [extraMessages]
-  );
 
   const logout = () => {
     authLogout();
@@ -434,13 +404,7 @@ export default function App() {
               onRegister={async (email, password, confirmPassword) => {
                 try {
                   const normalizedEmail = email.trim().toLowerCase();
-                  const matchingMockProfile = patientProfiles.find(
-                    (profile) =>
-                      profile.email.toLowerCase() === normalizedEmail
-                  );
-
                   const fullName =
-                    matchingMockProfile?.fullName ||
                     normalizedEmail
                       .split("@")[0]
                       .replace(/[._-]+/g, " ")
@@ -487,8 +451,6 @@ export default function App() {
             <PrivateRoute allowedRoles={["patient"]}>
               <PatientPortalPage
                 page="patient-dashboard"
-                patientProfiles={patientProfiles}
-                allMessages={allMessages}
                 onLogout={logout}
               />
             </PrivateRoute>
@@ -500,8 +462,6 @@ export default function App() {
             <PrivateRoute allowedRoles={["patient"]}>
               <PatientPortalPage
                 page="patient-cycles"
-                patientProfiles={patientProfiles}
-                allMessages={allMessages}
                 onLogout={logout}
               />
             </PrivateRoute>
@@ -513,8 +473,6 @@ export default function App() {
             <PrivateRoute allowedRoles={["patient"]}>
               <PatientPortalPage
                 page="patient-bloodwork"
-                patientProfiles={patientProfiles}
-                allMessages={allMessages}
                 onLogout={logout}
               />
             </PrivateRoute>
@@ -526,8 +484,6 @@ export default function App() {
             <PrivateRoute allowedRoles={["patient"]}>
               <PatientPortalPage
                 page="patient-journal"
-                patientProfiles={patientProfiles}
-                allMessages={allMessages}
                 onLogout={logout}
               />
             </PrivateRoute>
@@ -539,8 +495,6 @@ export default function App() {
             <PrivateRoute allowedRoles={["patient"]}>
               <PatientPortalPage
                 page="patient-messages"
-                patientProfiles={patientProfiles}
-                allMessages={allMessages}
                 onLogout={logout}
               />
             </PrivateRoute>
@@ -552,8 +506,6 @@ export default function App() {
             <PrivateRoute allowedRoles={["patient"]}>
               <PatientPortalPage
                 page="patient-profile"
-                patientProfiles={patientProfiles}
-                allMessages={allMessages}
                 onLogout={logout}
               />
             </PrivateRoute>
