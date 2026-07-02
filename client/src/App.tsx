@@ -1,4 +1,11 @@
-import { useEffect, useState, lazy, Suspense, useTransition } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import {
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 import {
   seedPatientProfiles,
   seedMessages,
@@ -6,10 +13,11 @@ import {
   TreatmentProtocol,
   LabResult,
   Message,
-  UserRole,
 } from "./utils/mockData";
 import { LoadingSpinner } from "./components/shared/LoadingSpinner";
 import { useAuth } from "./context/AuthContext";
+import PrivateRoute from "./components/common/PrivateRoute";
+import Unauthorized from "./components/common/Unauthorized";
 import { getMyLabs } from "./services/labService";
 import { getPatientById } from "./services/patientService";
 import { getMyProtocol } from "./services/treatmentService";
@@ -20,41 +28,68 @@ import {
   adaptTreatmentProtocol,
   getUserPatientProfileId,
 } from "./pages/patient/patientPortalAdapters";
-import type { TreatmentProtocolResponse } from "./types/api";
+import type { TreatmentProtocolResponse, UserRole } from "./types/api";
 
-// ─── Lazy loads ───────────────────────────────────────────────────────────────
-
-const LandingPage = lazy(() => import("./pages/auth/LandingPage").then(m => ({ default: m.LandingPage })));
-const LoginPage = lazy(() => import("./pages/auth/LoginPage").then(m => ({ default: m.LoginPage })));
-const RegisterPage = lazy(() => import("./pages/auth/RegisterPage").then(m => ({ default: m.RegisterPage })));
-const PatientLayout = lazy(() => import("./pages/patient/PatientLayout").then(m => ({ default: m.PatientLayout })));
-const PatientDashboard = lazy(() => import("./pages/patient/PatientDashboard").then(m => ({ default: m.PatientDashboard })));
-const TreatmentCycles = lazy(() => import("./pages/patient/TreatmentCycles").then(m => ({ default: m.TreatmentCycles })));
-const BloodWork = lazy(() => import("./pages/patient/BloodWork").then(m => ({ default: m.BloodWork })));
-const SymptomJournal = lazy(() => import("./pages/patient/SymptomJournal").then(m => ({ default: m.SymptomJournal })));
-const PatientMessages = lazy(() => import("./pages/patient/PatientMessages").then(m => ({ default: m.PatientMessages })));
-const PatientProfilePage = lazy(() => import("./components/PatientProfile").then(m => ({ default: m.PatientProfile })));
-const OncologistDashboard = lazy(() => import("./pages/oncologist/OncologistDashboard").then(m => ({ default: m.OncologistDashboard })));
-const PatientDetail = lazy(() => import("./pages/oncologist/PatientDetail").then(m => ({ default: m.PatientDetail })));
-const LabStaffDashboard = lazy(() => import("./pages/labstaff/LabStaffDashboard").then(m => ({ default: m.LabStaffDashboard })));
-const NotFound = lazy(() => import("./pages/NotFound").then(m => ({ default: m.NotFound })));
-
-// ─── Page type ────────────────────────────────────────────────────────────────
-
-type Page =
-  | "landing"
-  | "login"
-  | "register"
-  | "patient-dashboard"
-  | "patient-cycles"
-  | "patient-bloodwork"
-  | "patient-journal"
-  | "patient-messages"
-  | "patient-profile"
-  | "oncologist-dashboard"
-  | "oncologist-patient-detail"
-  | "labstaff-dashboard"
-  | "404";
+const LandingPage = lazy(() =>
+  import("./pages/auth/LandingPage").then((m) => ({ default: m.LandingPage }))
+);
+const LoginPage = lazy(() =>
+  import("./pages/auth/LoginPage").then((m) => ({ default: m.LoginPage }))
+);
+const RegisterPage = lazy(() =>
+  import("./pages/auth/RegisterPage").then((m) => ({ default: m.RegisterPage }))
+);
+const PatientLayout = lazy(() =>
+  import("./pages/patient/PatientLayout").then((m) => ({
+    default: m.PatientLayout,
+  }))
+);
+const PatientDashboard = lazy(() =>
+  import("./pages/patient/PatientDashboard").then((m) => ({
+    default: m.PatientDashboard,
+  }))
+);
+const TreatmentCycles = lazy(() =>
+  import("./pages/patient/TreatmentCycles").then((m) => ({
+    default: m.TreatmentCycles,
+  }))
+);
+const BloodWork = lazy(() =>
+  import("./pages/patient/BloodWork").then((m) => ({ default: m.BloodWork }))
+);
+const SymptomJournal = lazy(() =>
+  import("./pages/patient/SymptomJournal").then((m) => ({
+    default: m.SymptomJournal,
+  }))
+);
+const PatientMessages = lazy(() =>
+  import("./pages/patient/PatientMessages").then((m) => ({
+    default: m.PatientMessages,
+  }))
+);
+const PatientProfilePage = lazy(() =>
+  import("./components/PatientProfile").then((m) => ({
+    default: m.PatientProfile,
+  }))
+);
+const OncologistDashboard = lazy(() =>
+  import("./pages/oncologist/OncologistDashboard").then((m) => ({
+    default: m.OncologistDashboard,
+  }))
+);
+const PatientDetail = lazy(() =>
+  import("./pages/oncologist/PatientDetail").then((m) => ({
+    default: m.PatientDetail,
+  }))
+);
+const LabStaffDashboard = lazy(() =>
+  import("./pages/labstaff/LabStaffDashboard").then((m) => ({
+    default: m.LabStaffDashboard,
+  }))
+);
+const NotFound = lazy(() =>
+  import("./pages/NotFound").then((m) => ({ default: m.NotFound }))
+);
 
 export type PatientNavPage =
   | "patient-dashboard"
@@ -64,27 +99,32 @@ export type PatientNavPage =
   | "patient-messages"
   | "patient-profile";
 
-const PATIENT_PAGES: Page[] = [
-  "patient-dashboard",
-  "patient-cycles",
-  "patient-bloodwork",
-  "patient-journal",
-  "patient-messages",
-  "patient-profile",
-];
+const PATIENT_PATHS: Record<PatientNavPage, string> = {
+  "patient-dashboard": "/patient/dashboard",
+  "patient-cycles": "/patient/treatment-cycles",
+  "patient-bloodwork": "/patient/blood-work",
+  "patient-journal": "/patient/symptom-journal",
+  "patient-messages": "/patient/messages",
+  "patient-profile": "/patient/profile",
+};
 
 function SuspenseFallback() {
   return <LoadingSpinner message="Loading..." />;
 }
+
+function getApiStatus(error: unknown): number | undefined {
+  if (typeof error !== "object" || error === null || !("response" in error)) {
+    return undefined;
+  }
+
+  return (error as { response?: { status?: number } }).response?.status;
+}
+
 function getApiErrorMessage(
   error: unknown,
   fallback = "Something went wrong."
 ): string {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "response" in error
-  ) {
+  if (typeof error === "object" && error !== null && "response" in error) {
     const axiosError = error as {
       response?: {
         data?: {
@@ -102,39 +142,44 @@ function getApiErrorMessage(
 
   return fallback;
 }
-// ─── App ──────────────────────────────────────────────────────────────────────
 
-export default function App() {
-  const {
-    login: loginUser,
-    register: registerUser,
-    logout: authLogout,
-  } = useAuth();
-  const [page, setPage] = useState<Page>("landing");
-  const [pageHistory, setPageHistory] = useState<Page[]>([]);
-  const [isPending, startTransition] = useTransition();
+function getRoleDashboardPath(role: UserRole): string {
+  if (role === "patient") return "/patient/dashboard";
+  if (role === "oncologist") return "/oncologist/dashboard";
+  if (role === "lab_staff") return "/lab-staff/dashboard";
+  return "/";
+}
 
-  // Active user
-  const [role, setRole] = useState<UserRole | null>(null);
-  const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+interface PatientPortalPageProps {
+  page: PatientNavPage;
+  patientProfiles: PatientProfile[];
+  allMessages: Message[];
+  onLogout: () => void;
+}
 
-  // Mutable state (simulating backend collections)
-  const [patientProfiles, setPatientProfiles] = useState<PatientProfile[]>(seedPatientProfiles);
-  const [extraMessages] = useState<Message[]>([]);
-  const [patientPortalProfile, setPatientPortalProfile] = useState<PatientProfile | null>(null);
-  const [patientPortalProtocol, setPatientPortalProtocol] = useState<TreatmentProtocol | undefined>(undefined);
+function PatientPortalPage({
+  page,
+  patientProfiles,
+  allMessages,
+  onLogout,
+}: PatientPortalPageProps) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const activeProfileId =
+    user?.role === "patient" ? getUserPatientProfileId(user) : null;
+
+  const [patientPortalProfile, setPatientPortalProfile] =
+    useState<PatientProfile | null>(null);
+  const [patientPortalProtocol, setPatientPortalProtocol] = useState<
+    TreatmentProtocol | undefined
+  >(undefined);
   const [patientPortalLabs, setPatientPortalLabs] = useState<LabResult[]>([]);
   const [patientPortalLoading, setPatientPortalLoading] = useState(false);
   const [patientPortalError, setPatientPortalError] = useState("");
   const [patientUnreadCount, setPatientUnreadCount] = useState(0);
 
-  const allMessages = [
-    ...seedMessages,
-    ...extraMessages.filter((m) => !seedMessages.find((sm) => sm.id === m.id)),
-  ];
   useEffect(() => {
-    if (role !== "patient" || !activeProfileId) {
+    if (!activeProfileId) {
       setPatientPortalProfile(null);
       setPatientPortalProtocol(undefined);
       setPatientPortalLabs([]);
@@ -152,28 +197,24 @@ export default function App() {
 
       try {
         const protocolRequest = getMyProtocol().catch((error: unknown) => {
-          const status =
-            typeof error === "object" &&
-            error !== null &&
-            "response" in error &&
-            typeof (error as { response?: { status?: number } }).response?.status === "number"
-              ? (error as { response?: { status?: number } }).response?.status
-              : undefined;
-
-          if (status === 404) {
+          if (getApiStatus(error) === 404) {
             return { success: false } as TreatmentProtocolResponse;
           }
 
           throw error;
         });
 
-        const [profileResponse, labsResponse, protocolResponse, unreadResponse] =
-          await Promise.all([
-            getPatientById(activeProfileId),
-            getMyLabs(),
-            protocolRequest,
-            getMyUnreadCount().catch(() => ({ success: true, count: 0 })),
-          ]);
+        const [
+          profileResponse,
+          labsResponse,
+          protocolResponse,
+          unreadResponse,
+        ] = await Promise.all([
+          getPatientById(activeProfileId),
+          getMyLabs(),
+          protocolRequest,
+          getMyUnreadCount().catch(() => ({ success: true, count: 0 })),
+        ]);
 
         if (cancelled) return;
 
@@ -213,307 +254,346 @@ export default function App() {
       }
     };
 
-    loadPatientPortalData();
+    void loadPatientPortalData();
 
     return () => {
       cancelled = true;
     };
-  }, [role, activeProfileId]);
+  }, [activeProfileId]);
 
-  const navigate = (next: Page) => {
-    startTransition(() => {
-      setPageHistory((prev) => [...prev, page]);
-      setPage(next);
-    });
-  };
+  if (!activeProfileId) {
+    return (
+      <LoadingSpinner message="This patient account is not linked to a patient profile yet." />
+    );
+  }
 
-  const goBack = () => {
-    const prev = pageHistory[pageHistory.length - 1];
-    startTransition(() => {
-      if (prev && !["landing", "login", "register"].includes(prev)) {
-        setPageHistory((h) => h.slice(0, -1));
-        setPage(prev);
-      } else if (role === "patient") {
-        setPage("patient-dashboard");
-      } else if (role === "oncologist") {
-        setPage("oncologist-dashboard");
-      } else if (role === "lab_staff") {
-        setPage("labstaff-dashboard");
-      } else {
-        setPage("landing");
-      }
-    });
-  };
+  if (patientPortalLoading || !patientPortalProfile) {
+    return (
+      <LoadingSpinner
+        message={patientPortalError || "Loading patient portal..."}
+      />
+    );
+  }
 
-  const logout = () => {
-    authLogout();
-
-    startTransition(() => {
-      setRole(null);
-      setActiveProfileId(null);
-      setSelectedPatientId(null);
-      setPageHistory([]);
-      setPage("landing");
-    });
-  };
+  const profile = patientPortalProfile;
+  const protocol = patientPortalProtocol;
+  const patientLabs = patientPortalLabs;
+  const mockProfileForUnconnectedSections =
+    patientProfiles.find(
+      (p) => p.email.toLowerCase() === profile.email.toLowerCase()
+    ) || profile;
+  const patientMessages = allMessages.filter(
+    (m) => m.patientProfileId === mockProfileForUnconnectedSections.id
+  );
+  const unreadFromOnco = patientMessages.filter(
+    (m) => m.senderRole === "oncologist" && !m.read
+  );
 
   const handlePatientNavigation = (navPage: PatientNavPage) => {
-    startTransition(() => {
-      setPageHistory([]);
-      setPage(navPage);
-    });
+    navigate(PATIENT_PATHS[navPage]);
   };
 
-  // Data mutation handlers
-  const handleAddProfile = (p: PatientProfile) => {
-    setPatientProfiles((prev) => [...prev, p]);
-  };
-
-  const handleUpdateProfile = (p: PatientProfile) => {
-    setPatientProfiles((prev) => prev.map((x) => (x.id === p.id ? p : x)));
-  };
-
-
-  // ─── Landing ────────────────────────────────────────────────────────────────
-  if (page === "landing") {
-    return (
-      <Suspense fallback={<SuspenseFallback />}>
-        <LandingPage onGoToLogin={() => navigate("login")} onGoToRegister={() => navigate("register")} />
-      </Suspense>
-    );
-  }
-
-  // ─── Login ──────────────────────────────────────────────────────────────────
-  if (page === "login") {
-    return (
-      <Suspense fallback={<SuspenseFallback />}>
-        <LoginPage
-          onLogin={async (email, password) => {
-            try {
-              const data = await loginUser(email, password);
-              const loggedInUser = data.user;
-
-              if (loggedInUser.role === "patient") {
-                const patientProfileId = getUserPatientProfileId(loggedInUser);
-
-                if (!patientProfileId) {
-                  return "Login succeeded, but this patient account is not linked to a patient profile yet.";
-                }
-
-                startTransition(() => {
-                  setRole("patient");
-                  setActiveProfileId(patientProfileId);
-                  setSelectedPatientId(null);
-                  setPageHistory([]);
-                  setPage("patient-dashboard");
-                });
-
-                return null;
-              }
-
-              if (loggedInUser.role === "oncologist") {
-                startTransition(() => {
-                  setRole("oncologist");
-                  setActiveProfileId(null);
-                  setSelectedPatientId(null);
-                  setPageHistory([]);
-                  setPage("oncologist-dashboard");
-                });
-
-                return null;
-              }
-
-              if (loggedInUser.role === "lab_staff") {
-                startTransition(() => {
-                  setRole("lab_staff");
-                  setActiveProfileId(null);
-                  setSelectedPatientId(null);
-                  setPageHistory([]);
-                  setPage("labstaff-dashboard");
-                });
-
-                return null;
-              }
-
-              return "Unsupported user role.";
-            } catch (error) {
-              return getApiErrorMessage(error, "Invalid credentials.");
-            }
-          }}
-          onGoToRegister={() => navigate("register")}
-          onBackToHome={() => navigate("landing")}
-        />
-      </Suspense>
-    );
-  }
-
-  // ─── Register ───────────────────────────────────────────────────────────────
-  if (page === "register") {
-    return (
-      <Suspense fallback={<SuspenseFallback />}>
-        <RegisterPage
-          onRegister={async (email, password, confirmPassword) => {
-            try {
-              const normalizedEmail = email.trim().toLowerCase();
-              const matchingMockProfile = patientProfiles.find(
-                (profile) =>
-                  profile.email.toLowerCase() === normalizedEmail
-              );
-
-              const fullName =
-                matchingMockProfile?.fullName ||
-                normalizedEmail
-                  .split("@")[0]
-                  .replace(/[._-]+/g, " ")
-                  .trim() ||
-                "Patient";
-
-              const data = await registerUser(
-                fullName,
-                normalizedEmail,
-                password,
-                confirmPassword
-              );
-
-              const registeredUser = data.user;
-
-              if (registeredUser.role !== "patient") {
-                return "Only patient accounts can register from this page.";
-              }
-
-              const patientProfileId = getUserPatientProfileId(registeredUser);
-
-              if (!patientProfileId) {
-                return "Registration succeeded, but this patient account is not linked to a patient profile yet.";
-              }
-
-              startTransition(() => {
-                setRole("patient");
-                setActiveProfileId(patientProfileId);
-                setSelectedPatientId(null);
-                setPage("patient-dashboard");
-                setPageHistory([]);
-              });
-
-              return null;
-            } catch (error) {
-              return getApiErrorMessage(error, "Registration failed.");
-            }
-          }}
-          onBack={() => startTransition(() => setPage("login"))}
-          onBackToHome={() => navigate("landing")}
-        />
-      </Suspense>
-    );
-  }
-
-  // ─── Patient Portal ─────────────────────────────────────────────────────────
-  if (PATIENT_PAGES.includes(page) && role === "patient" && activeProfileId) {
-    if (patientPortalLoading || !patientPortalProfile) {
-      return (
-        <Suspense fallback={<SuspenseFallback />}>
-          <LoadingSpinner
-            message={patientPortalError || "Loading patient portal..."}
-          />
-        </Suspense>
-      );
-    }
-
-    const profile = patientPortalProfile;
-    const protocol = patientPortalProtocol;
-    const patientLabs = patientPortalLabs;
-    const mockProfileForUnconnectedSections =
-      patientProfiles.find(
-        (p) => p.email.toLowerCase() === profile.email.toLowerCase()
-      ) || profile;
-    const patientMessages = allMessages.filter((m) => m.patientProfileId === mockProfileForUnconnectedSections.id);
-    const unreadFromOnco = patientMessages.filter((m) => m.senderRole === "oncologist" && !m.read);
-
-    return (
-      <Suspense fallback={<SuspenseFallback />}>
-        <PatientLayout
-          patientName={profile.fullName}
-          patientId={profile.id}
-          currentPage={page}
+  return (
+    <PatientLayout
+      patientName={profile.fullName}
+      patientId={profile.id}
+      currentPage={page}
+      onNavigate={handlePatientNavigation}
+      onLogout={onLogout}
+      onBack={
+        page !== "patient-dashboard"
+          ? () => navigate(PATIENT_PATHS["patient-dashboard"])
+          : undefined
+      }
+      unreadMessages={patientUnreadCount}
+    >
+      {page === "patient-dashboard" && (
+        <PatientDashboard
+          profile={profile}
+          protocol={protocol}
+          latestLab={patientLabs[0]}
+          unreadMessages={unreadFromOnco}
           onNavigate={handlePatientNavigation}
-          onLogout={logout}
-          onBack={page !== "patient-dashboard" ? goBack : undefined}
-          unreadMessages={patientUnreadCount}
-        >
-          {page === "patient-dashboard" && (
-            <PatientDashboard
-              profile={profile}
-              protocol={protocol}
-              latestLab={patientLabs[0]}
-              unreadMessages={unreadFromOnco}
-              onNavigate={handlePatientNavigation}
-            />
-          )}
-          {page === "patient-cycles" && (
-            <TreatmentCycles profile={profile} protocol={protocol} />
-          )}
-          {page === "patient-bloodwork" && (
-            <BloodWork profile={profile} labResults={patientLabs} />
-          )}
-          {page === "patient-journal" && (
-            <SymptomJournal />
-          )}
-          {page === "patient-messages" && (
-            <PatientMessages
-              patientId={activeProfileId}
-              onUnreadCountChange={setPatientUnreadCount}
-            />
-          )}
-          {page === "patient-profile" && (
-            <PatientProfilePage profile={profile} protocol={protocol} />
-          )}
-        </PatientLayout>
-      </Suspense>
-    );
-  }
-
-  // ─── Oncologist Portal ──────────────────────────────────────────────────────
-  if (page === "oncologist-dashboard" && role === "oncologist") {
-    return (
-      <Suspense fallback={<SuspenseFallback />}>
-        <OncologistDashboard
-          onSelectPatient={(id) => {
-            startTransition(() => {
-              setSelectedPatientId(id);
-              setPageHistory((prev) => [...prev, page]);
-              setPage("oncologist-patient-detail");
-            });
-          }}
-          onLogout={logout}
         />
-      </Suspense>
-    );
-  }
-
-  if (page === "oncologist-patient-detail" && role === "oncologist" && selectedPatientId) {
-    return (
-      <Suspense fallback={<SuspenseFallback />}>
-        <PatientDetail
-          patientId={selectedPatientId}
-          onBack={goBack}
-          onHome={() => { startTransition(() => { setPageHistory([]); setPage("oncologist-dashboard"); }); }}
+      )}
+      {page === "patient-cycles" && (
+        <TreatmentCycles profile={profile} protocol={protocol} />
+      )}
+      {page === "patient-bloodwork" && (
+        <BloodWork profile={profile} labResults={patientLabs} />
+      )}
+      {page === "patient-journal" && <SymptomJournal />}
+      {page === "patient-messages" && (
+        <PatientMessages
+          patientId={activeProfileId}
+          onUnreadCountChange={setPatientUnreadCount}
         />
-      </Suspense>
-    );
-  }
+      )}
+      {page === "patient-profile" && (
+        <PatientProfilePage profile={profile} protocol={protocol} />
+      )}
+    </PatientLayout>
+  );
+}
 
-  // ─── Lab Staff Portal ───────────────────────────────────────────────────────
-  if (page === "labstaff-dashboard" && role === "lab_staff") {
-    return (
-      <Suspense fallback={<SuspenseFallback />}>
-        <LabStaffDashboard onLogout={logout} />
-      </Suspense>
-    );
+function OncologistPatientDetail() {
+  const navigate = useNavigate();
+  const { patientId } = useParams<{ patientId: string }>();
+
+  if (!patientId) {
+    return <NotFound onGoHome={() => navigate("/")} />;
   }
 
   return (
+    <PatientDetail
+      patientId={patientId}
+      onBack={() => navigate("/oncologist/dashboard")}
+      onHome={() => navigate("/oncologist/dashboard")}
+    />
+  );
+}
+
+export default function App() {
+  const {
+    login: loginUser,
+    register: registerUser,
+    logout: authLogout,
+  } = useAuth();
+  const navigate = useNavigate();
+
+  const [patientProfiles] = useState<PatientProfile[]>(seedPatientProfiles);
+  const [extraMessages] = useState<Message[]>([]);
+
+  const allMessages = useMemo(
+    () => [
+      ...seedMessages,
+      ...extraMessages.filter(
+        (m) => !seedMessages.find((seedMessage) => seedMessage.id === m.id)
+      ),
+    ],
+    [extraMessages]
+  );
+
+  const logout = () => {
+    authLogout();
+    navigate("/", { replace: true });
+  };
+
+  return (
     <Suspense fallback={<SuspenseFallback />}>
-      <NotFound onGoHome={() => startTransition(() => setPage("landing"))} />
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <LandingPage
+              onGoToLogin={() => navigate("/login")}
+              onGoToRegister={() => navigate("/register")}
+            />
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <LoginPage
+              onLogin={async (email, password) => {
+                try {
+                  const data = await loginUser(email, password);
+                  const loggedInUser = data.user;
+
+                  if (loggedInUser.role === "patient") {
+                    const patientProfileId =
+                      getUserPatientProfileId(loggedInUser);
+
+                    if (!patientProfileId) {
+                      return "Login succeeded, but this patient account is not linked to a patient profile yet.";
+                    }
+                  }
+
+                  navigate(getRoleDashboardPath(loggedInUser.role), {
+                    replace: true,
+                  });
+
+                  return null;
+                } catch (error) {
+                  if (getApiStatus(error) === 401) {
+                    return "Invalid email or password";
+                  }
+
+                  return getApiErrorMessage(error, "Invalid email or password");
+                }
+              }}
+              onGoToRegister={() => navigate("/register")}
+              onBackToHome={() => navigate("/")}
+            />
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <RegisterPage
+              onRegister={async (email, password, confirmPassword) => {
+                try {
+                  const normalizedEmail = email.trim().toLowerCase();
+                  const matchingMockProfile = patientProfiles.find(
+                    (profile) =>
+                      profile.email.toLowerCase() === normalizedEmail
+                  );
+
+                  const fullName =
+                    matchingMockProfile?.fullName ||
+                    normalizedEmail
+                      .split("@")[0]
+                      .replace(/[._-]+/g, " ")
+                      .trim() ||
+                    "Patient";
+
+                  const data = await registerUser(
+                    fullName,
+                    normalizedEmail,
+                    password,
+                    confirmPassword
+                  );
+
+                  const registeredUser = data.user;
+
+                  if (registeredUser.role !== "patient") {
+                    return "Only patient accounts can register from this page.";
+                  }
+
+                  const patientProfileId =
+                    getUserPatientProfileId(registeredUser);
+
+                  if (!patientProfileId) {
+                    return "Registration succeeded, but this patient account is not linked to a patient profile yet.";
+                  }
+
+                  navigate("/patient/dashboard", { replace: true });
+
+                  return null;
+                } catch (error) {
+                  return getApiErrorMessage(error, "Registration failed.");
+                }
+              }}
+              onBack={() => navigate("/login")}
+              onBackToHome={() => navigate("/")}
+            />
+          }
+        />
+
+        <Route path="/patient" element={<Navigate to="/patient/dashboard" replace />} />
+        <Route
+          path="/patient/dashboard"
+          element={
+            <PrivateRoute allowedRoles={["patient"]}>
+              <PatientPortalPage
+                page="patient-dashboard"
+                patientProfiles={patientProfiles}
+                allMessages={allMessages}
+                onLogout={logout}
+              />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/patient/treatment-cycles"
+          element={
+            <PrivateRoute allowedRoles={["patient"]}>
+              <PatientPortalPage
+                page="patient-cycles"
+                patientProfiles={patientProfiles}
+                allMessages={allMessages}
+                onLogout={logout}
+              />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/patient/blood-work"
+          element={
+            <PrivateRoute allowedRoles={["patient"]}>
+              <PatientPortalPage
+                page="patient-bloodwork"
+                patientProfiles={patientProfiles}
+                allMessages={allMessages}
+                onLogout={logout}
+              />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/patient/symptom-journal"
+          element={
+            <PrivateRoute allowedRoles={["patient"]}>
+              <PatientPortalPage
+                page="patient-journal"
+                patientProfiles={patientProfiles}
+                allMessages={allMessages}
+                onLogout={logout}
+              />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/patient/messages"
+          element={
+            <PrivateRoute allowedRoles={["patient"]}>
+              <PatientPortalPage
+                page="patient-messages"
+                patientProfiles={patientProfiles}
+                allMessages={allMessages}
+                onLogout={logout}
+              />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/patient/profile"
+          element={
+            <PrivateRoute allowedRoles={["patient"]}>
+              <PatientPortalPage
+                page="patient-profile"
+                patientProfiles={patientProfiles}
+                allMessages={allMessages}
+                onLogout={logout}
+              />
+            </PrivateRoute>
+          }
+        />
+
+        <Route path="/oncologist" element={<Navigate to="/oncologist/dashboard" replace />} />
+        <Route
+          path="/oncologist/dashboard"
+          element={
+            <PrivateRoute allowedRoles={["oncologist"]}>
+              <OncologistDashboard
+                onSelectPatient={(id) => navigate(`/oncologist/patients/${id}`)}
+                onLogout={logout}
+              />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/oncologist/patients/:patientId"
+          element={
+            <PrivateRoute allowedRoles={["oncologist"]}>
+              <OncologistPatientDetail />
+            </PrivateRoute>
+          }
+        />
+
+        <Route path="/lab-staff" element={<Navigate to="/lab-staff/dashboard" replace />} />
+        <Route
+          path="/lab-staff/dashboard"
+          element={
+            <PrivateRoute allowedRoles={["lab_staff"]}>
+              <LabStaffDashboard onLogout={logout} />
+            </PrivateRoute>
+          }
+        />
+
+        <Route path="/unauthorized" element={<Unauthorized />} />
+        <Route path="*" element={<NotFound onGoHome={() => navigate("/")} />} />
+      </Routes>
     </Suspense>
   );
 }
