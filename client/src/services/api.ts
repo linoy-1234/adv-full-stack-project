@@ -18,13 +18,34 @@ api.interceptors.request.use(
   (error: AxiosError) => Promise.reject(error)
 );
 
+const isAuthRequest = (url?: string) => {
+  if (!url) return false;
+
+  try {
+    const parsedUrl = new URL(url, api.defaults.baseURL);
+    return [
+      "/api/auth/login",
+      "/api/auth/register",
+      "/api/auth/me",
+      "/auth/login",
+      "/auth/register",
+      "/auth/me",
+    ].includes(parsedUrl.pathname);
+  } catch {
+    return ["/auth/login", "/auth/register", "/auth/me"].includes(url);
+  }
+};
+
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<{ message?: string }>) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isAuthRequest(error.config?.url)) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      window.location.href = "/login";
+
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
     }
 
     return Promise.reject(error);
