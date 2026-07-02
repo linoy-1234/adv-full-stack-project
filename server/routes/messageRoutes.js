@@ -14,7 +14,6 @@ const {
 
 const validate = require("../middleware/validate");
 const { protect } = require("../middleware/authMiddleware");
-const upload = require("../middleware/upload");
 const { sendMessageSchema, editMessageSchema } = require("../utils/validators/messageValidator");
 
 const router = express.Router();
@@ -30,7 +29,7 @@ router.get("/unread-counts", getOncologistUnreadCounts);
 
 // Patient-id-scoped routes
 router.get("/patients/:patientId", getPatientMessages);
-router.post("/patients/:patientId", upload.array("attachments", 5), validate(sendMessageSchema), sendMessage);
+router.post("/patients/:patientId", validate(sendMessageSchema), sendMessage);
 router.patch("/patients/:patientId/mark-all-read", markAllMessagesRead);
 
 // Single-message routes (dynamic :messageId — keep below all fixed-segment routes)

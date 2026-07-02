@@ -7,7 +7,7 @@ import type {
   TreatmentProtocolRecord,
   TreatmentTypeRecord,
   User,
-} from "../../types/api";
+} from "../types/api";
 import type {
   ChemoCycle,
   LabResult,
@@ -17,14 +17,14 @@ import type {
   SurgeryCheckpoint,
   TreatmentItem,
   TreatmentProtocol,
-} from "../../utils/mockData";
+} from "./mockData";
 import {
   getChemoDisplayStatus,
   getEffectiveCycleDates,
   getSurgeryDisplayStatus,
   toDateInputValue,
   todayIso,
-} from "../../utils/treatmentDisplay";
+} from "./treatmentDisplay";
 
 type PersonLike = string | { _id?: string; fullName?: string; email?: string } | null | undefined;
 

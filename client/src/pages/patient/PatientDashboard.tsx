@@ -3,7 +3,6 @@ import {
   PatientProfile,
   TreatmentProtocol,
   LabResult,
-  Message,
   ChemoCycle,
   RadiationCourse,
   SurgeryCheckpoint,
@@ -18,7 +17,7 @@ interface PatientDashboardProps {
   profile: PatientProfile;
   protocol?: TreatmentProtocol;
   latestLab?: LabResult;
-  unreadMessages: Message[];
+  unreadMessagesCount: number;
   onNavigate: (page: PatientNavPage) => void;
 }
 
@@ -51,7 +50,7 @@ function MedCheckRow({ med }: { med: Medication }) {
   );
 }
 
-export function PatientDashboard({ profile, protocol, latestLab, unreadMessages, onNavigate }: PatientDashboardProps) {
+export function PatientDashboard({ profile, protocol, latestLab, unreadMessagesCount, onNavigate }: PatientDashboardProps) {
   const todayValue = todayIso();
   const today = new Date(todayValue);
   const todayLabel = today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
@@ -201,10 +200,10 @@ export function PatientDashboard({ profile, protocol, latestLab, unreadMessages,
           <div>
             <p className="text-sm font-medium" style={{ color: "#2C3E2D" }}>Messages</p>
             <p className="text-xs" style={{ color: "#9CA3AF" }}>
-              {unreadMessages.length > 0 ? `${unreadMessages.length} unread` : "View messages"}
+              {unreadMessagesCount > 0 ? `${unreadMessagesCount} unread` : "View messages"}
             </p>
           </div>
-          {unreadMessages.length > 0 && (
+          {unreadMessagesCount > 0 && (
             <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-[#7CAE8E]" />
           )}
         </button>

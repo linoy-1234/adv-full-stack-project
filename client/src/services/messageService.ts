@@ -38,16 +38,11 @@ export const getOncologistUnreadCounts =
 
 export const sendMessage = async (
   patientId: string,
-  text: string,
-  attachments: File[] = []
+  text: string
 ): Promise<unknown> => {
-  const formData = new FormData();
-  formData.append("text", text);
-  attachments.forEach((file) => formData.append("attachments", file));
-
   const { data } = await api.post<MessageRecordResponse>(
     `/messages/patients/${patientId}`,
-    formData
+    { text }
   );
   return data.messageRecord;
 };
