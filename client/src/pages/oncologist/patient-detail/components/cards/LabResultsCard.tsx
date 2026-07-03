@@ -1,9 +1,9 @@
 import { ChevronDown, ChevronUp, FlaskConical } from "lucide-react";
 
-import { formatDate, getLabStatus, LAB_NORMS, type LabFieldKey } from "../../../../utils/mockData";
-import type { ApiLabResult } from "../../../../types/api";
-import { LabTrendChart } from "./LabTrendChart";
-import { SectionCard } from "./PatientDetailShared";
+import { formatDate, getLabStatus, LAB_NORMS, type LabFieldKey } from "../../../../../utils/mockData";
+import type { ApiLabResult } from "../../../../../types/api";
+import { LabTrendChart } from "../shared/LabTrendChart";
+import { SectionCard } from "../shared/PatientDetailShared";
 
 interface LabResultsCardProps {
   labsLoading: boolean;

@@ -1,25 +1,25 @@
-import { formatDate, shiftDate } from "../../../utils/mockData";
+import { formatDate, shiftDate } from "./mockData";
 import {
   toDateInputValue,
   todayIso,
   weekdayKeys,
   type RadiationDisplayStatus,
   type WeekdayKey,
-} from "../../../utils/treatmentDisplay";
+} from "./treatmentDisplay";
 import type {
   PatientAllergy,
   PatientProfile as ApiPatientProfile,
   TreatmentCycleRecord,
   TreatmentMedicationRecord,
   TreatmentProtocolRecord,
-} from "../../../types/api";
-import type { CyclePayload, MedicationPayload } from "../../../services/treatmentService";
+} from "../types/api";
+import type { CyclePayload, MedicationPayload } from "../services/treatmentService";
 import type {
   MedicationCategory,
   MedicationFormRecord,
   ProtocolFormResult,
   TreatmentItemType,
-} from "./patientDetailTypes";
+} from "../types/patientDetailTypes";
 
 export const inputCls =
   "w-full border border-[#E5E2DC] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7CAE8E]";

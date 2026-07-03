@@ -4,15 +4,15 @@ import { Stethoscope, X } from "lucide-react";
 import type {
   TreatmentProtocolRecord,
   TreatmentTypeRecord,
-} from "../../../../types/api";
-import type { ProtocolFormResult } from "../patientDetailTypes";
+} from "../../../../../types/api";
+import type { ProtocolFormResult } from "../../../../../types/patientDetailTypes";
 import {
   getProtocolDrugs,
   getTreatmentCount,
   getTreatmentTypes,
   inputCls,
   labelCls,
-} from "../patientDetailHelpers";
+} from "../../../../../utils/patientDetailHelpers";
 
 export function EditProtocolModal({
   protocol,

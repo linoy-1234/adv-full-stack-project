@@ -1,9 +1,9 @@
 import { Pencil, X } from "lucide-react";
 
-import { formatDate } from "../../../../utils/mockData";
-import type { PatientProfile as ApiPatientProfile } from "../../../../types/api";
-import { getOncologistName, getPatientMeta } from "../patientDetailHelpers";
-import { MetaRow, SectionCard } from "./PatientDetailShared";
+import { formatDate } from "../../../../../utils/mockData";
+import type { PatientProfile as ApiPatientProfile } from "../../../../../types/api";
+import { getOncologistName, getPatientMeta } from "../../../../../utils/patientDetailHelpers";
+import { MetaRow, SectionCard } from "../shared/PatientDetailShared";
 
 interface PatientMedicalProfileCardProps {
   profile: ApiPatientProfile | null;

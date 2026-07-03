@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { Pencil, X } from "lucide-react";
 
-import { toDateInputValue } from "../../../../utils/treatmentDisplay";
-import type { PatientProfile as ApiPatientProfile } from "../../../../types/api";
-import type { PatientPayload } from "../../../../services/patientService";
+import { toDateInputValue } from "../../../../../utils/treatmentDisplay";
+import type { PatientProfile as ApiPatientProfile } from "../../../../../types/api";
+import type { PatientPayload } from "../../../../../services/patientService";
 import {
   bloodTypes,
   getAllergyNames,
   inputCls,
   labelCls,
   normalizeBloodType,
-} from "../patientDetailHelpers";
+} from "../../../../../utils/patientDetailHelpers";
 
 export function EditProfileModal({
   profile,

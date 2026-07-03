@@ -76,7 +76,7 @@ import type {
   ModalName,
   MedicationFormRecord,
   ProtocolFormResult,
-} from "./patient-detail/patientDetailTypes";
+} from "../../types/patientDetailTypes";
 import {
   buildInitialCycles,
   getAllergyNames,
@@ -87,17 +87,17 @@ import {
   medicationToPayload,
   sortCycles,
   toCyclePayload,
-} from "./patient-detail/patientDetailHelpers";
-import { PatientMedicalProfileCard } from "./patient-detail/components/PatientMedicalProfileCard";
-import { MedicationPlanCard } from "./patient-detail/components/MedicationPlanCard";
-import { TreatmentProtocolCard } from "./patient-detail/components/TreatmentProtocolCard";
-import { TreatmentRoadmapCard } from "./patient-detail/components/TreatmentRoadmapCard";
-import { LabResultsCard } from "./patient-detail/components/LabResultsCard";
-import { EditProfileModal } from "./patient-detail/modals/EditProfileModal";
-import { EditMedicationsModal } from "./patient-detail/modals/EditMedicationsModal";
-import { EditProtocolModal } from "./patient-detail/modals/EditProtocolModal";
-import { EditTreatmentDatesModal } from "./patient-detail/modals/EditTreatmentDatesModal";
-import { PostponeCycleModal } from "./patient-detail/modals/PostponeCycleModal";
+} from "../../utils/patientDetailHelpers";
+import { PatientMedicalProfileCard } from "./patient-detail/components/cards/PatientMedicalProfileCard";
+import { MedicationPlanCard } from "./patient-detail/components/cards/MedicationPlanCard";
+import { TreatmentProtocolCard } from "./patient-detail/components/cards/TreatmentProtocolCard";
+import { TreatmentRoadmapCard } from "./patient-detail/components/cards/TreatmentRoadmapCard";
+import { LabResultsCard } from "./patient-detail/components/cards/LabResultsCard";
+import { EditProfileModal } from "./patient-detail/components/modals/EditProfileModal";
+import { EditMedicationsModal } from "./patient-detail/components/modals/EditMedicationsModal";
+import { EditProtocolModal } from "./patient-detail/components/modals/EditProtocolModal";
+import { EditTreatmentDatesModal } from "./patient-detail/components/modals/EditTreatmentDatesModal";
+import { PostponeCycleModal } from "./patient-detail/components/modals/PostponeCycleModal";
 
 interface PatientDetailProps {
   patientId: string;

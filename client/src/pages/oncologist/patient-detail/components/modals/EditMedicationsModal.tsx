@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { Pill, X } from "lucide-react";
 
-import type { WeekdayKey } from "../../../../utils/treatmentDisplay";
-import type { MedicationCategory, MedicationFormRecord } from "../patientDetailTypes";
+import type { WeekdayKey } from "../../../../../utils/treatmentDisplay";
+import type { MedicationCategory, MedicationFormRecord } from "../../../../../types/patientDetailTypes";
 import {
   emptyMedicationForm,
   inputCls,
   labelCls,
   prepareMedicationDraft,
-} from "../patientDetailHelpers";
-import { WeekdaySelector } from "../components/PatientDetailShared";
+} from "../../../../../utils/patientDetailHelpers";
+import { WeekdaySelector } from "../shared/PatientDetailShared";
 
 export function EditMedicationsModal({
   medications: initialMedications,
