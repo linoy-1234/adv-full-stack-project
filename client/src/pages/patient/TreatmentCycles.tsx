@@ -46,6 +46,16 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
+const weekdayLabel: Record<string, string> = {
+  sun: "Sun",
+  mon: "Mon",
+  tue: "Tue",
+  wed: "Wed",
+  thu: "Thu",
+  fri: "Fri",
+  sat: "Sat",
+};
+
 export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
   const todayValue = todayIso();
 
@@ -178,6 +188,11 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
                   </div>
                   <p className="text-xs text-[#9CA3AF]">{formatDate(rad.startDate)} → {formatDate(rad.endDate)}</p>
                   <p className="text-xs text-[#6B7280] mt-2">Sessions planned: {rad.totalSessions}</p>
+                  {rad.weekdays?.length ? (
+                    <p className="text-xs text-[#6B7280] mt-1">
+                      Weekdays: {rad.weekdays.map((day) => weekdayLabel[day]).join(", ")}
+                    </p>
+                  ) : null}
                   {rad.notes && <p className="text-xs text-[#9CA3AF] mt-1">{rad.notes}</p>}
                 </div>
               );

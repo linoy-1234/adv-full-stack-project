@@ -11,6 +11,12 @@ export const todayIso = () => new Date().toISOString().slice(0, 10);
 export const toDateInputValue = (date?: string | null) =>
   date ? date.slice(0, 10) : "";
 
+export const weekdayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+export type WeekdayKey = (typeof weekdayKeys)[number];
+
+export const getTodayWeekdayKey = (): WeekdayKey =>
+  weekdayKeys[new Date(todayIso()).getDay()];
+
 export const isSameDateKey = (left?: string | null, right?: string | null) =>
   !!left && !!right && toDateInputValue(left) === toDateInputValue(right);
 
@@ -35,8 +41,7 @@ export const getSurgeryDisplayStatus = (
 };
 
 const isApproved = (cycle: TreatmentCycleRecord) =>
-  cycle.decision?.decisionStatus === "approved" ||
-  ["approved", "active", "completed"].includes(cycle.status);
+  cycle.decision?.decisionStatus === "approved";
 
 export const getChemoDisplayStatus = (
   cycle: TreatmentCycleRecord
@@ -57,5 +62,18 @@ export const getChemoDisplayStatus = (
     return "completed";
   }
 
+  return "active";
+};
+
+export type RadiationDisplayStatus = "upcoming" | "active" | "completed";
+
+export const getRadiationDisplayStatus = (
+  cycle: TreatmentCycleRecord
+): RadiationDisplayStatus => {
+  const today = todayIso();
+  const { startDate, endDate } = getEffectiveCycleDates(cycle);
+
+  if (startDate && today < startDate) return "upcoming";
+  if (endDate && today > endDate) return "completed";
   return "active";
 };

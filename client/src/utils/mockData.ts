@@ -52,16 +52,19 @@ export interface LabStaff {
 
 // ─── Medication (created/edited by Oncologist only) ───────────────────────────
 
-export type MedicationCategory = "chemotherapy" | "supportive" | "chronic";
-export type MedicationRoute = "IV" | "oral" | "subcutaneous" | "topical";
+export type MedicationCategory = "chemotherapy" | "supportive" | "chronic" | "other";
+export type MedicationRoute = "IV" | "oral" | "subcutaneous" | "topical" | "other";
+export type WeekdayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 
 export interface Medication {
   id: string;
   name: string;
   dose: string;
   route: MedicationRoute;
-  frequency: string;
+  frequency?: string;
   timing: string;
+  weekdays?: WeekdayKey[];
+  asNeeded?: boolean;
   category: MedicationCategory;
   notes?: string;
 }
@@ -108,6 +111,7 @@ export interface RadiationCourse {
   endDate: string;
   totalSessions: number;
   completedSessions: number;
+  weekdays?: WeekdayKey[];
   status: "upcoming" | "active" | "completed";
   notes?: string;
 }

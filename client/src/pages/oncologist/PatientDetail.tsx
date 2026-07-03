@@ -27,11 +27,15 @@ import { formatDate, shiftDate, getLabStatus, LAB_NORMS, type LabFieldKey } from
 import {
   getChemoDisplayStatus,
   getEffectiveCycleDates,
+  getRadiationDisplayStatus,
   getSurgeryDisplayStatus,
   toDateInputValue,
   todayIso,
+  weekdayKeys,
   type ChemoDisplayStatus,
+  type RadiationDisplayStatus,
   type SurgeryDisplayStatus,
+  type WeekdayKey,
 } from "../../utils/treatmentDisplay";
 import { getPatientLabs } from "../../services/labService";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
@@ -42,6 +46,7 @@ import {
 } from "../../store/slices/patientsSlice";
 import {
   approveCycle,
+  bulkUpdateCycles,
   createCycle,
   createProtocol,
   deleteCycle,
@@ -83,8 +88,9 @@ interface MedicationFormRecord {
   name: string;
   dose: string;
   route: string;
-  frequency: string;
   timing: string;
+  weekdays: WeekdayKey[];
+  asNeeded: boolean;
   category: MedicationCategory;
   notes: string;
 }
@@ -255,6 +261,66 @@ const typeLabel: Record<TreatmentItemType, string> = {
   supportive: "Supportive",
 };
 
+const radiationStatusConfig: Record<RadiationDisplayStatus, { label: string; cls: string }> = {
+  completed: { label: "Completed", cls: "bg-gray-100 text-gray-600" },
+  active: { label: "Active", cls: "bg-amber-500 text-white" },
+  upcoming: { label: "Upcoming", cls: "bg-blue-100 text-blue-700" },
+};
+
+const weekdayLabels: Record<WeekdayKey, string> = {
+  sun: "Sun",
+  mon: "Mon",
+  tue: "Tue",
+  wed: "Wed",
+  thu: "Thu",
+  fri: "Fri",
+  sat: "Sat",
+};
+
+const normalizeWeekdays = (days?: string[]): WeekdayKey[] =>
+  (days || []).filter((day): day is WeekdayKey =>
+    (weekdayKeys as readonly string[]).includes(day)
+  );
+
+function WeekdaySelector({
+  selected,
+  onChange,
+  disabled,
+}: {
+  selected: WeekdayKey[];
+  onChange: (days: WeekdayKey[]) => void;
+  disabled?: boolean;
+}) {
+  const toggleDay = (day: WeekdayKey) => {
+    if (selected.includes(day)) {
+      onChange(selected.filter((selectedDay) => selectedDay !== day));
+      return;
+    }
+
+    onChange([...selected, day]);
+  };
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {weekdayKeys.map((day) => (
+        <button
+          key={day}
+          type="button"
+          onClick={() => toggleDay(day)}
+          disabled={disabled}
+          className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors disabled:opacity-60 ${
+            selected.includes(day)
+              ? "bg-[#7CAE8E] text-white border-[#7CAE8E]"
+              : "bg-white text-[#6B7280] border-[#E5E2DC] hover:border-[#7CAE8E]"
+          }`}
+        >
+          {weekdayLabels[day]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 const getMedicationId = (medication: TreatmentMedicationRecord) =>
   medication.id || medication._id || `med-${medication.name}`;
 
@@ -265,8 +331,9 @@ const normalizeMedication = (
   name: medication.name || "",
   dose: medication.dose || "",
   route: medication.route || "IV",
-  frequency: medication.frequency || medication.schedule || "",
   timing: medication.timing || "",
+  weekdays: normalizeWeekdays(medication.weekdays),
+  asNeeded: Boolean(medication.asNeeded),
   category: medication.category || "other",
   notes: medication.notes || "",
 });
@@ -298,8 +365,9 @@ const getMedicationPlan = (protocol: TreatmentProtocolRecord | null) => {
       name: drug,
       dose: "",
       route: "",
-      frequency: "",
       timing: "",
+      weekdays: [],
+      asNeeded: false,
       category: "chemotherapy",
       notes: "Listed in treatment protocol",
     });
@@ -313,11 +381,11 @@ const medicationToPayload = (medication: MedicationFormRecord): MedicationPayloa
   name: medication.name.trim(),
   dose: medication.dose.trim(),
   route: medication.route.trim(),
-  frequency: medication.frequency.trim(),
   timing: medication.timing.trim(),
-  schedule: [medication.frequency.trim(), medication.timing.trim()]
-    .filter(Boolean)
-    .join(" - "),
+  frequency: "",
+  schedule: "",
+  weekdays: medication.asNeeded ? [] : medication.weekdays,
+  asNeeded: medication.asNeeded,
   category: medication.category,
   notes: medication.notes.trim(),
 });
@@ -327,8 +395,9 @@ const emptyMedicationForm = (): MedicationFormRecord => ({
   name: "",
   dose: "",
   route: "IV",
-  frequency: "",
   timing: "",
+  weekdays: [],
+  asNeeded: false,
   category: "chemotherapy",
   notes: "",
 });
@@ -346,8 +415,9 @@ const prepareMedicationDraft = (
     name,
     dose: medication.dose.trim(),
     route: medication.route.trim(),
-    frequency: medication.frequency.trim(),
     timing: medication.timing.trim(),
+    weekdays: medication.asNeeded ? [] : medication.weekdays,
+    asNeeded: medication.asNeeded,
     notes: medication.notes.trim(),
   };
 };
@@ -389,6 +459,7 @@ const toCyclePayload = (cycle: TreatmentCycleRecord): Partial<CyclePayload> => (
   plannedDate: toDateInputValue(cycle.plannedDate) || undefined,
   totalSessions: cycle.totalSessions || 0,
   completedSessions: cycle.completedSessions || 0,
+  weekdays: normalizeWeekdays(cycle.weekdays),
   medications: cycle.medications || [],
   notes: cycle.notes || "",
 });
@@ -737,7 +808,7 @@ function EditMedicationsModal({
   const updateMedication = (
     id: string,
     field: keyof MedicationFormRecord,
-    value: string
+    value: string | boolean | WeekdayKey[]
   ) => {
     setMedications((current) =>
       current.map((medication) =>
@@ -749,6 +820,14 @@ function EditMedicationsModal({
   const saveMedications = async () => {
     const draft = prepareMedicationDraft(medForm);
     const medicationsToSave = draft ? [...medications, draft] : medications;
+    const missingWeekdays = medicationsToSave.some(
+      (medication) => !medication.asNeeded && medication.weekdays.length === 0
+    );
+
+    if (missingWeekdays) {
+      setError("Select at least one weekday for each scheduled medication, or mark it as As needed.");
+      return;
+    }
 
     setSaving(true);
     setError("");
@@ -860,16 +939,6 @@ function EditMedicationsModal({
                   </select>
                 </div>
                 <div>
-                  <label className={labelCls}>Frequency</label>
-                  <input
-                    className={inputCls}
-                    value={medication.frequency}
-                    onChange={(event) =>
-                      updateMedication(medication.id, "frequency", event.target.value)
-                    }
-                  />
-                </div>
-                <div>
                   <label className={labelCls}>Timing</label>
                   <input
                     className={inputCls}
@@ -878,6 +947,29 @@ function EditMedicationsModal({
                       updateMedication(medication.id, "timing", event.target.value)
                     }
                   />
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <label className={labelCls}>Weekdays</label>
+                  <WeekdaySelector
+                    selected={medication.weekdays}
+                    disabled={saving || medication.asNeeded}
+                    onChange={(days) => updateMedication(medication.id, "weekdays", days)}
+                  />
+                  <label className="inline-flex items-center gap-2 text-xs text-[#6B7280]">
+                    <input
+                      type="checkbox"
+                      checked={medication.asNeeded}
+                      disabled={saving}
+                      onChange={(event) => {
+                        updateMedication(medication.id, "asNeeded", event.target.checked);
+                        if (event.target.checked) {
+                          updateMedication(medication.id, "weekdays", []);
+                        }
+                      }}
+                    />
+                    <span>As needed</span>
+                    <span className="text-[#9CA3AF]">(not scheduled for specific days)</span>
+                  </label>
                 </div>
                 <div className="col-span-2">
                   <label className={labelCls}>Notes</label>
@@ -953,19 +1045,6 @@ function EditMedicationsModal({
                 </select>
               </div>
               <div>
-                <label className={labelCls}>Frequency</label>
-                <input
-                  className={inputCls}
-                  value={medForm.frequency}
-                  onChange={(event) =>
-                    setMedForm((current) => ({
-                      ...current,
-                      frequency: event.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div>
                 <label className={labelCls}>Timing</label>
                 <input
                   className={inputCls}
@@ -974,6 +1053,30 @@ function EditMedicationsModal({
                     setMedForm((current) => ({ ...current, timing: event.target.value }))
                   }
                 />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <label className={labelCls}>Weekdays</label>
+                <WeekdaySelector
+                  selected={medForm.weekdays}
+                  disabled={saving || medForm.asNeeded}
+                  onChange={(days) => setMedForm((current) => ({ ...current, weekdays: days }))}
+                />
+                <label className="inline-flex items-center gap-2 text-xs text-[#6B7280]">
+                  <input
+                    type="checkbox"
+                    checked={medForm.asNeeded}
+                    disabled={saving}
+                    onChange={(event) =>
+                      setMedForm((current) => ({
+                        ...current,
+                        asNeeded: event.target.checked,
+                        weekdays: event.target.checked ? [] : current.weekdays,
+                      }))
+                    }
+                  />
+                  <span>As needed</span>
+                  <span className="text-[#9CA3AF]">(not scheduled for specific days)</span>
+                </label>
               </div>
               <div className="col-span-2">
                 <label className={labelCls}>Notes</label>
@@ -1311,8 +1414,13 @@ function EditTreatmentDatesModal({
   );
   const [removedCycleIds, setRemovedCycleIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  const updateItem = (id: string, field: keyof TreatmentCycleRecord, value: string | number) => {
+  const updateItem = (
+    id: string,
+    field: keyof TreatmentCycleRecord,
+    value: string | number | WeekdayKey[]
+  ) => {
     setItems((current) =>
       current.map((item) => (item._id === id ? { ...item, [field]: value } : item))
     );
@@ -1355,10 +1463,49 @@ function EditTreatmentDatesModal({
   };
 
   const saveDates = async () => {
+    const radiationMissingWeekdays = items.some(
+      (item) =>
+        item.treatmentType === "radiation" &&
+        normalizeWeekdays(item.weekdays).length === 0
+    );
+
+    if (radiationMissingWeekdays) {
+      setError("Select at least one weekday for each radiation course.");
+      return;
+    }
+
+    const chemoItems = items.filter((item) => item.treatmentType === "chemotherapy");
+    for (let index = 0; index < chemoItems.length; index += 1) {
+      const current = chemoItems[index];
+      const currentStart = toDateInputValue(current.startDate);
+      const currentEnd = toDateInputValue(current.endDate);
+
+      for (let nextIndex = index + 1; nextIndex < chemoItems.length; nextIndex += 1) {
+        const next = chemoItems[nextIndex];
+        const nextStart = toDateInputValue(next.startDate);
+        const nextEnd = toDateInputValue(next.endDate);
+
+        if (currentStart <= nextEnd && currentEnd >= nextStart) {
+          setError("This chemotherapy cycle overlaps with another chemotherapy cycle. Please choose different dates.");
+          return;
+        }
+      }
+    }
+
     setSaving(true);
-    await onSave(items, removedCycleIds);
-    setSaving(false);
-    onClose();
+    setError("");
+    try {
+      await onSave(items, removedCycleIds);
+      setSaving(false);
+      onClose();
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Failed to save treatment dates"
+      );
+      setSaving(false);
+    }
   };
 
   return (
@@ -1378,6 +1525,12 @@ function EditTreatmentDatesModal({
         </div>
 
         <div className="px-6 py-4 max-h-[65vh] overflow-y-auto space-y-3">
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           {items.map((item) => (
             <div key={item._id} className="bg-white border border-[#E5E2DC] rounded-xl p-3 space-y-2">
               <div className="flex items-center justify-between gap-3">
@@ -1468,6 +1621,14 @@ function EditTreatmentDatesModal({
                       onChange={(event) =>
                         updateItem(item._id, "totalSessions", Number(event.target.value))
                       }
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className={labelCls}>Radiation Weekdays</label>
+                    <WeekdaySelector
+                      selected={normalizeWeekdays(item.weekdays)}
+                      disabled={saving}
+                      onChange={(days) => updateItem(item._id, "weekdays", days)}
                     />
                   </div>
                   <div className="col-span-2">
@@ -1618,14 +1779,27 @@ function PostponeCycleModal({
   const [newStartDate, setNewStartDate] = useState("");
   const [newEndDate, setNewEndDate] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const confirmPostpone = async () => {
     if (!newStartDate || !newEndDate) return;
+    if (newEndDate < newStartDate) {
+      setError("End date must be on or after start date.");
+      return;
+    }
 
     setSaving(true);
-    await onConfirm(newStartDate, newEndDate);
-    setSaving(false);
-    onClose();
+    setError("");
+    try {
+      await onConfirm(newStartDate, newEndDate);
+      setSaving(false);
+      onClose();
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error ? saveError.message : "Failed to postpone cycle"
+      );
+      setSaving(false);
+    }
   };
 
   return (
@@ -1643,6 +1817,12 @@ function PostponeCycleModal({
         </div>
 
         <div className="px-6 py-4 space-y-3">
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>New Start Date</label>
@@ -1928,22 +2108,29 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
     setTreatmentError("");
 
     try {
-      for (const cycleId of removedCycleIds) {
-        await deleteCycle(cycleId);
+      if (!protocol) {
+        throw new Error("Create a treatment protocol before saving treatment dates");
       }
 
-      for (const cycle of updatedCycles) {
+      const payloadCycles = updatedCycles.map((cycle) => {
         const payload = toCyclePayload(cycle);
         if (cycle.treatmentType === "surgery") {
           payload.plannedDate = toDateInputValue(cycle.plannedDate || cycle.startDate);
           payload.startDate = payload.plannedDate;
           payload.endDate = payload.plannedDate;
         }
-        await updateCycle(cycle._id, payload);
-      }
-      await refreshTreatment();
+        return { _id: cycle._id, ...payload };
+      });
+
+      const response = await bulkUpdateCycles(protocol._id, {
+        cycles: payloadCycles,
+        removedCycleIds,
+      });
+      applyTreatmentResponse(response);
     } catch (error) {
-      setTreatmentError(getApiErrorMessage(error, "Failed to save treatment dates"));
+      const message = getApiErrorMessage(error, "Failed to save treatment dates");
+      setTreatmentError(message);
+      throw new Error(message);
     } finally {
       setSavingTreatment(false);
     }
@@ -1978,7 +2165,9 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
       });
       applyTreatmentResponse(response);
     } catch (error) {
-      setTreatmentError(getApiErrorMessage(error, "Failed to postpone cycle"));
+      const message = getApiErrorMessage(error, "Failed to postpone cycle");
+      setTreatmentError(message);
+      throw new Error(message);
     } finally {
       setSavingTreatment(false);
     }
@@ -2183,13 +2372,18 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
                                         .join(" - ")}
                                     </span>
                                   )}
-                                  {(medication.frequency || medication.timing) && (
+                                  {medication.timing && (
                                     <div className="text-xs opacity-70 mt-0.5">
-                                      {[medication.frequency, medication.timing]
-                                        .filter(Boolean)
-                                        .join(" - ")}
+                                      {medication.timing}
                                     </div>
                                   )}
+                                  <div className="text-xs opacity-70 mt-0.5">
+                                    {medication.asNeeded
+                                      ? "As needed"
+                                      : medication.weekdays.length > 0
+                                      ? medication.weekdays.map((day) => weekdayLabels[day]).join(", ")
+                                      : "No weekdays selected"}
+                                  </div>
                                   {medication.notes && (
                                     <div className="text-xs opacity-70">{medication.notes}</div>
                                   )}
@@ -2428,21 +2622,12 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
                   })}
 
                   {radiationCycles.map((cycle) => {
-                    const radStart = toDateInputValue(cycle.startDate);
-                    const radEnd   = toDateInputValue(cycle.endDate);
-                    const radToday = todayIso();
-                    const radDone  = cycle.status === "completed" || (!!radEnd && radEnd < radToday);
-                    const radActive = !radDone && !!radStart && !!radEnd && radStart <= radToday && radEnd >= radToday;
-                    const radLabel  = radDone ? "Completed" : radActive ? "Active" : "Upcoming";
-                    const radCls    = radDone
-                      ? "bg-gray-100 text-gray-600"
-                      : radActive
-                      ? "bg-amber-500 text-white"
-                      : "bg-blue-100 text-blue-700";
+                    const radStatus = getRadiationDisplayStatus(cycle);
+                    const radCfg = radiationStatusConfig[radStatus];
                     return (
                       <div
                         key={cycle._id}
-                        className={`flex items-start gap-3 p-3 rounded-xl border border-[#E5E2DC] ${radActive ? "bg-amber-50" : radDone ? "bg-gray-50" : "bg-[#F5F2EE]"}`}
+                        className={`flex items-start gap-3 p-3 rounded-xl border border-[#E5E2DC] ${radStatus === "active" ? "bg-amber-50" : radStatus === "completed" ? "bg-gray-50" : "bg-[#F5F2EE]"}`}
                       >
                         <div className="mt-0.5">
                           <Zap size={14} className="text-amber-500" />
@@ -2452,14 +2637,21 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
                             <span className="text-sm font-medium text-[#2C3E2D]">
                               {getRoadmapItemTitle(cycle)}
                             </span>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${radCls}`}>
-                              {radLabel}
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${radCfg.cls}`}>
+                              {radCfg.label}
                             </span>
                           </div>
                           <div className="text-xs text-[#9CA3AF] mt-0.5">
                             {formatDate(cycle.startDate)} – {formatDate(cycle.endDate)} ·{" "}
                             {cycle.totalSessions || 0} sessions planned
                           </div>
+                          {normalizeWeekdays(cycle.weekdays).length > 0 && (
+                            <div className="text-xs text-[#9CA3AF] mt-0.5">
+                              {normalizeWeekdays(cycle.weekdays)
+                                .map((day) => weekdayLabels[day])
+                                .join(", ")}
+                            </div>
+                          )}
                           {cycle.notes && (
                             <p className="text-xs text-[#9CA3AF] mt-0.5">{cycle.notes}</p>
                           )}
@@ -2537,7 +2729,6 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
                         </p>
                         <span className="text-xs text-[#9CA3AF]">
                           by {latest.enteredBy?.fullName ?? "Unknown"}
-                          {latest.cycle && ` · ${latest.cycle.title}`}
                         </span>
                       </div>
                       <div className="grid grid-cols-3 gap-2">
@@ -2597,11 +2788,6 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
                                   <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
                                       <span className="text-xs font-semibold text-[#2C3E2D]">{formatDate(dateStr)}</span>
-                                      {lab.cycle && (
-                                        <span className="text-xs text-[#7CAE8E] bg-[#F0F7F3] border border-[#C8D9CC] px-2 py-0.5 rounded-full">
-                                          {lab.cycle.title}
-                                        </span>
-                                      )}
                                     </div>
                                     <span className="text-xs text-[#9CA3AF]">by {lab.enteredBy?.fullName ?? "Unknown"}</span>
                                   </div>

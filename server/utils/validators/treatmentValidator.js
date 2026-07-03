@@ -1,5 +1,15 @@
 const Joi = require("joi");
 
+const weekdaySchema = Joi.string().valid(
+  "sun",
+  "mon",
+  "tue",
+  "wed",
+  "thu",
+  "fri",
+  "sat"
+);
+
 const treatmentTypeSchema = Joi.object({
   type: Joi.string()
     .valid("chemotherapy", "radiation", "surgery", "supportive")
@@ -52,6 +62,14 @@ const medicationSchema = Joi.object({
     .max(160)
     .default(""),
 
+  weekdays: Joi.array()
+    .items(weekdaySchema)
+    .unique()
+    .default([]),
+
+  asNeeded: Joi.boolean()
+    .default(false),
+
   category: Joi.string()
     .valid("chemotherapy", "supportive", "chronic", "other")
     .default("other"),
@@ -100,6 +118,11 @@ const cycleSchema = Joi.object({
     .integer()
     .min(0)
     .default(0),
+
+  weekdays: Joi.array()
+    .items(weekdaySchema)
+    .unique()
+    .default([]),
 
   status: Joi.string()
     .valid(
@@ -214,6 +237,10 @@ const updateCycleSchema = Joi.object({
     .integer()
     .min(0),
 
+  weekdays: Joi.array()
+    .items(weekdaySchema)
+    .unique(),
+
   status: Joi.string()
     .valid(
       "upcoming",
@@ -260,11 +287,28 @@ const delayCycleSchema = Joi.object({
     .default(""),
 });
 
+const bulkUpdateCycleSchema = Joi.object({
+  cycles: Joi.array()
+    .items(
+      updateCycleSchema.keys({
+        _id: Joi.string()
+          .required(),
+      })
+    )
+    .min(1)
+    .required(),
+
+  removedCycleIds: Joi.array()
+    .items(Joi.string())
+    .default([]),
+});
+
 module.exports = {
   createTreatmentProtocolSchema,
   updateTreatmentProtocolSchema,
   createCycleSchema,
   updateCycleSchema,
+  bulkUpdateCycleSchema,
   approveCycleSchema,
   delayCycleSchema,
 };

@@ -9,6 +9,7 @@ const {
   createCycle,
   getProtocolCycles,
   updateCycle,
+  bulkUpdateCycles,
   deleteCycle,
   approveCycle,
   delayCycle,
@@ -22,6 +23,7 @@ const {
   updateTreatmentProtocolSchema,
   createCycleSchema,
   updateCycleSchema,
+  bulkUpdateCycleSchema,
   approveCycleSchema,
   delayCycleSchema,
 } = require("../utils/validators/treatmentValidator");
@@ -66,6 +68,12 @@ router.post(
 router.get(
   "/protocols/:protocolId/cycles",
   getProtocolCycles
+);
+
+router.put(
+  "/protocols/:protocolId/cycles/bulk",
+  validate(bulkUpdateCycleSchema),
+  bulkUpdateCycles
 );
 
 router.put(
