@@ -16,7 +16,6 @@ import {
   Stethoscope,
   Syringe,
   X,
-  XCircle,
   Zap,
 } from "lucide-react";
 import { MessagesPanel } from "../../components/shared/MessagesPanel";
@@ -45,9 +44,9 @@ import {
   approveCycle,
   createCycle,
   createProtocol,
-  delayCycle,
   deleteCycle,
   getPatientProtocol,
+  postponeCycle,
   updateCycle,
   updateProtocol,
   type CyclePayload,
@@ -170,11 +169,8 @@ function TypeIcon({ type }: { type: string }) {
 function CycleDisplayBadge({ displayStatus }: { displayStatus: ChemoDisplayStatus }) {
   const cfg: Record<ChemoDisplayStatus, { label: string; color: string }> = {
     completed: { label: "Completed", color: "bg-gray-100 text-gray-600" },
-    approved: { label: "Approved", color: "bg-emerald-100 text-emerald-700" },
     active: { label: "Active", color: "bg-[#7CAE8E] text-white" },
-    waiting_labs: { label: "Waiting for labs", color: "bg-amber-100 text-amber-700" },
-    ready_for_review: { label: "Ready for Review", color: "bg-violet-100 text-violet-700" },
-    delayed: { label: "Delayed", color: "bg-red-100 text-red-700" },
+    waiting_for_review: { label: "Waiting for Review", color: "bg-violet-100 text-violet-700" },
     upcoming: { label: "Upcoming", color: "bg-blue-100 text-blue-700" },
   };
   const { label, color } = cfg[displayStatus];
@@ -1474,18 +1470,6 @@ function EditTreatmentDatesModal({
                       }
                     />
                   </div>
-                  <div>
-                    <label className={labelCls}>Completed Sessions</label>
-                    <input
-                      className={inputCls}
-                      type="number"
-                      min="0"
-                      value={item.completedSessions || 0}
-                      onChange={(event) =>
-                        updateItem(item._id, "completedSessions", Number(event.target.value))
-                      }
-                    />
-                  </div>
                   <div className="col-span-2">
                     <label className={labelCls}>Notes</label>
                     <input
@@ -1622,25 +1606,24 @@ function LabTrendChart({ labResults }: { labResults: ApiLabResult[] }) {
   );
 }
 
-function DelayCycleModal({
+function PostponeCycleModal({
   cycle,
   onClose,
   onConfirm,
 }: {
   cycle: TreatmentCycleRecord;
   onClose: () => void;
-  onConfirm: (reason: string, newStartDate: string, newEndDate: string) => Promise<void>;
+  onConfirm: (newStartDate: string, newEndDate: string) => Promise<void>;
 }) {
-  const [reason, setReason] = useState("");
   const [newStartDate, setNewStartDate] = useState("");
   const [newEndDate, setNewEndDate] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const confirmDelay = async () => {
-    if (!reason.trim() || !newStartDate || !newEndDate) return;
+  const confirmPostpone = async () => {
+    if (!newStartDate || !newEndDate) return;
 
     setSaving(true);
-    await onConfirm(reason.trim(), newStartDate, newEndDate);
+    await onConfirm(newStartDate, newEndDate);
     setSaving(false);
     onClose();
   };
@@ -1649,7 +1632,7 @@ function DelayCycleModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
       <div className="bg-[#FAF8F5] rounded-2xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E2DC]">
-          <h2 className="text-base font-semibold text-[#2C3E2D]">Delay {cycle.title}</h2>
+          <h2 className="text-base font-semibold text-[#2C3E2D]">Postpone {cycle.title}</h2>
           <button
             onClick={onClose}
             className="text-[#9CA3AF] hover:text-[#6B7280]"
@@ -1660,16 +1643,6 @@ function DelayCycleModal({
         </div>
 
         <div className="px-6 py-4 space-y-3">
-          <div>
-            <label className={labelCls}>Reason for Delay</label>
-            <textarea
-              className={`${inputCls} resize-none`}
-              rows={3}
-              placeholder="Clinical reason for delaying this cycle..."
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-            />
-          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>New Start Date</label>
@@ -1701,11 +1674,11 @@ function DelayCycleModal({
             Cancel
           </button>
           <button
-            onClick={confirmDelay}
-            disabled={saving || !reason.trim() || !newStartDate || !newEndDate}
-            className="px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-50"
+            onClick={confirmPostpone}
+            disabled={saving || !newStartDate || !newEndDate}
+            className="px-4 py-2 rounded-lg bg-[#7CAE8E] text-white text-sm font-medium hover:bg-[#5A8A6A] disabled:opacity-50"
           >
-            {saving ? "Saving..." : "Confirm Delay"}
+            {saving ? "Saving..." : "Save Postpone"}
           </button>
         </div>
       </div>
@@ -1727,7 +1700,7 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
   const [treatmentError, setTreatmentError] = useState("");
   const [savingTreatment, setSavingTreatment] = useState(false);
   const [expandedCycle, setExpandedCycle] = useState<string | null>(null);
-  const [cycleToDelay, setCycleToDelay] = useState<TreatmentCycleRecord | null>(null);
+  const [cycleToPostpone, setCycleToPostpone] = useState<TreatmentCycleRecord | null>(null);
 
   const [labResults, setLabResults] = useState<ApiLabResult[]>([]);
   const [labsLoading, setLabsLoading] = useState(false);
@@ -1990,9 +1963,8 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
     }
   };
 
-  const handleDelay = async (
+  const handlePostpone = async (
     cycle: TreatmentCycleRecord,
-    reason: string,
     newStartDate: string,
     newEndDate: string
   ) => {
@@ -2000,14 +1972,13 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
     setTreatmentError("");
 
     try {
-      const response = await delayCycle(cycle._id, {
-        delayReason: reason,
+      const response = await postponeCycle(cycle._id, {
         newStartDate,
         newEndDate,
       });
       applyTreatmentResponse(response);
     } catch (error) {
-      setTreatmentError(getApiErrorMessage(error, "Failed to delay cycle"));
+      setTreatmentError(getApiErrorMessage(error, "Failed to postpone cycle"));
     } finally {
       setSavingTreatment(false);
     }
@@ -2356,20 +2327,13 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
               ) : (
                 <div className="space-y-2">
                   {chemoCycles.map((cycle) => {
-                    const displayStatus = getChemoDisplayStatus(cycle, labResults);
+                    const displayStatus = getChemoDisplayStatus(cycle);
                     const isExpanded = expandedCycle === cycle._id;
                     const { startDate: effectiveStart, endDate: effectiveEnd } =
                       getEffectiveCycleDates(cycle);
-                    const delayedStart = toDateInputValue(cycle.decision?.delayedToStartDate);
-                    const delayedEnd = toDateInputValue(cycle.decision?.delayedToEndDate);
-                    const effectiveDateStr =
-                      displayStatus === "delayed" && delayedStart
-                        ? `Delayed to ${formatDate(delayedStart)}${
-                            delayedEnd ? ` - ${formatDate(delayedEnd)}` : ""
-                          }`
-                        : `${formatDate(effectiveStart || cycle.startDate)} - ${formatDate(
-                            effectiveEnd || cycle.endDate
-                          )}`;
+                    const effectiveDateStr = `${formatDate(
+                      effectiveStart || cycle.startDate
+                    )} - ${formatDate(effectiveEnd || cycle.endDate)}`;
 
                     return (
                       <div key={cycle._id} className="border border-[#E5E2DC] rounded-xl overflow-hidden">
@@ -2405,20 +2369,12 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
                                 </p>
                               </div>
                             )}
-                            {displayStatus === "waiting_labs" && (
-                              <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                                <FlaskConical size={14} />
-                                <span>
-                                  Waiting for lab results before this cycle can be reviewed.
-                                </span>
-                              </div>
-                            )}
-                            {displayStatus === "ready_for_review" && (
+                            {displayStatus === "waiting_for_review" && (
                               <div className="space-y-2">
                                 <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
                                   <CheckCircle2 size={14} />
                                   <span>
-                                    Lab results received. Ready for oncologist approval.
+                                    Current start date has arrived. Review latest bloodwork and decide whether to approve or postpone.
                                   </span>
                                 </div>
                                 <div className="flex gap-2">
@@ -2430,40 +2386,25 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
                                     <Check size={13} /> Approve Cycle
                                   </button>
                                   <button
-                                    onClick={() => setCycleToDelay(cycle)}
+                                    onClick={() => setCycleToPostpone(cycle)}
                                     disabled={savingTreatment}
-                                    className="flex items-center gap-1.5 px-4 py-2 bg-red-100 text-red-700 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors disabled:opacity-60"
+                                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors disabled:opacity-60"
                                   >
-                                    <XCircle size={13} /> Delay Cycle
+                                    <Calendar size={13} /> Postpone
                                   </button>
                                 </div>
                               </div>
                             )}
-                            {(displayStatus === "approved" || displayStatus === "active") && (
+                            {displayStatus === "active" && (
                               <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
                                 <p>
                                   Approved on{" "}
                                   {formatDate(cycle.decision?.decidedAt || cycle.updatedAt || "")}{" "}
                                   by {getPersonName(cycle.decision?.decidedBy) || "oncologist"}
                                 </p>
-                                {displayStatus === "active" && (
-                                  <p className="text-xs mt-0.5 text-emerald-600">
-                                    Currently in progress.
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                            {displayStatus === "delayed" && (
-                              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 space-y-1">
-                                <p>
-                                  Delayed to: {formatDate(delayedStart || cycle.startDate)}
-                                  {delayedEnd ? ` - ${formatDate(delayedEnd)}` : ""}
+                                <p className="text-xs mt-0.5 text-emerald-600">
+                                  Currently in progress.
                                 </p>
-                                {cycle.decision?.delayReason && (
-                                  <p className="text-xs">
-                                    Reason: {cycle.decision.delayReason}
-                                  </p>
-                                )}
                               </div>
                             )}
                             {displayStatus === "completed" && (
@@ -2517,7 +2458,7 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
                           </div>
                           <div className="text-xs text-[#9CA3AF] mt-0.5">
                             {formatDate(cycle.startDate)} – {formatDate(cycle.endDate)} ·{" "}
-                            {cycle.completedSessions || 0}/{cycle.totalSessions || 0} sessions
+                            {cycle.totalSessions || 0} sessions planned
                           </div>
                           {cycle.notes && (
                             <p className="text-xs text-[#9CA3AF] mt-0.5">{cycle.notes}</p>
@@ -2729,12 +2670,12 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
           onSave={handleSaveDates}
         />
       )}
-      {cycleToDelay && (
-        <DelayCycleModal
-          cycle={cycleToDelay}
-          onClose={() => setCycleToDelay(null)}
-          onConfirm={(reason, newStartDate, newEndDate) =>
-            handleDelay(cycleToDelay, reason, newStartDate, newEndDate)
+      {cycleToPostpone && (
+        <PostponeCycleModal
+          cycle={cycleToPostpone}
+          onClose={() => setCycleToPostpone(null)}
+          onConfirm={(newStartDate, newEndDate) =>
+            handlePostpone(cycleToPostpone, newStartDate, newEndDate)
           }
         />
       )}

@@ -76,10 +76,12 @@ export type TreatmentItemType =
 
 export type CycleStatus =
   | "upcoming"
-  | "approved"
+  | "waiting_for_review"
+  | "waiting_labs"
+  | "active"
   | "delayed"
   | "completed"
-  | "waiting_labs";
+  | "approved";
 
 export interface ChemoCycle {
   id: string;
@@ -106,7 +108,7 @@ export interface RadiationCourse {
   endDate: string;
   totalSessions: number;
   completedSessions: number;
-  status: "upcoming" | "in_progress" | "completed";
+  status: "upcoming" | "active" | "completed";
   notes?: string;
 }
 
@@ -307,7 +309,7 @@ export const seedPatientProfiles: PatientProfile[] = [
     lastUpdatedBy: "Dr. Miriam Goldstein",
     lastUpdatedAt: "2026-05-25T09:00:00Z",
     accountStatus: "waiting_registration",
-    currentTreatmentStatus: "Cycle 2 — Delayed",
+    currentTreatmentStatus: "Cycle 2 - Waiting for Review",
   },
   {
     id: "pp-3",
@@ -388,7 +390,7 @@ export const seedTreatmentProtocols: TreatmentProtocol[] = [
       { id: "cycle-1-1", type: "chemotherapy", title: "Cycle 1", cycleNumber: 1, startDate: "2026-04-01", endDate: "2026-04-21", status: "completed", approvedDate: "2026-04-01", approvedBy: "Dr. Miriam Goldstein" } as ChemoCycle,
       { id: "cycle-1-2", type: "chemotherapy", title: "Cycle 2", cycleNumber: 2, startDate: "2026-04-22", endDate: "2026-05-12", status: "completed", approvedDate: "2026-04-22", approvedBy: "Dr. Miriam Goldstein" } as ChemoCycle,
       { id: "cycle-1-3", type: "chemotherapy", title: "Cycle 3", cycleNumber: 3, startDate: "2026-05-13", endDate: "2026-06-02", status: "approved", approvedDate: "2026-05-13", approvedBy: "Dr. Miriam Goldstein", labResultId: "lab-r-1" } as ChemoCycle,
-      { id: "cycle-1-4", type: "chemotherapy", title: "Cycle 4", cycleNumber: 4, startDate: "2026-06-03", endDate: "2026-06-23", status: "waiting_labs" } as ChemoCycle,
+      { id: "cycle-1-4", type: "chemotherapy", title: "Cycle 4", cycleNumber: 4, startDate: "2026-06-03", endDate: "2026-06-23", status: "waiting_for_review" } as ChemoCycle,
       { id: "cycle-1-5", type: "chemotherapy", title: "Cycle 5", cycleNumber: 5, startDate: "2026-06-24", endDate: "2026-07-14", status: "upcoming" } as ChemoCycle,
       { id: "cycle-1-6", type: "chemotherapy", title: "Cycle 6", cycleNumber: 6, startDate: "2026-07-15", endDate: "2026-08-04", status: "upcoming" } as ChemoCycle,
     ],
@@ -406,7 +408,7 @@ export const seedTreatmentProtocols: TreatmentProtocol[] = [
     numberOfChemoCycles: 6,
     items: [
       { id: "cycle-2-1", type: "chemotherapy", title: "Cycle 1", cycleNumber: 1, startDate: "2026-04-10", endDate: "2026-04-30", status: "completed", approvedDate: "2026-04-10", approvedBy: "Dr. Miriam Goldstein", labResultId: "lab-r-2" } as ChemoCycle,
-      { id: "cycle-2-2", type: "chemotherapy", title: "Cycle 2", cycleNumber: 2, startDate: "2026-05-01", endDate: "2026-05-21", status: "delayed", delayedTo: "2026-06-10", delayedEndDate: "2026-06-30", delayReason: "WBC count below threshold. Patient to rest and return for recheck." } as ChemoCycle,
+      { id: "cycle-2-2", type: "chemotherapy", title: "Cycle 2", cycleNumber: 2, startDate: "2026-05-01", endDate: "2026-05-21", status: "waiting_for_review" } as ChemoCycle,
       { id: "cycle-2-3", type: "chemotherapy", title: "Cycle 3", cycleNumber: 3, startDate: "2026-06-10", endDate: "2026-06-30", status: "upcoming" } as ChemoCycle,
       { id: "cycle-2-4", type: "chemotherapy", title: "Cycle 4", cycleNumber: 4, startDate: "2026-07-01", endDate: "2026-07-21", status: "upcoming" } as ChemoCycle,
       { id: "cycle-2-5", type: "chemotherapy", title: "Cycle 5", cycleNumber: 5, startDate: "2026-07-22", endDate: "2026-08-11", status: "upcoming" } as ChemoCycle,
@@ -428,7 +430,7 @@ export const seedTreatmentProtocols: TreatmentProtocol[] = [
     items: [
       { id: "cycle-3-1", type: "chemotherapy", title: "Cycle 1", cycleNumber: 1, startDate: "2026-03-15", endDate: "2026-04-04", status: "completed", approvedDate: "2026-03-15", approvedBy: "Dr. Miriam Goldstein", labResultId: "lab-r-3" } as ChemoCycle,
       { id: "cycle-3-2", type: "chemotherapy", title: "Cycle 2", cycleNumber: 2, startDate: "2026-04-05", endDate: "2026-04-25", status: "completed", approvedDate: "2026-04-05", approvedBy: "Dr. Miriam Goldstein", labResultId: "lab-r-4" } as ChemoCycle,
-      { id: "rad-3-1", type: "radiation", title: "Pelvic Radiation Course", startDate: "2026-05-10", endDate: "2026-06-21", totalSessions: 25, completedSessions: 18, status: "in_progress", notes: "Monday–Friday sessions. Weekly review with radiation oncologist." } as RadiationCourse,
+      { id: "rad-3-1", type: "radiation", title: "Pelvic Radiation Course", startDate: "2026-05-10", endDate: "2026-06-21", totalSessions: 25, completedSessions: 18, status: "completed", notes: "Monday–Friday sessions. Weekly review with radiation oncologist." } as RadiationCourse,
     ],
     notes: "Concurrent chemoradiation completed. Now radiation maintenance only.",
     lastUpdatedBy: "Dr. Miriam Goldstein",
@@ -467,7 +469,7 @@ export const seedTreatmentProtocols: TreatmentProtocol[] = [
       { id: "cycle-5-2", type: "chemotherapy", title: "Cycle 2", cycleNumber: 2, startDate: "2026-03-06", endDate: "2026-03-19", status: "completed", approvedDate: "2026-03-06", approvedBy: "Dr. Miriam Goldstein", labResultId: "lab-r-6" } as ChemoCycle,
       { id: "cycle-5-3", type: "chemotherapy", title: "Cycle 3", cycleNumber: 3, startDate: "2026-03-20", endDate: "2026-04-02", status: "completed", approvedDate: "2026-03-20", approvedBy: "Dr. Miriam Goldstein", labResultId: "lab-r-7" } as ChemoCycle,
       { id: "cycle-5-4", type: "chemotherapy", title: "Cycle 4", cycleNumber: 4, startDate: "2026-04-03", endDate: "2026-04-16", status: "completed", approvedDate: "2026-04-03", approvedBy: "Dr. Miriam Goldstein", labResultId: "lab-r-8" } as ChemoCycle,
-      { id: "cycle-5-5", type: "chemotherapy", title: "Cycle 5", cycleNumber: 5, startDate: "2026-06-05", endDate: "2026-06-18", status: "waiting_labs" } as ChemoCycle,
+      { id: "cycle-5-5", type: "chemotherapy", title: "Cycle 5", cycleNumber: 5, startDate: "2026-06-05", endDate: "2026-06-18", status: "waiting_for_review" } as ChemoCycle,
       { id: "cycle-5-6", type: "chemotherapy", title: "Cycle 6", cycleNumber: 6, startDate: "2026-06-19", endDate: "2026-07-02", status: "upcoming" } as ChemoCycle,
     ],
     notes: "Manage peripheral neuropathy closely — dose reduce if grade 2+.",
@@ -555,28 +557,13 @@ export function validateRegistration(email: string, password: string): AuthResul
 
 export function getPendingAction(
   profileId: string,
-  labs: LabResult[],
-  protocol: TreatmentProtocol | undefined,
+  _labs: LabResult[],
+  _protocol: TreatmentProtocol | undefined,
   messages: Message[]
 ): PendingAction {
   const hasUnreadMsg = messages.some(
     (m) => m.patientProfileId === profileId && m.senderRole === "patient" && !m.read
   );
   if (hasUnreadMsg) return "unread_message";
-  if (!protocol) return "none";
-  const hasDelayed = protocol.items.some(
-    (i) => i.type === "chemotherapy" && (i as ChemoCycle).status === "delayed"
-  );
-  if (hasDelayed) return "treatment_delayed";
-  const waitingCycle = protocol.items.find(
-    (i) => i.type === "chemotherapy" && (i as ChemoCycle).status === "waiting_labs"
-  ) as ChemoCycle | undefined;
-  if (waitingCycle) {
-    const hasLabs = labs.some(
-      (l) => l.patientProfileId === profileId && l.linkedCycleId === waitingCycle.id
-    );
-    if (hasLabs) return "cycle_ready_review";
-    return "waiting_labs";
-  }
   return "none";
 }

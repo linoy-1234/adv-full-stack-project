@@ -1,14 +1,6 @@
 const Joi = require("joi");
 
-const objectId = Joi.string()
-  .hex()
-  .length(24);
-
 const createLabResultSchema = Joi.object({
-  cycleId: objectId
-    .allow(null, "")
-    .default(null),
-
   testDate: Joi.date()
     .required(),
 
@@ -43,9 +35,6 @@ const createLabResultSchema = Joi.object({
 });
 
 const updateLabResultSchema = Joi.object({
-  cycleId: objectId
-    .allow(null, ""),
-
   testDate: Joi.date(),
 
   wbc: Joi.number()

@@ -1,7 +1,6 @@
 const User = require("../models/User");
 const PatientProfile = require("../models/PatientProfile");
 const TreatmentProtocol = require("../models/TreatmentProtocol");
-const TreatmentCycle = require("../models/TreatmentCycle");
 const Message = require("../models/Message");
 
 const buildPatientResponse = (patient) => {
@@ -99,17 +98,11 @@ const getPatients = async (req, res, next) => {
 
     const patientIds = patients.map((p) => p._id);
 
-    const [protocols, actionableCycles, unreadMsgAgg] = await Promise.all([
+    const [protocols, unreadMsgAgg] = await Promise.all([
       TreatmentProtocol.find({
         patient: { $in: patientIds },
         isActive: true,
       }).select("patient protocolName treatmentTypes"),
-
-      TreatmentCycle.find({
-        patient: { $in: patientIds },
-        isActive: true,
-        status: { $in: ["waiting_for_labs", "pending_review", "delayed"] },
-      }).select("patient status"),
 
       Message.aggregate([
         {
@@ -132,16 +125,6 @@ const getPatients = async (req, res, next) => {
       };
     }
 
-    // Higher number = higher priority; keeps the most urgent status per patient
-    const CYCLE_PRIORITY = { pending_review: 3, waiting_for_labs: 2, delayed: 1 };
-    const cycleStatusMap = {};
-    for (const cycle of actionableCycles) {
-      const pid = cycle.patient.toString();
-      const incoming = CYCLE_PRIORITY[cycle.status] ?? 0;
-      const current = CYCLE_PRIORITY[cycleStatusMap[pid]] ?? 0;
-      if (incoming > current) cycleStatusMap[pid] = cycle.status;
-    }
-
     const patientsWithUnread = new Set(
       unreadMsgAgg.filter((e) => e.count > 0).map((e) => e._id.toString())
     );
@@ -149,10 +132,6 @@ const getPatients = async (req, res, next) => {
     const computePendingAction = (patientId) => {
       const pid = patientId.toString();
       if (patientsWithUnread.has(pid)) return "unread_message";
-      const cycleStatus = cycleStatusMap[pid];
-      if (cycleStatus === "pending_review") return "cycle_ready_review";
-      if (cycleStatus === "waiting_for_labs") return "waiting_labs";
-      if (cycleStatus === "delayed") return "treatment_delayed";
       return "none";
     };
 

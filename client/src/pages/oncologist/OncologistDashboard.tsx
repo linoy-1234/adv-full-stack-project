@@ -46,7 +46,7 @@ interface OncologistDashboardProps {
 function PendingBadge({ action }: { action: PendingAction }) {
   if (action === "none") return <span className="text-xs text-[#9CA3AF]">-</span>;
   const cfg: Record<PendingAction, { label: string; color: string; icon: React.ReactNode }> = {
-    waiting_labs: { label: "Waiting for labs", color: "bg-amber-100 text-amber-700", icon: <FlaskConical size={11} /> },
+    waiting_labs: { label: "Review needed", color: "bg-amber-100 text-amber-700", icon: <Clock size={11} /> },
     labs_received: { label: "Labs received", color: "bg-blue-100 text-blue-700", icon: <FlaskConical size={11} /> },
     cycle_ready_review: { label: "Cycle ready for review", color: "bg-emerald-100 text-emerald-700", icon: <CheckCircle2 size={11} /> },
     unread_message: { label: "Unread message", color: "bg-purple-100 text-purple-700", icon: <MessageSquare size={11} /> },

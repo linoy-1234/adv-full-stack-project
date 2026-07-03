@@ -77,6 +77,7 @@ export type TreatmentKind =
 export type TreatmentCycleStatus =
   | "upcoming"
   | "waiting_for_labs"
+  | "waiting_for_review"
   | "pending_review"
   | "approved"
   | "active"

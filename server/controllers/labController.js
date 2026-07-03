@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 const PatientProfile = require("../models/PatientProfile");
-const TreatmentCycle = require("../models/TreatmentCycle");
 const LabResult = require("../models/LabResult");
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -75,98 +74,6 @@ const getAuthorizedLabResult = async (req, labResultId) => {
   return labResult;
 };
 
-const findLinkedCycle = async (cycleId, patientId) => {
-  if (!cycleId) {
-    return null;
-  }
-
-  if (!isValidId(cycleId)) {
-    return "invalid";
-  }
-
-  return TreatmentCycle.findOne({
-    _id: cycleId,
-    patient: patientId,
-    isActive: true,
-  });
-};
-
-const dateKey = (value) => {
-  if (!value) {
-    return "";
-  }
-
-  return new Date(value).toISOString().slice(0, 10);
-};
-
-const getEffectiveCycleStartDate = (cycle) => {
-  if (
-    cycle.decision?.delayedToStartDate &&
-    ["delayed", "approved", "pending_review", "waiting_for_labs"].includes(cycle.status)
-  ) {
-    return cycle.decision.delayedToStartDate;
-  }
-
-  return cycle.startDate || cycle.plannedDate;
-};
-
-const getAttemptDayRange = (cycle) => {
-  const effectiveStartKey = dateKey(getEffectiveCycleStartDate(cycle));
-
-  if (!effectiveStartKey) {
-    return null;
-  }
-
-  const start = new Date(`${effectiveStartKey}T00:00:00.000Z`);
-  const end = new Date(start);
-  end.setUTCDate(end.getUTCDate() + 1);
-
-  return { start, end };
-};
-
-const countValidAttemptLabs = async (cycle) => {
-  const attemptRange = getAttemptDayRange(cycle);
-
-  if (!attemptRange) {
-    return 0;
-  }
-
-  return LabResult.countDocuments({
-    cycle: cycle._id,
-    isActive: true,
-    testDate: {
-      $gte: attemptRange.start,
-      $lt: attemptRange.end,
-    },
-  });
-};
-
-const reconcileCycleLabReviewStatus = async (cycle) => {
-  if (!cycle) {
-    return;
-  }
-
-  if (["approved", "cancelled", "completed", "active"].includes(cycle.status)) {
-    return;
-  }
-
-  const validLabsCount = await countValidAttemptLabs(cycle);
-
-  if (
-    validLabsCount > 0 &&
-    ["waiting_for_labs", "upcoming", "delayed"].includes(cycle.status)
-  ) {
-    cycle.status = "pending_review";
-    await cycle.save();
-    return;
-  }
-
-  if (validLabsCount === 0 && cycle.status === "pending_review") {
-    cycle.status = "waiting_for_labs";
-    await cycle.save();
-  }
-};
-
 const createLabResult = async (req, res, next) => {
   try {
     if (!requireLabStaff(req, res)) return;
@@ -182,26 +89,9 @@ const createLabResult = async (req, res, next) => {
       });
     }
 
-    const cycleId = req.body.cycleId || null;
-    const linkedCycle = await findLinkedCycle(cycleId, patient._id);
-
-    if (linkedCycle === "invalid") {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid cycle id",
-      });
-    }
-
-    if (cycleId && !linkedCycle) {
-      return res.status(404).json({
-        success: false,
-        message: "Linked treatment cycle was not found for this patient",
-      });
-    }
-
     const labResult = await LabResult.create({
       patient: patient._id,
-      cycle: linkedCycle ? linkedCycle._id : null,
+      cycle: null,
       enteredBy: req.user._id,
       updatedBy: req.user._id,
       testDate: req.body.testDate,
@@ -213,8 +103,6 @@ const createLabResult = async (req, res, next) => {
       creatinine: req.body.creatinine,
       notes: req.body.notes,
     });
-
-    await reconcileCycleLabReviewStatus(linkedCycle);
 
     res.status(201).json({
       success: true,
@@ -328,29 +216,6 @@ const updateLabResult = async (req, res, next) => {
       });
     }
 
-    const previousCycleId = labResult.cycle;
-
-    if (req.body.cycleId !== undefined) {
-      const cycleId = req.body.cycleId || null;
-      const linkedCycle = await findLinkedCycle(cycleId, labResult.patient);
-
-      if (linkedCycle === "invalid") {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid cycle id",
-        });
-      }
-
-      if (cycleId && !linkedCycle) {
-        return res.status(404).json({
-          success: false,
-          message: "Linked treatment cycle was not found for this patient",
-        });
-      }
-
-      labResult.cycle = linkedCycle ? linkedCycle._id : null;
-    }
-
     const fieldsToUpdate = [
       "testDate",
       "wbc",
@@ -371,19 +236,6 @@ const updateLabResult = async (req, res, next) => {
     labResult.updatedBy = req.user._id;
 
     await labResult.save();
-
-    const cycleIdsToReconcile = [
-      previousCycleId,
-      labResult.cycle,
-    ]
-      .filter(Boolean)
-      .map((cycleId) => cycleId.toString());
-    const uniqueCycleIds = Array.from(new Set(cycleIdsToReconcile));
-
-    for (const cycleId of uniqueCycleIds) {
-      const cycle = await TreatmentCycle.findById(cycleId);
-      await reconcileCycleLabReviewStatus(cycle);
-    }
 
     res.status(200).json({
       success: true,
@@ -410,17 +262,10 @@ const deleteLabResult = async (req, res, next) => {
       });
     }
 
-    const linkedCycleId = labResult.cycle;
-
     labResult.isActive = false;
     labResult.updatedBy = req.user._id;
 
     await labResult.save();
-
-    if (linkedCycleId) {
-      const cycle = await TreatmentCycle.findById(linkedCycleId);
-      await reconcileCycleLabReviewStatus(cycle);
-    }
 
     res.status(200).json({
       success: true,

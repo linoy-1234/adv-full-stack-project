@@ -148,17 +148,11 @@ const getRoadmapItemTitle = (cycle: TreatmentCycleRecord) => {
   return cycle.title;
 };
 
-const adaptCycle = (
-  cycle: TreatmentCycleRecord,
-  labResults: ApiLabResult[]
-): TreatmentItem => {
+const adaptCycle = (cycle: TreatmentCycleRecord): TreatmentItem => {
   const { startDate, endDate } = getEffectiveCycleDates(cycle);
-  const delayedTo = toDateInputValue(cycle.decision?.delayedToStartDate);
-  const delayedEndDate = toDateInputValue(cycle.decision?.delayedToEndDate);
 
   if (cycle.treatmentType === "chemotherapy") {
-    const status = getChemoDisplayStatus(cycle, labResults);
-    const linkedLab = labResults.find((lab) => lab.cycle?._id === cycle._id);
+    const status = getChemoDisplayStatus(cycle);
 
     return {
       id: cycle._id,
@@ -170,11 +164,7 @@ const adaptCycle = (
       status,
       approvedDate: toDateInputValue(cycle.decision?.decidedAt),
       approvedBy: getPersonName(cycle.decision?.decidedBy, "oncologist"),
-      delayedTo,
-      delayedEndDate,
-      delayReason: cycle.decision?.delayReason,
       notes: cycle.notes,
-      labResultId: linkedLab?._id,
     } as ChemoCycle;
   }
 
@@ -191,7 +181,7 @@ const adaptCycle = (
       endDate,
       totalSessions: cycle.totalSessions || 0,
       completedSessions: cycle.completedSessions || 0,
-      status: isCompleted ? "completed" : isActive ? "in_progress" : "upcoming",
+      status: isCompleted ? "completed" : isActive ? "active" : "upcoming",
       notes: cycle.notes,
     } as RadiationCourse;
   }
@@ -209,14 +199,14 @@ const adaptCycle = (
 export const adaptTreatmentProtocol = (
   protocol: TreatmentProtocolRecord,
   cycles: TreatmentCycleRecord[],
-  labResults: ApiLabResult[]
+  _labResults: ApiLabResult[]
 ): TreatmentProtocol => ({
   id: protocol._id,
   patientProfileId: getPersonId(protocol.patient),
   protocolName: protocol.protocolName,
   diagnosis: protocol.diagnosis,
   treatmentTypes: protocol.treatmentTypes.map((entry) => entry.type),
-  items: cycles.map((cycle) => adaptCycle(cycle, labResults)),
+  items: cycles.map((cycle) => adaptCycle(cycle)),
   drugs: protocol.drugs || [],
   notes: protocol.notes,
   numberOfChemoCycles: plannedCount(protocol.treatmentTypes, "chemotherapy"),
@@ -239,8 +229,4 @@ export const adaptLabResult = (lab: ApiLabResult): LabResult => ({
   notes: lab.notes,
   enteredBy: lab.enteredBy?.fullName || "Lab Staff",
   enteredAt: lab.createdAt,
-  linkedCycleId: lab.cycle?._id,
-  linkedCycleLabel: lab.cycle
-    ? lab.cycle.title || `${lab.cycle.treatmentType} cycle ${lab.cycle.cycleNumber}`
-    : undefined,
 });

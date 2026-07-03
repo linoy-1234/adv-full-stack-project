@@ -2,6 +2,11 @@ const mongoose = require("mongoose");
 const PatientProfile = require("../models/PatientProfile");
 const TreatmentProtocol = require("../models/TreatmentProtocol");
 const TreatmentCycle = require("../models/TreatmentCycle");
+const {
+  emptyDecision,
+  resetCycleApproval,
+  syncDerivedTreatmentStatus,
+} = require("../utils/treatmentStatus");
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -147,6 +152,13 @@ const hydrateProtocolResponse = async (protocolId) => {
     .sort({ startDate: 1, cycleNumber: 1 })
     .populate("decision.decidedBy", "fullName email role");
 
+  for (const cycle of cycles) {
+    syncDerivedTreatmentStatus(cycle);
+    if (cycle.isModified("status") || cycle.isModified("decision")) {
+      await cycle.save();
+    }
+  }
+
   return { protocol, cycles };
 };
 
@@ -190,12 +202,22 @@ const createTreatmentProtocol = async (req, res, next) => {
       updatedBy: req.user._id,
     });
 
-    const cyclesToCreate = req.body.cycles.map((cycle) => ({
-      ...cycle,
-      protocol: protocol._id,
-      patient: patient._id,
-      oncologist: req.user._id,
-    }));
+    const cyclesToCreate = req.body.cycles.map((cycle) => {
+      const cycleToCreate = {
+        ...cycle,
+        status: cycle.status || "upcoming",
+        decision: cycle.decision || emptyDecision(),
+      };
+
+      syncDerivedTreatmentStatus(cycleToCreate);
+
+      return {
+        ...cycleToCreate,
+        protocol: protocol._id,
+        patient: patient._id,
+        oncologist: req.user._id,
+      };
+    });
 
     await TreatmentCycle.insertMany(cyclesToCreate);
     const payload = await hydrateProtocolResponse(protocol._id);
@@ -245,6 +267,13 @@ const getPatientTreatmentProtocol = async (req, res, next) => {
     })
       .sort({ startDate: 1, cycleNumber: 1 })
       .populate("decision.decidedBy", "fullName email role");
+
+    for (const cycle of cycles) {
+      syncDerivedTreatmentStatus(cycle);
+      if (cycle.isModified("status") || cycle.isModified("decision")) {
+        await cycle.save();
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -372,12 +401,16 @@ const createCycle = async (req, res, next) => {
       });
     }
 
-    const cycle = await TreatmentCycle.create({
+    const cycleData = {
       ...req.body,
       protocol: protocol._id,
       patient: protocol.patient,
       oncologist: req.user._id,
-    });
+      decision: req.body.decision || emptyDecision(),
+    };
+    syncDerivedTreatmentStatus(cycleData);
+
+    await TreatmentCycle.create(cycleData);
     await syncProtocolPlannedCounts(protocol, req.user._id);
     const payload = await hydrateProtocolResponse(protocol._id);
 
@@ -410,6 +443,13 @@ const getProtocolCycles = async (req, res, next) => {
     })
       .sort({ startDate: 1, cycleNumber: 1 })
       .populate("decision.decidedBy", "fullName email role");
+
+    for (const cycle of cycles) {
+      syncDerivedTreatmentStatus(cycle);
+      if (cycle.isModified("status") || cycle.isModified("decision")) {
+        await cycle.save();
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -455,7 +495,18 @@ const updateCycle = async (req, res, next) => {
       });
     }
 
+    const datesChanged =
+      req.body.startDate !== undefined ||
+      req.body.endDate !== undefined ||
+      req.body.plannedDate !== undefined;
+
     Object.assign(cycle, req.body);
+
+    if (datesChanged && cycle.treatmentType === "chemotherapy") {
+      resetCycleApproval(cycle);
+    }
+
+    syncDerivedTreatmentStatus(cycle);
     await cycle.save();
     await syncProtocolPlannedCounts(protocol, req.user._id);
     const payload = await hydrateProtocolResponse(protocol._id);
@@ -548,15 +599,15 @@ const approveCycle = async (req, res, next) => {
       });
     }
 
-    if (cycle.status !== "pending_review") {
+    syncDerivedTreatmentStatus(cycle);
+
+    if (cycle.treatmentType !== "chemotherapy" || cycle.status !== "waiting_for_review") {
       return res.status(400).json({
         success: false,
-        message:
-          "Cycle cannot be approved yet. It must be pending review after lab results are available.",
+        message: "Cycle cannot be approved from its current status.",
       });
     }
 
-    cycle.status = "approved";
     cycle.decision = {
       decisionStatus: "approved",
       decidedBy: req.user._id,
@@ -566,6 +617,7 @@ const approveCycle = async (req, res, next) => {
       delayedToStartDate: null,
       delayedToEndDate: null,
     };
+    syncDerivedTreatmentStatus(cycle);
 
     await cycle.save();
     const payload = await hydrateProtocolResponse(protocol._id);
@@ -607,33 +659,26 @@ const delayCycle = async (req, res, next) => {
       });
     }
 
-    if (cycle.status !== "pending_review") {
+    syncDerivedTreatmentStatus(cycle);
+
+    if (cycle.treatmentType !== "chemotherapy" || cycle.status !== "waiting_for_review") {
       return res.status(400).json({
         success: false,
-        message:
-          "Cycle cannot be delayed from this status. It must be pending review first.",
+        message: "Cycle cannot be postponed from its current status.",
       });
     }
 
-    cycle.status = "delayed";
     cycle.startDate = req.body.newStartDate;
     cycle.endDate = req.body.newEndDate;
-    cycle.decision = {
-      decisionStatus: "delayed",
-      decidedBy: req.user._id,
-      decidedAt: new Date(),
-      decisionNotes: req.body.decisionNotes || "",
-      delayReason: req.body.delayReason,
-      delayedToStartDate: req.body.newStartDate,
-      delayedToEndDate: req.body.newEndDate,
-    };
+    resetCycleApproval(cycle);
+    syncDerivedTreatmentStatus(cycle);
 
     await cycle.save();
     const payload = await hydrateProtocolResponse(protocol._id);
 
     res.status(200).json({
       success: true,
-      message: "Cycle delayed successfully",
+      message: "Cycle postponed successfully",
       ...payload,
     });
   } catch (error) {

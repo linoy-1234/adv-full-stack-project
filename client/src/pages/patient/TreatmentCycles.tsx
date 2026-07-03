@@ -17,13 +17,9 @@ interface TreatmentCyclesProps {
 function CycleStatusBadge({ status }: { status: string }) {
   const cfg: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
     completed:    { label: "Completed",      color: "bg-gray-100 text-gray-600",        icon: <CheckCircle2 size={11} /> },
-    approved:     { label: "Approved",       color: "bg-emerald-100 text-emerald-700",  icon: <CheckCircle2 size={11} /> },
     active:       { label: "Active",         color: "bg-emerald-100 text-emerald-700",  icon: <CheckCircle2 size={11} /> },
-    waiting_labs: { label: "Waiting for labs", color: "bg-amber-100 text-amber-700",    icon: <Clock size={11} /> },
-    ready_for_review: { label: "Ready for Review", color: "bg-violet-100 text-violet-700", icon: <CheckCircle2 size={11} /> },
-    delayed:      { label: "Delayed",        color: "bg-red-100 text-red-700",          icon: <AlertTriangle size={11} /> },
+    waiting_for_review: { label: "Waiting for Review", color: "bg-violet-100 text-violet-700", icon: <Clock size={11} /> },
     upcoming:     { label: "Upcoming",       color: "bg-blue-100 text-blue-700",        icon: <Clock size={11} /> },
-    in_progress:  { label: "In Progress",    color: "bg-emerald-100 text-emerald-700",  icon: <CheckCircle2 size={11} /> },
     postponed:    { label: "Postponed",      color: "bg-red-100 text-red-700",          icon: <AlertTriangle size={11} /> },
     today:        { label: "Today",          color: "bg-blue-500 text-white",           icon: <Calendar size={11} /> },
   };
@@ -83,10 +79,7 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
       if ((c.status as string) !== "active") return false;
       return c.startDate <= todayValue && c.endDate >= todayValue;
     }
-    if (item.type === "radiation") {
-      const r = item as RadiationCourse;
-      return r.status === "in_progress";
-    }
+    if (item.type === "radiation") return (item as RadiationCourse).status === "active";
     return false;
   });
 
@@ -136,7 +129,6 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
             {chemoItems.map((cycle) => {
               const status = cycle.status as string;
               const isActive = status === "active" && cycle.startDate <= todayValue && cycle.endDate >= todayValue;
-              const hasDelayedContext = Boolean(cycle.delayedTo || cycle.delayReason);
               return (
                 <div key={cycle.id} className={`px-4 py-3 ${isActive ? "bg-emerald-50" : ""}`}>
                   <div className="flex items-center justify-between flex-wrap gap-1">
@@ -148,22 +140,14 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
                       <CycleStatusBadge status={cycle.status} />
                     </div>
                     <span className="text-xs text-[#9CA3AF]">
-                      {hasDelayedContext && cycle.delayedTo
-                        ? `Delayed → ${formatDate(cycle.delayedTo)}${cycle.delayedEndDate ? ` – ${formatDate(cycle.delayedEndDate)}` : ""}`
-                        : `${formatDate(cycle.startDate)} – ${formatDate(cycle.endDate)}`}
+                      {formatDate(cycle.startDate)} – {formatDate(cycle.endDate)}
                     </span>
                   </div>
-                  {["approved", "active", "completed"].includes(status) && cycle.approvedBy && (
+                  {["active", "completed"].includes(status) && cycle.approvedBy && (
                     <p className="text-xs text-emerald-600 mt-0.5">Approved by {cycle.approvedBy} · {formatDate(cycle.approvedDate || "")}</p>
                   )}
-                  {hasDelayedContext && cycle.delayReason && (
-                    <p className="text-xs text-red-600 mt-0.5">Reason: {cycle.delayReason}</p>
-                  )}
-                  {status === "waiting_labs" && (
-                    <p className="text-xs text-amber-600 mt-0.5">Awaiting lab results before oncologist can review this cycle.</p>
-                  )}
-                  {status === "ready_for_review" && (
-                    <p className="text-xs text-violet-600 mt-0.5">Lab results received. Ready for oncologist review.</p>
+                  {status === "waiting_for_review" && (
+                    <p className="text-xs text-violet-600 mt-0.5">Waiting for oncologist review.</p>
                   )}
                   {cycle.notes && <p className="text-xs text-[#9CA3AF] mt-0.5">{cycle.notes}</p>}
                 </div>
@@ -182,26 +166,18 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
           </div>
           <div className="divide-y divide-[#F5F2EE]">
             {radItems.map((rad) => {
-              const isActive = rad.status === "in_progress";
+              const isActive = rad.status === "active";
               return (
                 <div key={rad.id} className={`px-4 py-3 ${isActive ? "bg-amber-50" : ""}`}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      {isActive && <span className="text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-medium">In Progress</span>}
+                      {isActive && <span className="text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-medium">Active</span>}
                       <span className="text-sm font-medium text-[#2C3E2D]">{rad.title}</span>
                     </div>
                     <CycleStatusBadge status={rad.status} />
                   </div>
                   <p className="text-xs text-[#9CA3AF]">{formatDate(rad.startDate)} → {formatDate(rad.endDate)}</p>
-                  <div className="mt-2">
-                    <div className="flex items-center justify-between text-xs text-[#6B7280] mb-1">
-                      <span>Sessions: {rad.completedSessions}/{rad.totalSessions}</span>
-                      <span>{Math.round((rad.completedSessions / rad.totalSessions) * 100)}%</span>
-                    </div>
-                    <div className="h-1.5 bg-[#F5F2EE] rounded-full overflow-hidden">
-                      <div className="h-full bg-amber-400 rounded-full" style={{ width: `${(rad.completedSessions / rad.totalSessions) * 100}%` }} />
-                    </div>
-                  </div>
+                  <p className="text-xs text-[#6B7280] mt-2">Sessions planned: {rad.totalSessions}</p>
                   {rad.notes && <p className="text-xs text-[#9CA3AF] mt-1">{rad.notes}</p>}
                 </div>
               );

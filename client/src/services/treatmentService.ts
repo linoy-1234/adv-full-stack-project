@@ -32,6 +32,7 @@ export interface CyclePayload {
   status?:
     | "upcoming"
     | "waiting_for_labs"
+    | "waiting_for_review"
     | "pending_review"
     | "approved"
     | "active"
@@ -56,7 +57,7 @@ export interface ProtocolPayload {
 export interface DelayCyclePayload {
   newStartDate: string;
   newEndDate: string;
-  delayReason: string;
+  delayReason?: string;
   decisionNotes?: string;
 }
 
@@ -170,7 +171,7 @@ export const approveCycle = async (
   return data;
 };
 
-export const delayCycle = async (
+export const postponeCycle = async (
   cycleId: string,
   delayData: DelayCyclePayload
 ): Promise<TreatmentProtocolResponse> => {
@@ -181,5 +182,7 @@ export const delayCycle = async (
 
   return data;
 };
+
+export const delayCycle = postponeCycle;
 
 //the protocol of the treatment,(approve,deny treatment, CRUD protocol, CRUD rounds)
