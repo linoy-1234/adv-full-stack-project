@@ -67,6 +67,17 @@ const medicationSchema = new mongoose.Schema(
       default: "",
     },
 
+    weekdays: {
+      type: [String],
+      enum: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"],
+      default: [],
+    },
+
+    asNeeded: {
+      type: Boolean,
+      default: false,
+    },
+
     category: {
       type: String,
       enum: ["chemotherapy", "supportive", "chronic", "other"],

@@ -81,6 +81,16 @@ const categoryLabel: Record<string, string> = {
   other: "Other",
 };
 
+const weekdayLabel: Record<string, string> = {
+  sun: "Sun",
+  mon: "Mon",
+  tue: "Tue",
+  wed: "Wed",
+  thu: "Thu",
+  fri: "Fri",
+  sat: "Sat",
+};
+
 const typeLabel: Record<string, string> = {
   chemotherapy: "Chemotherapy",
   radiation: "Radiation",
@@ -189,11 +199,18 @@ export function PatientProfile({ profile, protocol }: PatientProfileProps) {
                               {[med.dose, med.route].filter(Boolean).join(" - ")}
                             </span>
                           )}
-                          {(med.frequency || med.timing) && (
+                          {med.timing && (
                             <div className="text-xs opacity-70 mt-0.5">
-                              {[med.frequency, med.timing].filter(Boolean).join(" - ")}
+                              {med.timing}
                             </div>
                           )}
+                          <div className="text-xs opacity-70 mt-0.5">
+                            {med.asNeeded
+                              ? "As needed"
+                              : med.weekdays?.length
+                              ? med.weekdays.map((day) => weekdayLabel[day]).join(", ")
+                              : "No weekdays selected"}
+                          </div>
                           {med.notes && (
                             <div className="text-xs opacity-70">{med.notes}</div>
                           )}

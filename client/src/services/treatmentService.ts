@@ -1,5 +1,5 @@
 import api from "./api";
-import type { ApiMessageResponse, TreatmentProtocolResponse } from "../types/api";
+import type { ApiMessageResponse, TreatmentProtocolResponse, WeekdayKey } from "../types/api";
 
 export interface TreatmentTypePayload {
   type: "chemotherapy" | "radiation" | "surgery" | "supportive";
@@ -15,6 +15,8 @@ export interface MedicationPayload {
   frequency?: string;
   timing?: string;
   schedule?: string;
+  weekdays?: WeekdayKey[];
+  asNeeded?: boolean;
   category?: "chemotherapy" | "supportive" | "chronic" | "other";
   notes?: string;
 }
@@ -28,6 +30,7 @@ export interface CyclePayload {
   plannedDate?: string;
   totalSessions?: number;
   completedSessions?: number;
+  weekdays?: WeekdayKey[];
   medications?: string[];
   status?:
     | "upcoming"
@@ -59,6 +62,11 @@ export interface DelayCyclePayload {
   newEndDate: string;
   delayReason?: string;
   decisionNotes?: string;
+}
+
+export interface BulkCycleUpdatePayload {
+  cycles: Array<Partial<CyclePayload> & { _id: string }>;
+  removedCycleIds?: string[];
 }
 
 export const getPatientProtocol = async (
@@ -130,6 +138,18 @@ export const getProtocolCycles = async (
 ): Promise<TreatmentProtocolResponse> => {
   const { data } = await api.get<TreatmentProtocolResponse>(
     `/treatments/protocols/${protocolId}/cycles`
+  );
+
+  return data;
+};
+
+export const bulkUpdateCycles = async (
+  protocolId: string,
+  payload: BulkCycleUpdatePayload
+): Promise<TreatmentProtocolResponse> => {
+  const { data } = await api.put<TreatmentProtocolResponse>(
+    `/treatments/protocols/${protocolId}/cycles/bulk`,
+    payload
   );
 
   return data;

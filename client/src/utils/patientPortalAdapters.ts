@@ -21,9 +21,9 @@ import type {
 import {
   getChemoDisplayStatus,
   getEffectiveCycleDates,
+  getRadiationDisplayStatus,
   getSurgeryDisplayStatus,
   toDateInputValue,
-  todayIso,
 } from "./treatmentDisplay";
 
 type PersonLike = string | { _id?: string; fullName?: string; email?: string } | null | undefined;
@@ -59,6 +59,8 @@ const normalizeMedication = (
   route: (medication.route || "oral") as Medication["route"],
   frequency: medication.frequency || medication.schedule || "",
   timing: medication.timing || "",
+  weekdays: medication.weekdays || [],
+  asNeeded: Boolean(medication.asNeeded),
   category:
     medication.category === "other"
       ? "supportive"
@@ -87,6 +89,8 @@ export const getMedicationPlan = (
       route: "IV",
       frequency: "",
       timing: "",
+      weekdays: [],
+      asNeeded: false,
       category: "chemotherapy",
       notes: "Listed in treatment protocol",
     });
@@ -169,10 +173,6 @@ const adaptCycle = (cycle: TreatmentCycleRecord): TreatmentItem => {
   }
 
   if (cycle.treatmentType === "radiation") {
-    const today = todayIso();
-    const isCompleted = cycle.status === "completed" || (!!endDate && endDate < today);
-    const isActive = !isCompleted && !!startDate && !!endDate && startDate <= today && endDate >= today;
-
     return {
       id: cycle._id,
       type: "radiation",
@@ -181,7 +181,8 @@ const adaptCycle = (cycle: TreatmentCycleRecord): TreatmentItem => {
       endDate,
       totalSessions: cycle.totalSessions || 0,
       completedSessions: cycle.completedSessions || 0,
-      status: isCompleted ? "completed" : isActive ? "active" : "upcoming",
+      weekdays: cycle.weekdays || [],
+      status: getRadiationDisplayStatus(cycle),
       notes: cycle.notes,
     } as RadiationCourse;
   }

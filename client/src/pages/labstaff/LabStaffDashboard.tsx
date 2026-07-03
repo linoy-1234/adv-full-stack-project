@@ -413,9 +413,6 @@ export function LabStaffDashboard({ onLogout }: LabStaffDashboardProps) {
   return (
     <div className="min-h-screen bg-[#FAF8F5]">
       <RibbonBackground />
-      <div className="fixed inset-0 pointer-events-none flex items-center justify-center opacity-[0.025] select-none z-0">
-        <span className="text-[22rem] leading-none">♋</span>
-      </div>
 
       <header className="sticky top-0 z-20 bg-[#FAF8F5]/95 backdrop-blur border-b border-[#E5E2DC]">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">

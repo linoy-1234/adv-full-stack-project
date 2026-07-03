@@ -132,6 +132,12 @@ const treatmentCycleSchema = new mongoose.Schema(
       default: 0,
     },
 
+    weekdays: {
+      type: [String],
+      enum: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"],
+      default: [],
+    },
+
     notes: {
       type: String,
       trim: true,

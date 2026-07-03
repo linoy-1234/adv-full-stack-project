@@ -69,7 +69,7 @@ export function LandingPage({ onGoToLogin, onGoToRegister }: LandingPageProps) {
             </div>
             <div className="rounded-2xl p-4" style={{ backgroundColor: '#FFFFFF', border: '1.5px solid #E5E7EB' }}>
               <p className="text-sm font-semibold mb-1" style={{ color: '#2D4739' }}>Lab Staff</p>
-              <p className="text-xs" style={{ color: '#9CA3AF' }}>Enter and update blood work results, linked directly to each patient's treatment cycle.</p>
+              <p className="text-xs" style={{ color: '#9CA3AF' }}>Enter and update independent blood work records for each patient.</p>
             </div>
           </div>
 

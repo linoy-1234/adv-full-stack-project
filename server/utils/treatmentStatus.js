@@ -13,12 +13,8 @@ const emptyDecision = () => ({
   delayedToEndDate: null,
 });
 
-const isLegacyApprovedStatus = (status) =>
-  ["approved", "active", "completed"].includes(status);
-
 const isCycleApproved = (cycle) =>
-  cycle?.decision?.decisionStatus === "approved" ||
-  isLegacyApprovedStatus(cycle?.status);
+  cycle?.decision?.decisionStatus === "approved";
 
 const resetCycleApproval = (cycle) => {
   cycle.decision = emptyDecision();
@@ -38,10 +34,7 @@ const deriveChemotherapyStatus = (cycle, today = new Date()) => {
     return startDate && todayValue < startDate ? "upcoming" : "waiting_for_review";
   }
 
-  if (startDate && todayValue < startDate) {
-    resetCycleApproval(cycle);
-    return "upcoming";
-  }
+  if (startDate && todayValue < startDate) return "upcoming";
 
   if (endDate && todayValue > endDate) {
     return "completed";

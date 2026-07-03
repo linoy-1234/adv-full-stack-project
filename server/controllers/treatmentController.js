@@ -9,6 +9,9 @@ const {
 } = require("../utils/treatmentStatus");
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const CHEMO_OVERLAP_MESSAGE =
+  "This chemotherapy cycle overlaps with another chemotherapy cycle. Please choose different dates.";
 
 const getAuthorizedPatient = async (req, patientId) => {
   if (!isValidId(patientId)) {
@@ -79,7 +82,7 @@ const requireOncologist = (req, res) => {
 
 const normalizeMedications = (medications = []) =>
   medications.map((medication) => {
-    const frequency = medication.frequency || medication.schedule || "";
+    const frequency = medication.frequency || "";
     const timing = medication.timing || "";
 
     return {
@@ -87,9 +90,116 @@ const normalizeMedications = (medications = []) =>
       id: medication.id || new mongoose.Types.ObjectId().toString(),
       frequency,
       timing,
-      schedule: medication.schedule || [frequency, timing].filter(Boolean).join(" - "),
+      schedule: medication.schedule || "",
+      weekdays: (medication.weekdays || []).filter((day) => WEEKDAYS.includes(day)),
+      asNeeded: Boolean(medication.asNeeded),
     };
   });
+
+const toDateOnly = (value) => {
+  const date = new Date(value);
+  date.setUTCHours(0, 0, 0, 0);
+  return date;
+};
+
+const rangesOverlap = (leftStart, leftEnd, rightStart, rightEnd) =>
+  toDateOnly(leftStart) <= toDateOnly(rightEnd) &&
+  toDateOnly(leftEnd) >= toDateOnly(rightStart);
+
+const normalizeCycleDates = (cycle) => ({
+  startDate: cycle.startDate || cycle.plannedDate,
+  endDate: cycle.endDate || cycle.startDate || cycle.plannedDate,
+});
+
+const validateChemoOverlapInPayload = (cycles = []) => {
+  const chemoCycles = cycles.filter(
+    (cycle) => cycle.treatmentType === "chemotherapy"
+  );
+
+  for (let index = 0; index < chemoCycles.length; index += 1) {
+    const current = chemoCycles[index];
+    const currentDates = normalizeCycleDates(current);
+    if (!currentDates.startDate || !currentDates.endDate) continue;
+
+    for (let nextIndex = index + 1; nextIndex < chemoCycles.length; nextIndex += 1) {
+      const next = chemoCycles[nextIndex];
+      const nextDates = normalizeCycleDates(next);
+      if (!nextDates.startDate || !nextDates.endDate) continue;
+
+      if (
+        rangesOverlap(
+          currentDates.startDate,
+          currentDates.endDate,
+          nextDates.startDate,
+          nextDates.endDate
+        )
+      ) {
+        const error = new Error(CHEMO_OVERLAP_MESSAGE);
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+  }
+};
+
+const validateChemoOverlapForPatient = async ({
+  patientId,
+  startDate,
+  endDate,
+  excludeCycleId,
+}) => {
+  const query = {
+    patient: patientId,
+    treatmentType: "chemotherapy",
+    isActive: true,
+    startDate: { $lte: toDateOnly(endDate) },
+    endDate: { $gte: toDateOnly(startDate) },
+  };
+
+  if (excludeCycleId) {
+    query._id = { $ne: excludeCycleId };
+  }
+
+  const overlap = await TreatmentCycle.exists(query);
+  if (overlap) {
+    const error = new Error(CHEMO_OVERLAP_MESSAGE);
+    error.statusCode = 400;
+    throw error;
+  }
+};
+
+const assertNoFinalChemoOverlap = async ({
+  protocolId,
+  patientId,
+  updates = [],
+  removedCycleIds = [],
+}) => {
+  const removedIds = new Set(removedCycleIds.map((id) => id.toString()));
+  const updateMap = new Map(
+    updates
+      .filter((cycle) => cycle._id)
+      .map((cycle) => [cycle._id.toString(), cycle])
+  );
+  const existingCycles = await TreatmentCycle.find({
+    protocol: protocolId,
+    patient: patientId,
+    treatmentType: "chemotherapy",
+    isActive: true,
+    _id: { $nin: Array.from(removedIds) },
+  });
+
+  const finalCycles = existingCycles.map((cycle) => {
+    const update = updateMap.get(cycle._id.toString()) || {};
+    return {
+      _id: cycle._id.toString(),
+      treatmentType: "chemotherapy",
+      startDate: update.startDate || cycle.startDate,
+      endDate: update.endDate || cycle.endDate,
+    };
+  });
+
+  validateChemoOverlapInPayload(finalCycles);
+};
 
 const countableTreatmentTypes = ["chemotherapy", "radiation", "surgery"];
 
@@ -188,6 +298,8 @@ const createTreatmentProtocol = async (req, res, next) => {
         message: "This patient already has an active treatment protocol",
       });
     }
+
+    validateChemoOverlapInPayload(req.body.cycles);
 
     const protocol = await TreatmentProtocol.create({
       patient: patient._id,
@@ -408,6 +520,15 @@ const createCycle = async (req, res, next) => {
       oncologist: req.user._id,
       decision: req.body.decision || emptyDecision(),
     };
+
+    if (cycleData.treatmentType === "chemotherapy") {
+      await validateChemoOverlapForPatient({
+        patientId: protocol.patient,
+        startDate: cycleData.startDate,
+        endDate: cycleData.endDate,
+      });
+    }
+
     syncDerivedTreatmentStatus(cycleData);
 
     await TreatmentCycle.create(cycleData);
@@ -497,8 +618,16 @@ const updateCycle = async (req, res, next) => {
 
     const datesChanged =
       req.body.startDate !== undefined ||
-      req.body.endDate !== undefined ||
-      req.body.plannedDate !== undefined;
+      req.body.endDate !== undefined;
+
+    if (cycle.treatmentType === "chemotherapy" && datesChanged) {
+      await validateChemoOverlapForPatient({
+        patientId: cycle.patient,
+        startDate: req.body.startDate || cycle.startDate,
+        endDate: req.body.endDate || cycle.endDate,
+        excludeCycleId: cycle._id,
+      });
+    }
 
     Object.assign(cycle, req.body);
 
@@ -514,6 +643,81 @@ const updateCycle = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Treatment cycle updated successfully",
+      ...payload,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const bulkUpdateCycles = async (req, res, next) => {
+  try {
+    if (!requireOncologist(req, res)) return;
+
+    const { protocolId } = req.params;
+    const protocol = await getAuthorizedProtocol(req, protocolId);
+
+    if (!protocol) {
+      return res.status(404).json({
+        success: false,
+        message: "Treatment protocol was not found",
+      });
+    }
+
+    const updates = req.body.cycles || [];
+    const removedCycleIds = req.body.removedCycleIds || [];
+
+    await assertNoFinalChemoOverlap({
+      protocolId: protocol._id,
+      patientId: protocol.patient,
+      updates,
+      removedCycleIds,
+    });
+
+    for (const cycleId of removedCycleIds) {
+      if (!isValidId(cycleId)) continue;
+      const cycle = await TreatmentCycle.findOne({
+        _id: cycleId,
+        protocol: protocol._id,
+        isActive: true,
+      });
+      if (!cycle) continue;
+      cycle.status = "cancelled";
+      cycle.isActive = false;
+      cycle.cancelledAt = new Date();
+      cycle.cancelledBy = req.user._id;
+      cycle.cancelReason = "Removed from roadmap";
+      await cycle.save();
+    }
+
+    for (const update of updates) {
+      const { _id, ...cycleUpdate } = update;
+      const cycle = await TreatmentCycle.findOne({
+        _id,
+        protocol: protocol._id,
+        isActive: true,
+      });
+
+      if (!cycle) continue;
+
+      const datesChanged =
+        cycleUpdate.startDate !== undefined || cycleUpdate.endDate !== undefined;
+      Object.assign(cycle, cycleUpdate);
+
+      if (datesChanged && cycle.treatmentType === "chemotherapy") {
+        resetCycleApproval(cycle);
+      }
+
+      syncDerivedTreatmentStatus(cycle);
+      await cycle.save();
+    }
+
+    await syncProtocolPlannedCounts(protocol, req.user._id);
+    const payload = await hydrateProtocolResponse(protocol._id);
+
+    res.status(200).json({
+      success: true,
+      message: "Treatment cycles updated successfully",
       ...payload,
     });
   } catch (error) {
@@ -668,6 +872,13 @@ const delayCycle = async (req, res, next) => {
       });
     }
 
+    await validateChemoOverlapForPatient({
+      patientId: cycle.patient,
+      startDate: req.body.newStartDate,
+      endDate: req.body.newEndDate,
+      excludeCycleId: cycle._id,
+    });
+
     cycle.startDate = req.body.newStartDate;
     cycle.endDate = req.body.newEndDate;
     resetCycleApproval(cycle);
@@ -695,6 +906,7 @@ module.exports = {
   createCycle,
   getProtocolCycles,
   updateCycle,
+  bulkUpdateCycles,
   deleteCycle,
   approveCycle,
   delayCycle,

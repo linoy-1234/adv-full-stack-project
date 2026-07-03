@@ -133,13 +133,17 @@ const getPatientLabResults = async (req, res, next) => {
     })
       .sort({ testDate: -1 })
       .populate("enteredBy", "fullName email role")
-      .populate("updatedBy", "fullName email role")
-      .populate("cycle", "title cycleNumber treatmentType status startDate endDate");
+      .populate("updatedBy", "fullName email role");
+
+    const independentLabResults = labResults.map((labResult) => ({
+      ...labResult.toObject(),
+      cycle: null,
+    }));
 
     res.status(200).json({
       success: true,
-      count: labResults.length,
-      labResults,
+      count: independentLabResults.length,
+      labResults: independentLabResults,
     });
   } catch (error) {
     next(error);
@@ -190,11 +194,13 @@ const getLabResultById = async (req, res, next) => {
 
     await labResult.populate("enteredBy", "fullName email role");
     await labResult.populate("updatedBy", "fullName email role");
-    await labResult.populate("cycle", "title cycleNumber treatmentType status startDate endDate");
 
     res.status(200).json({
       success: true,
-      labResult,
+      labResult: {
+        ...labResult.toObject(),
+        cycle: null,
+      },
     });
   } catch (error) {
     next(error);

@@ -5,7 +5,6 @@ import {
   MedicationCategory,
   MedicationRoute,
   AccountStatus,
-  PendingAction,
   formatDate,
   TODAY,
 } from "../../utils/mockData";
@@ -18,7 +17,7 @@ import {
   clearPatientsError,
   fetchPatients,
 } from "../../store/slices/patientsSlice";
-import type { PatientProfile as ApiPatientProfile } from "../../types/api";
+import type { PatientProfile as ApiPatientProfile, PendingAction } from "../../types/api";
 import type { PatientPayload } from "../../services/patientService";
 import {
   Users,
@@ -43,21 +42,30 @@ interface OncologistDashboardProps {
   onLogout: () => void;
 }
 
-function PendingBadge({ action }: { action: PendingAction }) {
-  if (action === "none") return <span className="text-xs text-[#9CA3AF]">-</span>;
-  const cfg: Record<PendingAction, { label: string; color: string; icon: React.ReactNode }> = {
-    waiting_labs: { label: "Review needed", color: "bg-amber-100 text-amber-700", icon: <Clock size={11} /> },
-    labs_received: { label: "Labs received", color: "bg-blue-100 text-blue-700", icon: <FlaskConical size={11} /> },
-    cycle_ready_review: { label: "Cycle ready for review", color: "bg-emerald-100 text-emerald-700", icon: <CheckCircle2 size={11} /> },
+function PendingBadges({ actions }: { actions: PendingAction[] }) {
+  const visibleActions = actions.filter((action) => action !== "none");
+  if (visibleActions.length === 0) {
+    return <span className="text-xs text-[#9CA3AF]">-</span>;
+  }
+
+  const cfg: Partial<Record<PendingAction, { label: string; color: string; icon: React.ReactNode }>> = {
+    cycle_ready_review: { label: "Treatment review", color: "bg-violet-100 text-violet-700", icon: <CheckCircle2 size={11} /> },
     unread_message: { label: "Unread message", color: "bg-purple-100 text-purple-700", icon: <MessageSquare size={11} /> },
-    treatment_delayed: { label: "Treatment delayed", color: "bg-red-100 text-red-700", icon: <AlertCircle size={11} /> },
-    none: { label: "", color: "", icon: null },
   };
-  const { label, color, icon } = cfg[action];
+
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>
-      {icon}{label}
-    </span>
+    <div className="flex flex-wrap gap-1">
+      {visibleActions.map((action) => {
+        const item = cfg[action];
+        if (!item) return null;
+
+        return (
+          <span key={action} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${item.color}`}>
+            {item.icon}{item.label}
+          </span>
+        );
+      })}
+    </div>
   );
 }
 
@@ -113,7 +121,6 @@ function AddPatientModal({ onClose, onSave, oncologistName }: AddPatientModalPro
     name: "",
     dose: "",
     route: "IV" as MedicationRoute,
-    frequency: "",
     timing: "",
     category: "chemotherapy" as MedicationCategory,
     notes: "",
@@ -150,7 +157,7 @@ function AddPatientModal({ onClose, onSave, oncologistName }: AddPatientModalPro
       ...prev,
       { ...medForm, id: `med-new-${Date.now()}` },
     ]);
-    setMedForm({ name: "", dose: "", route: "IV", frequency: "", timing: "", category: "chemotherapy", notes: "" });
+    setMedForm({ name: "", dose: "", route: "IV", timing: "", category: "chemotherapy", notes: "" });
   };
 
   const removeMed = (id: string) =>
@@ -403,12 +410,8 @@ function AddPatientModal({ onClose, onSave, oncologistName }: AddPatientModalPro
                   </select>
                 </div>
                 <div>
-                  <label className={labelCls}>Frequency</label>
-                  <input className={inputCls} placeholder="e.g. Every 21 days" value={medForm.frequency} onChange={(e) => setMedForm((p) => ({ ...p, frequency: e.target.value }))} />
-                </div>
-                <div>
-                  <label className={labelCls}>Timing / Days</label>
-                  <input className={inputCls} placeholder="e.g. Day 1 of cycle" value={medForm.timing} onChange={(e) => setMedForm((p) => ({ ...p, timing: e.target.value }))} />
+                  <label className={labelCls}>Timing</label>
+                  <input className={inputCls} placeholder="e.g. morning and evening" value={medForm.timing} onChange={(e) => setMedForm((p) => ({ ...p, timing: e.target.value }))} />
                 </div>
               </div>
               <button type="button" onClick={addMedication} className="flex items-center gap-1.5 text-sm text-[#7CAE8E] hover:text-[#5A8A6A] font-medium">
@@ -608,7 +611,7 @@ export function OncologistDashboard({ onSelectPatient, onLogout }: OncologistDas
                     <AccountBadge status={profile.accountStatus} />
                   </div>
                   <div>
-                    <PendingBadge action={profile.pendingAction ?? "none"} />
+                    <PendingBadges actions={profile.pendingActions ?? [profile.pendingAction ?? "none"]} />
                   </div>
                   <div className="flex justify-end">
                     <button onClick={() => handleOpenPatient(profile)} className="flex items-center gap-0.5 text-sm text-[#7CAE8E] hover:text-[#5A8A6A] font-medium">

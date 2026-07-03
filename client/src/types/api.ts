@@ -53,8 +53,17 @@ export interface PatientProfile {
     protocolName: string;
     treatmentTypes: string[];
   } | null;
-  pendingAction?: "waiting_labs" | "labs_received" | "cycle_ready_review" | "unread_message" | "treatment_delayed" | "none";
+  pendingAction?: PendingAction;
+  pendingActions?: PendingAction[];
 }
+
+export type PendingAction =
+  | "waiting_labs"
+  | "labs_received"
+  | "cycle_ready_review"
+  | "unread_message"
+  | "treatment_delayed"
+  | "none";
 
 export interface AuthResponse {
   success: boolean;
@@ -93,6 +102,8 @@ export type TreatmentMedicationCategory =
   | "chronic"
   | "other";
 
+export type WeekdayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
+
 export interface TreatmentTypeRecord {
   type: TreatmentKind;
   plannedCount: number;
@@ -108,6 +119,8 @@ export interface TreatmentMedicationRecord {
   frequency?: string;
   timing?: string;
   schedule?: string;
+  weekdays?: WeekdayKey[];
+  asNeeded?: boolean;
   category?: TreatmentMedicationCategory;
   notes?: string;
 }
@@ -176,6 +189,7 @@ export interface TreatmentCycleRecord {
   plannedDate?: string;
   totalSessions?: number;
   completedSessions?: number;
+  weekdays?: WeekdayKey[];
   medications?: string[];
   status: TreatmentCycleStatus;
   notes?: string;

@@ -1,7 +1,9 @@
 const User = require("../models/User");
 const PatientProfile = require("../models/PatientProfile");
 const TreatmentProtocol = require("../models/TreatmentProtocol");
+const TreatmentCycle = require("../models/TreatmentCycle");
 const Message = require("../models/Message");
+const { syncDerivedTreatmentStatus } = require("../utils/treatmentStatus");
 
 const buildPatientResponse = (patient) => {
   return {
@@ -98,7 +100,7 @@ const getPatients = async (req, res, next) => {
 
     const patientIds = patients.map((p) => p._id);
 
-    const [protocols, unreadMsgAgg] = await Promise.all([
+    const [protocols, unreadMsgAgg, chemoCycles] = await Promise.all([
       TreatmentProtocol.find({
         patient: { $in: patientIds },
         isActive: true,
@@ -115,6 +117,12 @@ const getPatients = async (req, res, next) => {
         },
         { $group: { _id: "$patient", count: { $sum: 1 } } },
       ]),
+
+      TreatmentCycle.find({
+        patient: { $in: patientIds },
+        treatmentType: "chemotherapy",
+        isActive: true,
+      }),
     ]);
 
     const protocolMap = {};
@@ -129,16 +137,37 @@ const getPatients = async (req, res, next) => {
       unreadMsgAgg.filter((e) => e.count > 0).map((e) => e._id.toString())
     );
 
+    const patientsWaitingForTreatmentReview = new Set();
+    for (const cycle of chemoCycles) {
+      syncDerivedTreatmentStatus(cycle);
+      if (cycle.isModified("status") || cycle.isModified("decision")) {
+        await cycle.save();
+      }
+      if (cycle.status === "waiting_for_review") {
+        patientsWaitingForTreatmentReview.add(cycle.patient.toString());
+      }
+    }
+
     const computePendingAction = (patientId) => {
       const pid = patientId.toString();
+      if (patientsWaitingForTreatmentReview.has(pid)) return "cycle_ready_review";
       if (patientsWithUnread.has(pid)) return "unread_message";
       return "none";
+    };
+
+    const computePendingActions = (patientId) => {
+      const pid = patientId.toString();
+      const actions = [];
+      if (patientsWaitingForTreatmentReview.has(pid)) actions.push("cycle_ready_review");
+      if (patientsWithUnread.has(pid)) actions.push("unread_message");
+      return actions.length ? actions : ["none"];
     };
 
     const result = patients.map((patient) => ({
       ...buildPatientResponse(patient),
       treatmentSummary: protocolMap[patient._id.toString()] || null,
       pendingAction: computePendingAction(patient._id),
+      pendingActions: computePendingActions(patient._id),
     }));
 
     res.status(200).json({
