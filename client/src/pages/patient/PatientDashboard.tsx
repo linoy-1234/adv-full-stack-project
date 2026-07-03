@@ -60,11 +60,11 @@ export function PatientDashboard({ profile, protocol, latestLab, unreadMessagesC
     if (item.type === "chemotherapy") {
       const c = item as ChemoCycle;
       const status = c.status as string;
-      return c.startDate <= todayValue && c.endDate >= todayValue && ["approved", "active", "waiting_labs", "ready_for_review"].includes(status);
+      return c.startDate <= todayValue && c.endDate >= todayValue && status === "active";
     }
     if (item.type === "radiation") {
       const r = item as RadiationCourse;
-      return r.status === "in_progress" && r.startDate <= todayValue && r.endDate >= todayValue;
+      return r.status === "active" && r.startDate <= todayValue && r.endDate >= todayValue;
     }
     if (item.type === "surgery") {
       const s = item as SurgeryCheckpoint;
@@ -76,9 +76,9 @@ export function PatientDashboard({ profile, protocol, latestLab, unreadMessagesC
   const nextItem = !todayItem && protocol?.items.find((item) => {
     if (item.type === "chemotherapy") {
       const status = (item as ChemoCycle).status as string;
-      return ["upcoming", "waiting_labs", "ready_for_review", "approved", "active"].includes(status);
+      return ["upcoming", "waiting_for_review", "active"].includes(status);
     }
-    if (item.type === "radiation") return (item as RadiationCourse).status === "in_progress";
+    if (item.type === "radiation") return (item as RadiationCourse).status === "active";
     if (item.type === "surgery") return (item as SurgeryCheckpoint).status === "upcoming";
     return false;
   });
@@ -124,11 +124,7 @@ export function PatientDashboard({ profile, protocol, latestLab, unreadMessagesC
               🌿 {todayItem.type === "chemotherapy" ? `Chemotherapy — ${todayItem.title}` : todayItem.type === "radiation" ? "Radiation Session Today" : `Surgery: ${todayItem.title}`}
             </div>
             <p className="text-sm mb-3" style={{ color: "#166534" }}>
-              {todayItem.type === "chemotherapy" && (todayItem as ChemoCycle).status === "waiting_labs"
-                ? "Your care team is waiting for lab results before this treatment can be reviewed."
-                : todayItem.type === "chemotherapy" && ((todayItem as ChemoCycle).status as string) === "ready_for_review"
-                ? "Your lab results have been received and this treatment is ready for oncologist review."
-                : "You have a scheduled treatment today. Please follow your oncologist's instructions and attend your clinic appointment."}
+              You have a scheduled treatment today. Please follow your oncologist's instructions and attend your clinic appointment.
             </p>
             {allMeds.length > 0 && (
               <>

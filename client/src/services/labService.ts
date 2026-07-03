@@ -2,7 +2,6 @@ import api from "./api";
 import type { ApiMessageResponse, LabResultsResponse, LabResultResponse } from "../types/api";
 
 export interface LabResultPayload {
-  cycleId?: string | null;
   testDate: string;
   wbc: number;
   neutrophils: number;

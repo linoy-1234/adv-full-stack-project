@@ -27,11 +27,9 @@ import {
   deleteLabResult,
   type LabResultPayload,
 } from "../../services/labService";
-import { getPatientProtocol } from "../../services/treatmentService";
 import type {
   PatientProfile,
   ApiLabResult,
-  TreatmentCycleRecord,
 } from "../../types/api";
 
 // ─── Pure display helpers (no mock data dependency) ───────────────────────────
@@ -61,32 +59,40 @@ function labEnteredBy(lab: ApiLabResult): string {
   return lab.enteredBy?.fullName ?? "Unknown";
 }
 
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  if (typeof error === "object" && error !== null && "response" in error) {
+    const axiosError = error as { response?: { data?: { message?: string } } };
+    return axiosError.response?.data?.message || fallback;
+  }
+
+  if (error instanceof Error) return error.message;
+  return fallback;
+};
+
 // ─── Lab Entry Form ───────────────────────────────────────────────────────────
 
 interface LabEntryFormProps {
   patients: PatientProfile[];
   labStaffName: string;
-  cycles: TreatmentCycleRecord[];
-  cyclesLoading: boolean;
   selectedPatientId: string | null;
   onPatientChange: (patientId: string) => void;
   onSave: (patientId: string, payload: LabResultPayload, labResultId?: string) => Promise<void>;
   onClose: () => void;
   editingLab?: ApiLabResult;
   saving: boolean;
+  externalError: string;
 }
 
 function LabEntryForm({
   patients,
   labStaffName,
-  cycles,
-  cyclesLoading,
   selectedPatientId,
   onPatientChange,
   onSave,
   onClose,
   editingLab,
   saving,
+  externalError,
 }: LabEntryFormProps) {
   const [patientId, setPatientId] = useState(
     editingLab?.patient ?? selectedPatientId ?? ""
@@ -99,15 +105,24 @@ function LabEntryForm({
   const [alt, setAlt] = useState(editingLab?.alt?.toString() ?? "");
   const [creatinine, setCreatinine] = useState(editingLab?.creatinine?.toString() ?? "");
   const [notes, setNotes] = useState(editingLab?.notes ?? "");
-  const [linkedCycleId, setLinkedCycleId] = useState(editingLab?.cycle?._id ?? "");
   const [error, setError] = useState("");
-
-  const chemoCycles = cycles.filter((c) => c.treatmentType === "chemotherapy");
 
   const inputCls =
     "w-full border border-[#E5E2DC] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7CAE8E]";
   const labelCls =
     "block text-xs font-semibold text-[#6B7280] mb-1 uppercase tracking-wide";
+  const cyclesLoading = false;
+  const chemoCycles: Array<{ _id: string; title: string; startDate: string; endDate: string }> = [];
+  const linkedCycleId = "";
+  const setLinkedCycleId = (_value: string) => {};
+
+  useEffect(() => {
+    if (externalError) setError(externalError);
+  }, [externalError]);
+
+  const clearError = () => {
+    if (error) setError("");
+  };
 
   const handleSave = async () => {
     if (!patientId) { setError("Please select a patient."); return; }
@@ -124,7 +139,6 @@ function LabEntryForm({
       alt: parseFloat(alt),
       creatinine: parseFloat(creatinine),
       notes: notes.trim() || undefined,
-      cycleId: linkedCycleId || null,
     };
 
     setError("");
@@ -160,8 +174,8 @@ function LabEntryForm({
               value={patientId}
               disabled={!!editingLab}
               onChange={(e) => {
+                clearError();
                 setPatientId(e.target.value);
-                setLinkedCycleId("");
                 onPatientChange(e.target.value);
               }}
             >
@@ -180,13 +194,16 @@ function LabEntryForm({
               className={inputCls}
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => {
+                clearError();
+                setDate(e.target.value);
+              }}
             />
           </div>
 
-          {patientId && (
+          {false && patientId && (
             <div>
-              <label className={labelCls}>Link to Chemotherapy Cycle (optional)</label>
+              <label className={labelCls}>Legacy hidden field</label>
               {cyclesLoading ? (
                 <p className="text-xs text-[#9CA3AF]">Loading cycles…</p>
               ) : chemoCycles.length === 0 ? (
@@ -215,32 +232,32 @@ function LabEntryForm({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>WBC (×10⁹/L)</label>
-                <input className={inputCls} type="number" step="0.1" placeholder="e.g. 5.2" value={wbc} onChange={(e) => setWbc(e.target.value)} />
+                <input className={inputCls} type="number" step="0.1" placeholder="e.g. 5.2" value={wbc} onChange={(e) => { clearError(); setWbc(e.target.value); }} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.wbc.min}–{LAB_NORMS.wbc.max}</p>
               </div>
               <div>
                 <label className={labelCls}>Neutrophils (×10⁹/L)</label>
-                <input className={inputCls} type="number" step="0.1" placeholder="e.g. 2.8" value={neutrophils} onChange={(e) => setNeutrophils(e.target.value)} />
+                <input className={inputCls} type="number" step="0.1" placeholder="e.g. 2.8" value={neutrophils} onChange={(e) => { clearError(); setNeutrophils(e.target.value); }} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.neutrophils.min}–{LAB_NORMS.neutrophils.max}</p>
               </div>
               <div>
                 <label className={labelCls}>Hemoglobin (g/dL)</label>
-                <input className={inputCls} type="number" step="0.1" placeholder="e.g. 12.0" value={hemoglobin} onChange={(e) => setHemoglobin(e.target.value)} />
+                <input className={inputCls} type="number" step="0.1" placeholder="e.g. 12.0" value={hemoglobin} onChange={(e) => { clearError(); setHemoglobin(e.target.value); }} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.hemoglobin.min}–{LAB_NORMS.hemoglobin.max}</p>
               </div>
               <div>
                 <label className={labelCls}>Platelets (×10⁹/L)</label>
-                <input className={inputCls} type="number" step="1" placeholder="e.g. 200" value={platelets} onChange={(e) => setPlatelets(e.target.value)} />
+                <input className={inputCls} type="number" step="1" placeholder="e.g. 200" value={platelets} onChange={(e) => { clearError(); setPlatelets(e.target.value); }} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.platelets.min}–{LAB_NORMS.platelets.max}</p>
               </div>
               <div>
                 <label className={labelCls}>ALT (U/L)</label>
-                <input className={inputCls} type="number" step="1" placeholder="e.g. 28" value={alt} onChange={(e) => setAlt(e.target.value)} />
+                <input className={inputCls} type="number" step="1" placeholder="e.g. 28" value={alt} onChange={(e) => { clearError(); setAlt(e.target.value); }} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.alt.min}–{LAB_NORMS.alt.max}</p>
               </div>
               <div>
                 <label className={labelCls}>Creatinine (mg/dL)</label>
-                <input className={inputCls} type="number" step="0.01" placeholder="e.g. 0.85" value={creatinine} onChange={(e) => setCreatinine(e.target.value)} />
+                <input className={inputCls} type="number" step="0.01" placeholder="e.g. 0.85" value={creatinine} onChange={(e) => { clearError(); setCreatinine(e.target.value); }} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.creatinine.min}–{LAB_NORMS.creatinine.max}</p>
               </div>
             </div>
@@ -253,7 +270,10 @@ function LabEntryForm({
               rows={2}
               placeholder="Optional notes…"
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={(e) => {
+                clearError();
+                setNotes(e.target.value);
+              }}
             />
           </div>
         </div>
@@ -307,9 +327,6 @@ export function LabStaffDashboard({ onLogout }: LabStaffDashboardProps) {
   const [labsLoading, setLabsLoading] = useState(false);
   const [labsError, setLabsError] = useState("");
 
-  const [cycles, setCycles] = useState<TreatmentCycleRecord[]>([]);
-  const [cyclesLoading, setCyclesLoading] = useState(false);
-
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -323,11 +340,10 @@ export function LabStaffDashboard({ onLogout }: LabStaffDashboardProps) {
       .finally(() => setPatientsLoading(false));
   }, []);
 
-  // Load lab results and cycles when a patient is selected
+  // Load lab results when a patient is selected
   useEffect(() => {
     if (!selectedPatientId) {
       setLabResults([]);
-      setCycles([]);
       return;
     }
 
@@ -337,12 +353,6 @@ export function LabStaffDashboard({ onLogout }: LabStaffDashboardProps) {
       .then((res) => setLabResults(res.labResults))
       .catch(() => setLabsError("Could not load lab results."))
       .finally(() => setLabsLoading(false));
-
-    setCyclesLoading(true);
-    getPatientProtocol(selectedPatientId)
-      .then((res) => setCycles(res.cycles ?? []))
-      .catch(() => setCycles([]))
-      .finally(() => setCyclesLoading(false));
   }, [selectedPatientId]);
 
   const filteredPatients = patients.filter(
@@ -358,11 +368,7 @@ export function LabStaffDashboard({ onLogout }: LabStaffDashboardProps) {
 
   const handlePatientChange = (patientId: string) => {
     if (!patientId) return;
-    setCyclesLoading(true);
-    getPatientProtocol(patientId)
-      .then((res) => setCycles(res.cycles ?? []))
-      .catch(() => setCycles([]))
-      .finally(() => setCyclesLoading(false));
+    setSelectedPatientId(patientId);
   };
 
   const refreshLabs = async (patientId: string) => {
@@ -386,8 +392,8 @@ export function LabStaffDashboard({ onLogout }: LabStaffDashboardProps) {
       setShowForm(false);
       setEditingLab(undefined);
       if (selectedPatientId) await refreshLabs(selectedPatientId);
-    } catch {
-      setSaveError("Could not save lab result. Please try again.");
+    } catch (error) {
+      setSaveError(getApiErrorMessage(error, "Could not save lab result. Please try again."));
       setSaving(false);
       return;
     }
@@ -444,7 +450,7 @@ export function LabStaffDashboard({ onLogout }: LabStaffDashboardProps) {
           <strong>Lab Staff access:</strong> You can enter, edit, and delete lab results. Patient profiles, diagnoses, medications, treatment protocols, and treatment decisions are managed by the oncologist.
         </div>
 
-        {saveError && (
+        {saveError && !showForm && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
             {saveError}
           </div>
@@ -547,11 +553,6 @@ export function LabStaffDashboard({ onLogout }: LabStaffDashboardProps) {
                               <span className="text-sm font-semibold text-[#2C3E2D]">
                                 {formatDate(labDate(lab))}
                               </span>
-                              {lab.cycle && (
-                                <span className="ml-2 text-xs text-[#7CAE8E] bg-[#F0F7F3] px-2 py-0.5 rounded-full">
-                                  {lab.cycle.title}
-                                </span>
-                              )}
                             </div>
                             <div className="flex items-center gap-2">
                               <button
@@ -598,14 +599,13 @@ export function LabStaffDashboard({ onLogout }: LabStaffDashboardProps) {
         <LabEntryForm
           patients={patients}
           labStaffName={labStaffName}
-          cycles={cycles}
-          cyclesLoading={cyclesLoading}
           selectedPatientId={selectedPatientId}
           onPatientChange={handlePatientChange}
           onSave={handleSave}
           onClose={() => { setShowForm(false); setEditingLab(undefined); setSaveError(""); }}
           editingLab={editingLab}
           saving={saving}
+          externalError={saveError}
         />
       )}
     </div>

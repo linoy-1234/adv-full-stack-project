@@ -105,6 +105,7 @@ const cycleSchema = Joi.object({
     .valid(
       "upcoming",
       "waiting_for_labs",
+      "waiting_for_review",
       "pending_review",
       "approved",
       "active",
@@ -217,6 +218,7 @@ const updateCycleSchema = Joi.object({
     .valid(
       "upcoming",
       "waiting_for_labs",
+      "waiting_for_review",
       "pending_review",
       "approved",
       "active",
@@ -248,9 +250,9 @@ const delayCycleSchema = Joi.object({
     .required(),
 
   delayReason: Joi.string()
-    .min(2)
     .max(500)
-    .required(),
+    .allow("")
+    .optional(),
 
   decisionNotes: Joi.string()
     .allow("")

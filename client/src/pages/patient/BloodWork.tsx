@@ -79,9 +79,6 @@ export function BloodWork({ profile, labResults }: BloodWorkProps) {
                   <p className="text-sm font-semibold text-[#2C3E2D]">Latest Results — {formatDate(latest.date)}</p>
                   <p className="text-xs text-[#9CA3AF]">Entered by {latest.enteredBy} · {formatDate(latest.enteredAt)}</p>
                 </div>
-                {latest.linkedCycleId && (
-                  <span className="text-xs text-[#7CAE8E] bg-[#F0F7F3] px-2 py-0.5 rounded-full border border-[#C8D9CC]">{latest.linkedCycleLabel || "Linked to cycle"}</span>
-                )}
               </div>
               <div className="px-5 divide-y divide-[#F5F2EE]">
                 {(["wbc","neutrophils","hemoglobin","platelets","alt","creatinine"] as LabFieldKey[]).map((field) => (
@@ -114,7 +111,7 @@ export function BloodWork({ profile, labResults }: BloodWorkProps) {
                 <div key={lab.id} className="px-5 py-3 border-b border-[#F5F2EE] last:border-0">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-medium text-[#2C3E2D]">{formatDate(lab.date)}</p>
-                    <p className="text-xs text-[#9CA3AF]">{lab.linkedCycleLabel ? `${lab.linkedCycleLabel} · ` : ""}by {lab.enteredBy}</p>
+                    <p className="text-xs text-[#9CA3AF]">by {lab.enteredBy}</p>
                   </div>
                   <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
                     {(["wbc","neutrophils","hemoglobin","platelets","alt","creatinine"] as LabFieldKey[]).map((field) => {
