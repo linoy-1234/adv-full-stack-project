@@ -2,8 +2,8 @@ import type {
   TreatmentKind,
   TreatmentMedicationCategory,
   TreatmentTypeRecord,
-} from "../../../types/api";
-import type { WeekdayKey } from "../../../utils/treatmentDisplay";
+} from "./api";
+import type { WeekdayKey } from "../utils/treatmentDisplay";
 
 export type ModalName = "profile" | "medications" | "protocol" | "dates" | null;
 export type MedicationCategory = TreatmentMedicationCategory;

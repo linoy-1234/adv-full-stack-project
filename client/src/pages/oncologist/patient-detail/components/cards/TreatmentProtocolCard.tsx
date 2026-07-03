@@ -1,14 +1,14 @@
 import { Pencil, Stethoscope } from "lucide-react";
 
-import type { TreatmentProtocolRecord } from "../../../../types/api";
+import type { TreatmentProtocolRecord } from "../../../../../types/api";
 import {
   getProtocolDrugs,
   getProtocolMeta,
   getTreatmentCount,
   getTreatmentTypes,
   typeLabel,
-} from "../patientDetailHelpers";
-import { MetaRow, PhasePlaceholder, SectionCard, TypeIcon } from "./PatientDetailShared";
+} from "../../../../../utils/patientDetailHelpers";
+import { MetaRow, PhasePlaceholder, SectionCard, TypeIcon } from "../shared/PatientDetailShared";
 
 interface TreatmentProtocolCardProps {
   protocol: TreatmentProtocolRecord | null;

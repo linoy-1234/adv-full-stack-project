@@ -1,9 +1,9 @@
 import { Pencil, Pill } from "lucide-react";
 
-import type { TreatmentProtocolRecord } from "../../../../types/api";
-import type { MedicationCategory, MedicationFormRecord } from "../patientDetailTypes";
-import { categoryColor, categoryLabel, getProtocolMeta, weekdayLabels } from "../patientDetailHelpers";
-import { PhasePlaceholder, SectionCard } from "./PatientDetailShared";
+import type { TreatmentProtocolRecord } from "../../../../../types/api";
+import type { MedicationCategory, MedicationFormRecord } from "../../../../../types/patientDetailTypes";
+import { categoryColor, categoryLabel, getProtocolMeta, weekdayLabels } from "../../../../../utils/patientDetailHelpers";
+import { PhasePlaceholder, SectionCard } from "../shared/PatientDetailShared";
 
 interface MedicationPlanCardProps {
   protocol: TreatmentProtocolRecord | null;

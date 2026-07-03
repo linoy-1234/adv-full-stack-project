@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 
-import type { TreatmentCycleRecord } from "../../../../types/api";
-import { inputCls, labelCls } from "../patientDetailHelpers";
+import type { TreatmentCycleRecord } from "../../../../../types/api";
+import { inputCls, labelCls } from "../../../../../utils/patientDetailHelpers";
 
 export function PostponeCycleModal({
   cycle,

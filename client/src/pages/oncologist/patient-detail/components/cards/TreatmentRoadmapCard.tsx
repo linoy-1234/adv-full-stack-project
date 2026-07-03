@@ -10,23 +10,23 @@ import {
   Zap,
 } from "lucide-react";
 
-import { formatDate } from "../../../../utils/mockData";
+import { formatDate } from "../../../../../utils/mockData";
 import {
   getChemoDisplayStatus,
   getEffectiveCycleDates,
   getRadiationDisplayStatus,
   getSurgeryDisplayStatus,
   type SurgeryDisplayStatus,
-} from "../../../../utils/treatmentDisplay";
-import type { TreatmentCycleRecord, TreatmentProtocolRecord } from "../../../../types/api";
+} from "../../../../../utils/treatmentDisplay";
+import type { TreatmentCycleRecord, TreatmentProtocolRecord } from "../../../../../types/api";
 import {
   getPersonName,
   getRoadmapItemTitle,
   normalizeWeekdays,
   radiationStatusConfig,
   weekdayLabels,
-} from "../patientDetailHelpers";
-import { CycleDisplayBadge, PhasePlaceholder, SectionCard } from "./PatientDetailShared";
+} from "../../../../../utils/patientDetailHelpers";
+import { CycleDisplayBadge, PhasePlaceholder, SectionCard } from "../shared/PatientDetailShared";
 
 interface TreatmentRoadmapCardProps {
   protocol: TreatmentProtocolRecord | null;

@@ -5,8 +5,8 @@ import {
   weekdayKeys,
   type ChemoDisplayStatus,
   type WeekdayKey,
-} from "../../../../utils/treatmentDisplay";
-import { weekdayLabels } from "../patientDetailHelpers";
+} from "../../../../../utils/treatmentDisplay";
+import { weekdayLabels } from "../../../../../utils/patientDetailHelpers";
 
 export function SourceLabel({ text }: { text: string }) {
   return (

@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { Calendar, Scissors, Syringe, X, Zap } from "lucide-react";
 
-import { shiftDate } from "../../../../utils/mockData";
-import { toDateInputValue, type WeekdayKey } from "../../../../utils/treatmentDisplay";
-import type { TreatmentCycleRecord } from "../../../../types/api";
+import { shiftDate } from "../../../../../utils/mockData";
+import { toDateInputValue, type WeekdayKey } from "../../../../../utils/treatmentDisplay";
+import type { TreatmentCycleRecord } from "../../../../../types/api";
 import {
   getRoadmapItemTitle,
   inputCls,
   labelCls,
   normalizeWeekdays,
-} from "../patientDetailHelpers";
-import { WeekdaySelector } from "../components/PatientDetailShared";
+} from "../../../../../utils/patientDetailHelpers";
+import { WeekdaySelector } from "../shared/PatientDetailShared";
 
 export function EditTreatmentDatesModal({
   cycles,
