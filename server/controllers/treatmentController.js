@@ -106,6 +106,12 @@ const rangesOverlap = (leftStart, leftEnd, rightStart, rightEnd) =>
   toDateOnly(leftStart) <= toDateOnly(rightEnd) &&
   toDateOnly(leftEnd) >= toDateOnly(rightStart);
 
+const isSameDate = (a, b) => {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return toDateOnly(a).getTime() === toDateOnly(b).getTime();
+};
+
 const normalizeCycleDates = (cycle) => ({
   startDate: cycle.startDate || cycle.plannedDate,
   endDate: cycle.endDate || cycle.startDate || cycle.plannedDate,
@@ -617,8 +623,10 @@ const updateCycle = async (req, res, next) => {
     }
 
     const datesChanged =
-      req.body.startDate !== undefined ||
-      req.body.endDate !== undefined;
+      (req.body.startDate !== undefined &&
+        !isSameDate(req.body.startDate, cycle.startDate)) ||
+      (req.body.endDate !== undefined &&
+        !isSameDate(req.body.endDate, cycle.endDate));
 
     if (cycle.treatmentType === "chemotherapy" && datesChanged) {
       await validateChemoOverlapForPatient({
@@ -701,7 +709,10 @@ const bulkUpdateCycles = async (req, res, next) => {
       if (!cycle) continue;
 
       const datesChanged =
-        cycleUpdate.startDate !== undefined || cycleUpdate.endDate !== undefined;
+        (cycleUpdate.startDate !== undefined &&
+          !isSameDate(cycleUpdate.startDate, cycle.startDate)) ||
+        (cycleUpdate.endDate !== undefined &&
+          !isSameDate(cycleUpdate.endDate, cycle.endDate));
       Object.assign(cycle, cycleUpdate);
 
       if (datesChanged && cycle.treatmentType === "chemotherapy") {
