@@ -32,7 +32,6 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-const isProduction = process.env.NODE_ENV === "production";
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -41,11 +40,6 @@ const apiLimiter = rateLimit({
     success: false,
     message: "Too many requests, please try again later",
   },
-  // React StrictMode double-invokes effects in development, and this SPA
-  // fires several parallel GET requests per page (patient, labs, treatment,
-  // messages, documents, symptoms). That legitimately multiplies request
-  // counts during normal local use, so only enforce the limit in production.
-  skip: () => !isProduction,
 });
 
 app.use("/api", apiLimiter);
