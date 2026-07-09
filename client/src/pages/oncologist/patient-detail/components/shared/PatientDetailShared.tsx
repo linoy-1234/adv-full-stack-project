@@ -6,7 +6,7 @@ import {
   type ChemoDisplayStatus,
   type WeekdayKey,
 } from "../../../../../utils/treatmentDisplay";
-import { weekdayLabels } from "../../../../../utils/patientDetailHelpers";
+import { weekdayLabels } from "../../helpers";
 
 export function SourceLabel({ text }: { text: string }) {
   return (
@@ -131,3 +131,4 @@ export function WeekdaySelector({
     </div>
   );
 }
+

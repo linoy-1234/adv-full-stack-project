@@ -15,15 +15,15 @@ import {
   Scissors,
   Stethoscope,
   Syringe,
-  X,
   Zap,
 } from "lucide-react";
-import { MessagesPanel } from "../../components/shared/MessagesPanel";
-import { ClinicalDocumentsPanel } from "../../components/shared/ClinicalDocumentsPanel";
-import { SymptomJournalPanel } from "../../components/shared/SymptomJournalPanel";
+import ErrorMessage from "../../../components/common/ErrorMessage";
+import { MessagesPanel } from "../../../components/shared/MessagesPanel";
+import { ClinicalDocumentsPanel } from "../../../components/shared/ClinicalDocumentsPanel";
+import { SymptomJournalPanel } from "../../../components/shared/SymptomJournalPanel";
 
-import { RibbonBackground } from "../../components/shared/RibbonBackground";
-import { formatDate, shiftDate, getLabStatus, LAB_NORMS, type LabFieldKey } from "../../utils/mockData";
+import { RibbonBackground } from "../../../components/shared/RibbonBackground";
+import { shiftDate } from "../../../utils/dateUtils";
 import {
   getChemoDisplayStatus,
   getEffectiveCycleDates,
@@ -36,14 +36,14 @@ import {
   type RadiationDisplayStatus,
   type SurgeryDisplayStatus,
   type WeekdayKey,
-} from "../../utils/treatmentDisplay";
-import { getPatientLabs } from "../../services/labService";
-import { useAppDispatch, useAppSelector } from "../../store/hooks";
+} from "../../../utils/treatmentDisplay";
+import { getPatientLabs } from "../../../services/labService";
+import { useAppDispatch, useAppSelector } from "../../../store/hooks";
 import {
   clearPatientsError,
   editPatient,
   fetchPatientById,
-} from "../../store/slices/patientsSlice";
+} from "../../../store/slices/patientsSlice";
 import {
   approveCycle,
   bulkUpdateCycles,
@@ -57,8 +57,8 @@ import {
   type CyclePayload,
   type MedicationPayload,
   type ProtocolPayload,
-} from "../../services/treatmentService";
-import type { PatientPayload } from "../../services/patientService";
+} from "../../../services/treatmentService";
+import type { PatientPayload } from "../../../services/patientService";
 import type {
   ApiLabResult,
   PatientAllergy,
@@ -71,12 +71,12 @@ import type {
   TreatmentProtocolRecord,
   TreatmentProtocolResponse,
   TreatmentTypeRecord,
-} from "../../types/api";
+} from "../../../types/api";
 import type {
   ModalName,
   MedicationFormRecord,
   ProtocolFormResult,
-} from "../../types/patientDetailTypes";
+} from "./types";
 import {
   buildInitialCycles,
   getAllergyNames,
@@ -87,17 +87,17 @@ import {
   medicationToPayload,
   sortCycles,
   toCyclePayload,
-} from "../../utils/patientDetailHelpers";
-import { PatientMedicalProfileCard } from "./patient-detail/components/cards/PatientMedicalProfileCard";
-import { MedicationPlanCard } from "./patient-detail/components/cards/MedicationPlanCard";
-import { TreatmentProtocolCard } from "./patient-detail/components/cards/TreatmentProtocolCard";
-import { TreatmentRoadmapCard } from "./patient-detail/components/cards/TreatmentRoadmapCard";
-import { LabResultsCard } from "./patient-detail/components/cards/LabResultsCard";
-import { EditProfileModal } from "./patient-detail/components/modals/EditProfileModal";
-import { EditMedicationsModal } from "./patient-detail/components/modals/EditMedicationsModal";
-import { EditProtocolModal } from "./patient-detail/components/modals/EditProtocolModal";
-import { EditTreatmentDatesModal } from "./patient-detail/components/modals/EditTreatmentDatesModal";
-import { PostponeCycleModal } from "./patient-detail/components/modals/PostponeCycleModal";
+} from "./helpers";
+import { PatientMedicalProfileCard } from "./components/cards/PatientMedicalProfileCard";
+import { MedicationPlanCard } from "./components/cards/MedicationPlanCard";
+import { TreatmentProtocolCard } from "./components/cards/TreatmentProtocolCard";
+import { TreatmentRoadmapCard } from "./components/cards/TreatmentRoadmapCard";
+import { LabResultsCard } from "./components/cards/LabResultsCard";
+import { EditProfileModal } from "./components/modals/EditProfileModal";
+import { EditMedicationsModal } from "./components/modals/EditMedicationsModal";
+import { EditProtocolModal } from "./components/modals/EditProtocolModal";
+import { EditTreatmentDatesModal } from "./components/modals/EditTreatmentDatesModal";
+import { PostponeCycleModal } from "./components/modals/PostponeCycleModal";
 
 interface PatientDetailProps {
   patientId: string;
@@ -465,29 +465,17 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
         {profile && (
           <>
             {patientsError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700 flex items-center justify-between gap-3">
-                <span>{patientsError}</span>
-                <button
-                  type="button"
-                  onClick={() => dispatch(clearPatientsError())}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <X size={14} />
-                </button>
-              </div>
+              <ErrorMessage
+                message={patientsError}
+                onDismiss={() => dispatch(clearPatientsError())}
+              />
             )}
 
             {treatmentError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700 flex items-center justify-between gap-3">
-                <span>{treatmentError}</span>
-                <button
-                  type="button"
-                  onClick={() => setTreatmentError("")}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <X size={14} />
-                </button>
-              </div>
+              <ErrorMessage
+                message={treatmentError}
+                onDismiss={() => setTreatmentError("")}
+              />
             )}
 
             <PatientMedicalProfileCard
@@ -588,3 +576,4 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
     </div>
   );
 }
+

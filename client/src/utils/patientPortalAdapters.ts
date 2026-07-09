@@ -17,7 +17,7 @@ import type {
   SurgeryCheckpoint,
   TreatmentItem,
   TreatmentProtocol,
-} from "./mockData";
+} from "../types/patientPortalTypes";
 import {
   getChemoDisplayStatus,
   getEffectiveCycleDates,
@@ -231,3 +231,4 @@ export const adaptLabResult = (lab: ApiLabResult): LabResult => ({
   enteredBy: lab.enteredBy?.fullName || "Lab Staff",
   enteredAt: lab.createdAt,
 });
+

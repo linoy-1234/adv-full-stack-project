@@ -2,11 +2,9 @@ import { useState } from "react";
 import {
   PatientProfile,
   LabResult,
-  getLabStatus,
-  LabFieldKey,
-  LAB_NORMS,
-  formatDate,
-} from "../../utils/mockData";
+} from "../../types/patientPortalTypes";
+import { formatDate } from "../../utils/dateUtils";
+import { getLabStatus, LAB_NORMS, type LabFieldKey } from "../../utils/labUtils";
 import { ChevronDown, ChevronUp, FlaskConical, Info } from "lucide-react";
 
 interface BloodWorkProps {
@@ -134,3 +132,4 @@ export function BloodWork({ profile, labResults }: BloodWorkProps) {
     </div>
   );
 }
+

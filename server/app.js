@@ -51,7 +51,6 @@ const authLimiter = rateLimit({
     success: false,
     message: "Too many login attempts, please try again later",
   },
-  skip: () => !isProduction,
 });
 
 app.use("/api/auth/login", authLimiter);

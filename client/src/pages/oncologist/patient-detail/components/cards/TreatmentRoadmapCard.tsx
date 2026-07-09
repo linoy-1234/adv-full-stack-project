@@ -10,7 +10,7 @@ import {
   Zap,
 } from "lucide-react";
 
-import { formatDate } from "../../../../../utils/mockData";
+import { formatDate } from "../../../../../utils/dateUtils";
 import {
   getChemoDisplayStatus,
   getEffectiveCycleDates,
@@ -25,7 +25,7 @@ import {
   normalizeWeekdays,
   radiationStatusConfig,
   weekdayLabels,
-} from "../../../../../utils/patientDetailHelpers";
+} from "../../helpers";
 import { CycleDisplayBadge, PhasePlaceholder, SectionCard } from "../shared/PatientDetailShared";
 
 interface TreatmentRoadmapCardProps {
@@ -266,3 +266,4 @@ export function TreatmentRoadmapCard({
     </SectionCard>
   );
 }
+

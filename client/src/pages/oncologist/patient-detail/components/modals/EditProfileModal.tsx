@@ -10,7 +10,7 @@ import {
   inputCls,
   labelCls,
   normalizeBloodType,
-} from "../../../../../utils/patientDetailHelpers";
+} from "../../helpers";
 
 export function EditProfileModal({
   profile,
@@ -240,3 +240,4 @@ export function EditProfileModal({
     </div>
   );
 }
+

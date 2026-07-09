@@ -1,4 +1,4 @@
-import { formatDate } from "../../../../../utils/mockData";
+import { formatDate } from "../../../../../utils/dateUtils";
 import type { ApiLabResult } from "../../../../../types/api";
 
 export function LabTrendChart({ labResults }: { labResults: ApiLabResult[] }) {
@@ -75,3 +75,4 @@ export function LabTrendChart({ labResults }: { labResults: ApiLabResult[] }) {
     </div>
   );
 }
+

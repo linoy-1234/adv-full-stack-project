@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Calendar, Scissors, Syringe, X, Zap } from "lucide-react";
 
-import { shiftDate } from "../../../../../utils/mockData";
+import { shiftDate } from "../../../../../utils/dateUtils";
 import { toDateInputValue, type WeekdayKey } from "../../../../../utils/treatmentDisplay";
 import type { TreatmentCycleRecord } from "../../../../../types/api";
 import {
@@ -9,7 +9,7 @@ import {
   inputCls,
   labelCls,
   normalizeWeekdays,
-} from "../../../../../utils/patientDetailHelpers";
+} from "../../helpers";
 import { WeekdaySelector } from "../shared/PatientDetailShared";
 
 export function EditTreatmentDatesModal({
@@ -303,3 +303,4 @@ export function EditTreatmentDatesModal({
     </div>
   );
 }
+

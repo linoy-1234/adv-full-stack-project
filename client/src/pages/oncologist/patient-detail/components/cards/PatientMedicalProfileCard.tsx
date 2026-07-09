@@ -1,8 +1,9 @@
-import { Pencil, X } from "lucide-react";
+import { Pencil } from "lucide-react";
 
-import { formatDate } from "../../../../../utils/mockData";
+import ErrorMessage from "../../../../../components/common/ErrorMessage";
+import { formatDate } from "../../../../../utils/dateUtils";
 import type { PatientProfile as ApiPatientProfile } from "../../../../../types/api";
-import { getOncologistName, getPatientMeta } from "../../../../../utils/patientDetailHelpers";
+import { getOncologistName, getPatientMeta } from "../../helpers";
 import { MetaRow, SectionCard } from "../shared/PatientDetailShared";
 
 interface PatientMedicalProfileCardProps {
@@ -26,16 +27,11 @@ export function PatientMedicalProfileCard({
     return (
       <SectionCard title="Patient Medical Profile" source="Created by oncologist">
         {patientsError ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700 flex items-center justify-between gap-3">
-            <span>{patientsError}</span>
-            <button
-              type="button"
-              onClick={onDismissError}
-              className="text-red-500 hover:text-red-700"
-            >
-              <X size={14} />
-            </button>
-          </div>
+          <ErrorMessage
+            message={patientsError}
+            onDismiss={onDismissError}
+            className="py-3"
+          />
         ) : (
           <div className="text-center py-8 text-sm text-[#9CA3AF]">
             {loading ? "Loading patient profile..." : "Loading patient profile..."}
@@ -105,3 +101,4 @@ export function PatientMedicalProfileCard({
     </SectionCard>
   );
 }
+

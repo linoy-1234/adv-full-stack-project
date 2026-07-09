@@ -4,8 +4,8 @@ import {
   ChemoCycle,
   RadiationCourse,
   SurgeryCheckpoint,
-  formatDate,
-} from "../../utils/mockData";
+} from "../../types/patientPortalTypes";
+import { formatDate } from "../../utils/dateUtils";
 import { Calendar, CheckCircle2, Clock, Syringe, Zap, Scissors, AlertTriangle, Info } from "lucide-react";
 import { todayIso } from "../../utils/treatmentDisplay";
 
@@ -235,3 +235,4 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
     </div>
   );
 }
+
