@@ -7,7 +7,7 @@ import {
   getTreatmentCount,
   getTreatmentTypes,
   typeLabel,
-} from "../../../../../utils/patientDetailHelpers";
+} from "../../helpers";
 import { MetaRow, PhasePlaceholder, SectionCard, TypeIcon } from "../shared/PatientDetailShared";
 
 interface TreatmentProtocolCardProps {
@@ -117,3 +117,4 @@ export function TreatmentProtocolCard({
     </SectionCard>
   );
 }
+

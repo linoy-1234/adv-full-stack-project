@@ -1,8 +1,8 @@
 import { Pencil, Pill } from "lucide-react";
 
 import type { TreatmentProtocolRecord } from "../../../../../types/api";
-import type { MedicationCategory, MedicationFormRecord } from "../../../../../types/patientDetailTypes";
-import { categoryColor, categoryLabel, getProtocolMeta, weekdayLabels } from "../../../../../utils/patientDetailHelpers";
+import type { MedicationCategory, MedicationFormRecord } from "../../types";
+import { categoryColor, categoryLabel, getProtocolMeta, weekdayLabels } from "../../helpers";
 import { PhasePlaceholder, SectionCard } from "../shared/PatientDetailShared";
 
 interface MedicationPlanCardProps {
@@ -104,3 +104,4 @@ export function MedicationPlanCard({
     </SectionCard>
   );
 }
+

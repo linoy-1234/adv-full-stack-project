@@ -11,8 +11,8 @@ import {
 import {
   PatientProfile as PatientProfileType,
   TreatmentProtocol,
-  formatDate,
-} from "../utils/mockData";
+} from "../../types/patientPortalTypes";
+import { formatDate } from "../../utils/dateUtils";
 
 interface PatientProfileProps {
   profile: PatientProfileType;
@@ -317,3 +317,4 @@ export function PatientProfile({ profile, protocol }: PatientProfileProps) {
     </div>
   );
 }
+

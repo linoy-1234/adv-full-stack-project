@@ -2,13 +2,13 @@ import { useState } from "react";
 import { Pill, X } from "lucide-react";
 
 import type { WeekdayKey } from "../../../../../utils/treatmentDisplay";
-import type { MedicationCategory, MedicationFormRecord } from "../../../../../types/patientDetailTypes";
+import type { MedicationCategory, MedicationFormRecord } from "../../types";
 import {
   emptyMedicationForm,
   inputCls,
   labelCls,
   prepareMedicationDraft,
-} from "../../../../../utils/patientDetailHelpers";
+} from "../../helpers";
 import { WeekdaySelector } from "../shared/PatientDetailShared";
 
 export function EditMedicationsModal({
@@ -359,3 +359,4 @@ export function EditMedicationsModal({
     </div>
   );
 }
+

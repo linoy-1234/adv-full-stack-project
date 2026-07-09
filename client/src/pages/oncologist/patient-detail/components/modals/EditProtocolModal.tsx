@@ -5,14 +5,14 @@ import type {
   TreatmentProtocolRecord,
   TreatmentTypeRecord,
 } from "../../../../../types/api";
-import type { ProtocolFormResult } from "../../../../../types/patientDetailTypes";
+import type { ProtocolFormResult } from "../../types";
 import {
   getProtocolDrugs,
   getTreatmentCount,
   getTreatmentTypes,
   inputCls,
   labelCls,
-} from "../../../../../utils/patientDetailHelpers";
+} from "../../helpers";
 
 export function EditProtocolModal({
   protocol,
@@ -293,3 +293,4 @@ export function EditProtocolModal({
     </div>
   );
 }
+

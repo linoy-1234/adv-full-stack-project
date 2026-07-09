@@ -2,7 +2,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 
 import type { TreatmentCycleRecord } from "../../../../../types/api";
-import { inputCls, labelCls } from "../../../../../utils/patientDetailHelpers";
+import { inputCls, labelCls } from "../../helpers";
 
 export function PostponeCycleModal({
   cycle,
@@ -102,3 +102,4 @@ export function PostponeCycleModal({
     </div>
   );
 }
+

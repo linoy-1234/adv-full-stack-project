@@ -14,6 +14,7 @@ import {
   updateDocumentMetadata,
   deleteDocument,
 } from "../../services/documentService";
+import ErrorMessage from "../common/ErrorMessage";
 import type { ClinicalDocumentRecord } from "../../types/api";
 import {
   DOCUMENT_TYPE_VALUES,
@@ -136,9 +137,7 @@ function UploadModal({ patientId, onClose, onSuccess }: UploadModalProps) {
 
         <div className="px-6 py-4 space-y-3">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">
-              {error}
-            </div>
+            <ErrorMessage message={error} />
           )}
 
           <div>
@@ -306,9 +305,7 @@ function EditModal({ doc, onClose, onSuccess }: EditModalProps) {
 
         <div className="px-6 py-4 space-y-3">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">
-              {error}
-            </div>
+            <ErrorMessage message={error} />
           )}
 
           <div>
@@ -552,15 +549,11 @@ export function ClinicalDocumentsPanel({
         {/* Document list */}
         <div className="px-5 py-4">
           {deleteError && (
-            <div className="mb-3 bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700 flex items-center justify-between">
-              <span>{deleteError}</span>
-              <button
-                onClick={() => setDeleteError("")}
-                className="text-red-400 hover:text-red-600"
-              >
-                <X size={14} />
-              </button>
-            </div>
+            <ErrorMessage
+              message={deleteError}
+              onDismiss={() => setDeleteError("")}
+              className="mb-3"
+            />
           )}
 
           {loading ? (
@@ -568,9 +561,7 @@ export function ClinicalDocumentsPanel({
               Loading documents…
             </div>
           ) : error ? (
-            <div className="flex items-center justify-center py-10 text-sm text-red-500">
-              {error}
-            </div>
+            <ErrorMessage message={error} />
           ) : documents.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 gap-2 text-[#9CA3AF]">
               <FileText size={26} className="opacity-30" />

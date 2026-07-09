@@ -7,8 +7,8 @@ import {
   RadiationCourse,
   SurgeryCheckpoint,
   Medication,
-  formatDate,
-} from "../../utils/mockData";
+} from "../../types/patientPortalTypes";
+import { formatDate } from "../../utils/dateUtils";
 import { PatientNavPage } from "../../App";
 import { Calendar, Pill, MessageCircle, FlaskConical, Clock, CheckSquare, Square, Info } from "lucide-react";
 import { getTodayWeekdayKey, todayIso } from "../../utils/treatmentDisplay";
@@ -299,3 +299,4 @@ export function PatientDashboard({
     </div>
   );
 }
+

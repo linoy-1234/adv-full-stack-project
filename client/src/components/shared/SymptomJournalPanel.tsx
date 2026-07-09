@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Activity, Info } from "lucide-react";
 import { getPatientSymptoms } from "../../services/symptomService";
+import ErrorMessage from "../common/ErrorMessage";
 import type { SymptomLog, SymptomItem } from "../../types/api";
 
 interface SymptomJournalPanelProps {
@@ -121,12 +122,7 @@ export function SymptomJournalPanel({ patientId }: SymptomJournalPanelProps) {
             Loading symptom entries...
           </div>
         ) : error ? (
-          <div
-            className="rounded-xl p-3"
-            style={{ backgroundColor: "#FEF2F2", border: "1.5px solid #FCA5A5" }}
-          >
-            <p className="text-sm" style={{ color: "#DC2626" }}>{error}</p>
-          </div>
+          <ErrorMessage message={error} className="rounded-xl" />
         ) : entries.length === 0 ? (
           <div className="py-8 text-center text-sm text-[#9CA3AF]">
             <div className="mx-auto mb-2 w-8 h-8 rounded-full bg-[#F5F2EE] border border-[#E5E2DC] flex items-center justify-center text-[#7CAE8E]">

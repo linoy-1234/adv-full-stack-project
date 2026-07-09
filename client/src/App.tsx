@@ -10,7 +10,7 @@ import {
   PatientProfile,
   TreatmentProtocol,
   LabResult,
-} from "./utils/mockData";
+} from "./types/patientPortalTypes";
 import { LoadingSpinner } from "./components/shared/LoadingSpinner";
 import { useAuth } from "./context/AuthContext";
 import PrivateRoute from "./components/common/PrivateRoute";
@@ -65,7 +65,7 @@ const PatientMessages = lazy(() =>
   }))
 );
 const PatientProfilePage = lazy(() =>
-  import("./components/PatientProfile").then((m) => ({
+  import("./pages/patient/PatientProfile").then((m) => ({
     default: m.PatientProfile,
   }))
 );
@@ -75,7 +75,7 @@ const OncologistDashboard = lazy(() =>
   }))
 );
 const PatientDetail = lazy(() =>
-  import("./pages/oncologist/PatientDetail").then((m) => ({
+  import("./pages/oncologist/patient-detail/PatientDetail").then((m) => ({
     default: m.PatientDetail,
   }))
 );
@@ -549,3 +549,4 @@ export default function App() {
     </Suspense>
   );
 }
+

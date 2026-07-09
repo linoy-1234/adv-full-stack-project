@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronUp, FlaskConical } from "lucide-react";
 
-import { formatDate, getLabStatus, LAB_NORMS, type LabFieldKey } from "../../../../../utils/mockData";
+import { formatDate } from "../../../../../utils/dateUtils";
+import { getLabStatus, LAB_NORMS, type LabFieldKey } from "../../../../../utils/labUtils";
 import type { ApiLabResult } from "../../../../../types/api";
 import { LabTrendChart } from "../shared/LabTrendChart";
 import { SectionCard } from "../shared/PatientDetailShared";
@@ -140,3 +141,4 @@ export function LabResultsCard({
     </SectionCard>
   );
 }
+
