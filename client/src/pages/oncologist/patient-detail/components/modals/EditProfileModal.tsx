@@ -33,6 +33,7 @@ export function EditProfileModal({
   });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const isEmailLocked = profile.accountStatus === "linked";
 
   const handleSave = async () => {
     if (
@@ -51,9 +52,8 @@ export function EditProfileModal({
     setSaving(true);
     setError("");
 
-    const saveError = await onSave({
+    const patientData: Partial<PatientPayload> = {
       fullName: form.fullName.trim(),
-      email: form.email.trim().toLowerCase(),
       nationalId: form.nationalId.trim(),
       dateOfBirth: form.dateOfBirth,
       diagnosis: form.diagnosis.trim(),
@@ -68,7 +68,13 @@ export function EditProfileModal({
           notes: "",
         })),
       notes: form.notes.trim(),
-    });
+    };
+
+    if (!isEmailLocked) {
+      patientData.email = form.email.trim().toLowerCase();
+    }
+
+    const saveError = await onSave(patientData);
 
     if (saveError) {
       setError(saveError);
@@ -123,6 +129,7 @@ export function EditProfileModal({
                 className={inputCls}
                 type="email"
                 value={form.email}
+                disabled={isEmailLocked || saving}
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
@@ -130,6 +137,11 @@ export function EditProfileModal({
                   }))
                 }
               />
+              {isEmailLocked && (
+                <p className="mt-1 text-xs text-[#9CA3AF]">
+                  Email cannot be changed after the patient account is linked.
+                </p>
+              )}
             </div>
             <div>
               <label className={labelCls}>National ID</label>
