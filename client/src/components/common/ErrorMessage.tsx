@@ -15,6 +15,7 @@ const ErrorMessage = ({
 }: ErrorMessageProps) => {
   return (
     <div
+      role="alert"
       className={`bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700 flex items-center justify-between gap-3 ${className}`}
     >
       <span>{message}</span>

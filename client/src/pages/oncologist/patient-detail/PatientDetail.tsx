@@ -23,6 +23,7 @@ import { ClinicalDocumentsPanel } from "../../../components/shared/ClinicalDocum
 import { SymptomJournalPanel } from "../../../components/shared/SymptomJournalPanel";
 
 import { RibbonBackground } from "../../../components/shared/RibbonBackground";
+import { useErrorVisibility } from "../../../hooks/useErrorVisibility";
 import { shiftDate } from "../../../utils/dateUtils";
 import {
   getChemoDisplayStatus,
@@ -119,6 +120,7 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
   const [treatmentLoading, setTreatmentLoading] = useState(false);
   const [treatmentError, setTreatmentError] = useState("");
   const [savingTreatment, setSavingTreatment] = useState(false);
+  const treatmentErrorRef = useErrorVisibility(treatmentError);
   const [expandedCycle, setExpandedCycle] = useState<string | null>(null);
   const [cycleToPostpone, setCycleToPostpone] = useState<TreatmentCycleRecord | null>(null);
 
@@ -472,10 +474,12 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
             )}
 
             {treatmentError && (
-              <ErrorMessage
-                message={treatmentError}
-                onDismiss={() => setTreatmentError("")}
-              />
+              <div ref={treatmentErrorRef}>
+                <ErrorMessage
+                  message={treatmentError}
+                  onDismiss={() => setTreatmentError("")}
+                />
+              </div>
             )}
 
             <PatientMedicalProfileCard

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Pill, X } from "lucide-react";
 
+import { useErrorVisibility } from "../../../../../hooks/useErrorVisibility";
 import type { WeekdayKey } from "../../../../../utils/treatmentDisplay";
 import type { MedicationCategory, MedicationFormRecord } from "../../types";
 import {
@@ -28,6 +29,7 @@ export function EditMedicationsModal({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const errorRef = useErrorVisibility(error);
 
   const addMedication = () => {
     const draft = prepareMedicationDraft(medForm);
@@ -104,7 +106,11 @@ export function EditMedicationsModal({
 
         <div className="px-6 py-4 max-h-[70vh] overflow-y-auto space-y-4">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">
+            <div
+              ref={errorRef}
+              role="alert"
+              className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700"
+            >
               {error}
             </div>
           )}

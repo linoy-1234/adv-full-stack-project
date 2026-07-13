@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { RibbonBackground } from '../../components/shared/RibbonBackground';
+import { focusFirstField, useErrorVisibility } from '../../hooks/useErrorVisibility';
 
 interface RegisterPageProps {
   onRegister: (
@@ -19,14 +20,18 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const emailRef = useRef<HTMLInputElement | null>(null);
+  const passwordRef = useRef<HTMLInputElement | null>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement | null>(null);
+  const errorRef = useErrorVisibility(error);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!email.includes('@')) { setError('Please enter a valid email address.'); return; }
-    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
-    if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
+    if (!email.includes('@')) { setError('Please enter a valid email address.'); focusFirstField([emailRef]); return; }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); focusFirstField([passwordRef]); return; }
+    if (password !== confirmPassword) { setError('Passwords do not match.'); focusFirstField([confirmPasswordRef]); return; }
 
     setLoading(true);
     try {
@@ -74,6 +79,7 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
           <div>
             <label className="block text-sm mb-1.5" style={{ color: '#374151' }}>Email Address</label>
             <input
+              ref={emailRef}
               type="email"
               placeholder="The email your oncologist registered you with"
               value={email}
@@ -89,6 +95,7 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
             <label className="block text-sm mb-1.5" style={{ color: '#374151' }}>Create Password</label>
             <div className="relative">
               <input
+                ref={passwordRef}
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Min. 6 characters"
                 value={password}
@@ -107,6 +114,7 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
           <div>
             <label className="block text-sm mb-1.5" style={{ color: '#374151' }}>Confirm Password</label>
             <input
+              ref={confirmPasswordRef}
               type="password"
               placeholder="Repeat your password"
               value={confirmPassword}
@@ -120,7 +128,7 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
           </div>
 
           {error && (
-            <p className="text-sm rounded-xl px-4 py-2.5" style={{ backgroundColor: '#FEF2F2', color: '#DC2626' }}>{error}</p>
+            <p ref={errorRef} role="alert" className="text-sm rounded-xl px-4 py-2.5" style={{ backgroundColor: '#FEF2F2', color: '#DC2626' }}>{error}</p>
           )}
 
           <button
