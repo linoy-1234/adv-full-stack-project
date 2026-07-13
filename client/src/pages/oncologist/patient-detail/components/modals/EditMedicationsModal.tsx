@@ -128,7 +128,7 @@ export function EditMedicationsModal({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className={labelCls}>Name</label>
+                  <label className={labelCls}>Name *</label>
                   <input
                     className={inputCls}
                     value={medication.name}
@@ -189,7 +189,7 @@ export function EditMedicationsModal({
                   />
                 </div>
                 <div className="col-span-2 space-y-2">
-                  <label className={labelCls}>Weekdays</label>
+                  <label className={labelCls}>Weekdays *</label>
                   <WeekdaySelector
                     selected={medication.weekdays}
                     disabled={saving || medication.asNeeded}
@@ -231,7 +231,7 @@ export function EditMedicationsModal({
             </p>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className={labelCls}>Name</label>
+                <label className={labelCls}>Name *</label>
                 <input
                   className={inputCls}
                   value={medForm.name}
@@ -295,7 +295,7 @@ export function EditMedicationsModal({
                 />
               </div>
               <div className="col-span-2 space-y-2">
-                <label className={labelCls}>Weekdays</label>
+                <label className={labelCls}>Weekdays *</label>
                 <WeekdaySelector
                   selected={medForm.weekdays}
                   disabled={saving || medForm.asNeeded}
