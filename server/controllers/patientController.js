@@ -4,6 +4,7 @@ const TreatmentProtocol = require("../models/TreatmentProtocol");
 const TreatmentCycle = require("../models/TreatmentCycle");
 const Message = require("../models/Message");
 const { syncDerivedTreatmentStatus } = require("../utils/treatmentStatus");
+const normalizeEmail = require("../utils/normalizeEmail");
 
 const buildPatientResponse = (patient) => {
   return {
@@ -29,7 +30,7 @@ const buildPatientResponse = (patient) => {
 
 const createPatient = async (req, res, next) => {
   try {
-    const normalizedEmail = req.body.email.toLowerCase().trim();
+    const normalizedEmail = normalizeEmail(req.body.email);
     const normalizedNationalId = req.body.nationalId.trim();
 
     const existingPatientByEmail = await PatientProfile.findOne({
@@ -244,7 +245,7 @@ const updatePatient = async (req, res, next) => {
     }
 
     if (req.body.email) {
-      const normalizedEmail = req.body.email.toLowerCase().trim();
+      const normalizedEmail = normalizeEmail(req.body.email);
 
       const existingPatient = await PatientProfile.findOne({
         email: normalizedEmail,

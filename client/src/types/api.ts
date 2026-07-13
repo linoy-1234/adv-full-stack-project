@@ -7,6 +7,7 @@ export interface User {
   role: UserRole;
   patientProfile?: string | { _id: string; fullName?: string; email?: string } | null;
   isActive?: boolean;
+  googleSubject?: string | null;
 }
 
 export interface PatientAllergy {

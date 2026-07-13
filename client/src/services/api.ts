@@ -26,13 +26,15 @@ const isAuthRequest = (url?: string) => {
     return [
       "/api/auth/login",
       "/api/auth/register",
+      "/api/auth/google",
       "/api/auth/me",
       "/auth/login",
       "/auth/register",
+      "/auth/google",
       "/auth/me",
     ].includes(parsedUrl.pathname);
   } catch {
-    return ["/auth/login", "/auth/register", "/auth/me"].includes(url);
+    return ["/auth/login", "/auth/register", "/auth/google", "/auth/me"].includes(url);
   }
 };
 

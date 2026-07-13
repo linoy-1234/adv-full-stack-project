@@ -22,9 +22,15 @@ const userSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      required: [true, "Password is required"],
       minlength: [6, "Password must be at least 6 characters"],
       select: false,
+    },
+
+    googleSubject: {
+      type: String,
+      trim: true,
+      default: null,
+      sparse: true,
     },
 
     role: {
@@ -60,6 +66,10 @@ userSchema.pre("save", async function () {
 });
 
 userSchema.methods.matchPassword = async function (enteredPassword) {
+  if (!this.password) {
+    return false;
+  }
+
   return bcrypt.compare(enteredPassword, this.password);
 };
 

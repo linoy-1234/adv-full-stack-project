@@ -54,9 +54,17 @@ const loginSchema = Joi.object({
   }),
 });
 
+const googleAuthSchema = Joi.object({
+  credential: Joi.string().trim().required().messages({
+    "string.empty": "Google credential is required",
+    "any.required": "Google credential is required",
+  }),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
+  googleAuthSchema,
 };
 
 //בדיקת תקינות קלט

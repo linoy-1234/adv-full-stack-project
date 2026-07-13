@@ -1,12 +1,16 @@
 import { useState, type FormEvent } from "react";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { RibbonBackground } from "../../components/shared/RibbonBackground";
+import { GoogleAuthButton } from "../../components/auth/GoogleAuthButton";
 
 interface LoginPageProps {
   // Returns null on success, error string on failure
   onLogin: (
     email: string,
     password: string
+  ) => Promise<string | null> | string | null;
+  onGoogleLogin: (
+    credential: string
   ) => Promise<string | null> | string | null;
 
   onGoToRegister: () => void;
@@ -15,6 +19,7 @@ interface LoginPageProps {
 
 export function LoginPage({
   onLogin,
+  onGoogleLogin,
   onGoToRegister,
   onBackToHome,
 }: LoginPageProps) {
@@ -53,6 +58,23 @@ export function LoginPage({
 
     try {
       const err = await onLogin(normalizedEmail, password);
+
+      if (err) {
+        setError(err);
+      }
+    } catch (error) {
+      setError(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleCredential = async (credential: string) => {
+    setError("");
+    setLoading(true);
+
+    try {
+      const err = await onGoogleLogin(credential);
 
       if (err) {
         setError(err);
@@ -105,6 +127,20 @@ export function LoginPage({
         >
           Sign In
         </h2>
+
+        <div className="mb-4 flex justify-center">
+          <GoogleAuthButton
+            disabled={loading}
+            onCredential={handleGoogleCredential}
+            onError={setError}
+          />
+        </div>
+
+        <div className="mb-4 flex items-center gap-3">
+          <div className="h-px flex-1 bg-[#E5E7EB]" />
+          <span className="text-xs text-[#9CA3AF]">or</span>
+          <div className="h-px flex-1 bg-[#E5E7EB]" />
+        </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
