@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
 
 import type { PatientPayload } from "../../../services/patientService";
+import {
+  focusFirstField,
+  useErrorVisibility,
+} from "../../../hooks/useErrorVisibility";
 import {
   bloodTypes,
   inputCls,
@@ -28,6 +32,12 @@ export function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
   });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const fullNameRef = useRef<HTMLInputElement | null>(null);
+  const emailRef = useRef<HTMLInputElement | null>(null);
+  const nationalIdRef = useRef<HTMLInputElement | null>(null);
+  const dateOfBirthRef = useRef<HTMLInputElement | null>(null);
+  const diagnosisRef = useRef<HTMLInputElement | null>(null);
+  const errorRef = useErrorVisibility(error);
 
   const handleSave = async () => {
     if (
@@ -40,6 +50,13 @@ export function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
       setError(
         "Full name, email, national ID, date of birth, and diagnosis are required."
       );
+      focusFirstField([
+        !form.fullName.trim() ? fullNameRef : { current: null },
+        !form.email.trim() ? emailRef : { current: null },
+        !form.nationalId.trim() ? nationalIdRef : { current: null },
+        !form.dateOfBirth ? dateOfBirthRef : { current: null },
+        !form.diagnosis.trim() ? diagnosisRef : { current: null },
+      ]);
       return;
     }
 
@@ -95,7 +112,11 @@ export function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
 
         <div className="px-6 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">
+            <div
+              ref={errorRef}
+              role="alert"
+              className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700"
+            >
               {error}
             </div>
           )}
@@ -104,6 +125,7 @@ export function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
             <div className="col-span-2">
               <label className={labelCls}>Full Name *</label>
               <input
+                ref={fullNameRef}
                 className={inputCls}
                 value={form.fullName}
                 onChange={(event) =>
@@ -117,6 +139,7 @@ export function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
             <div>
               <label className={labelCls}>Email *</label>
               <input
+                ref={emailRef}
                 className={inputCls}
                 type="email"
                 value={form.email}
@@ -131,6 +154,7 @@ export function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
             <div>
               <label className={labelCls}>National ID *</label>
               <input
+                ref={nationalIdRef}
                 className={inputCls}
                 value={form.nationalId}
                 onChange={(event) =>
@@ -144,6 +168,7 @@ export function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
             <div>
               <label className={labelCls}>Date of Birth *</label>
               <input
+                ref={dateOfBirthRef}
                 className={inputCls}
                 type="date"
                 value={form.dateOfBirth}
@@ -177,6 +202,7 @@ export function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
             <div className="col-span-2">
               <label className={labelCls}>Diagnosis *</label>
               <input
+                ref={diagnosisRef}
                 className={inputCls}
                 value={form.diagnosis}
                 onChange={(event) =>

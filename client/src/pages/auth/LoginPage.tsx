@@ -1,7 +1,11 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { RibbonBackground } from "../../components/shared/RibbonBackground";
 import { GoogleAuthButton } from "../../components/auth/GoogleAuthButton";
+import {
+  focusFirstField,
+  useErrorVisibility,
+} from "../../hooks/useErrorVisibility";
 
 interface LoginPageProps {
   // Returns null on success, error string on failure
@@ -28,6 +32,9 @@ export function LoginPage({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const emailRef = useRef<HTMLInputElement | null>(null);
+  const passwordRef = useRef<HTMLInputElement | null>(null);
+  const errorRef = useErrorVisibility(error);
 
   const getErrorMessage = (error: unknown): string => {
     if (error instanceof Error) {
@@ -46,11 +53,13 @@ export function LoginPage({
 
     if (!normalizedEmail.includes("@")) {
       setError("Please enter a valid email address.");
+      focusFirstField([emailRef]);
       return;
     }
 
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
+      focusFirstField([passwordRef]);
       return;
     }
 
@@ -152,6 +161,7 @@ export function LoginPage({
             </label>
 
             <input
+              ref={emailRef}
               type="email"
               placeholder="your@email.com"
               value={email}
@@ -181,6 +191,7 @@ export function LoginPage({
 
             <div className="relative">
               <input
+                ref={passwordRef}
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 value={password}
@@ -216,6 +227,8 @@ export function LoginPage({
 
           {error && (
             <p
+              ref={errorRef}
+              role="alert"
               className="text-sm text-center rounded-xl px-4 py-2.5"
               style={{ backgroundColor: "#FEF2F2", color: "#DC2626" }}
             >

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Calendar, Scissors, Syringe, X, Zap } from "lucide-react";
 
+import { useErrorVisibility } from "../../../../../hooks/useErrorVisibility";
 import { shiftDate } from "../../../../../utils/dateUtils";
 import { toDateInputValue, type WeekdayKey } from "../../../../../utils/treatmentDisplay";
 import type { TreatmentCycleRecord } from "../../../../../types/api";
@@ -27,6 +28,7 @@ export function EditTreatmentDatesModal({
   const [removedCycleIds, setRemovedCycleIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const errorRef = useErrorVisibility(error);
 
   const updateItem = (
     id: string,
@@ -138,7 +140,11 @@ export function EditTreatmentDatesModal({
 
         <div className="px-6 py-4 max-h-[65vh] overflow-y-auto space-y-3">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">
+            <div
+              ref={errorRef}
+              role="alert"
+              className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700"
+            >
               {error}
             </div>
           )}

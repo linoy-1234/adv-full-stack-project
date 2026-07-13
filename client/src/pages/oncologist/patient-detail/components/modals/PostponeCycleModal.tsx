@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { X } from "lucide-react";
 
+import {
+  focusFirstField,
+  useErrorVisibility,
+} from "../../../../../hooks/useErrorVisibility";
 import type { TreatmentCycleRecord } from "../../../../../types/api";
 import { inputCls, labelCls } from "../../helpers";
 
@@ -17,11 +21,14 @@ export function PostponeCycleModal({
   const [newEndDate, setNewEndDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const newEndDateRef = useRef<HTMLInputElement | null>(null);
+  const errorRef = useErrorVisibility(error);
 
   const confirmPostpone = async () => {
     if (!newStartDate || !newEndDate) return;
     if (newEndDate < newStartDate) {
       setError("End date must be on or after start date.");
+      focusFirstField([newEndDateRef]);
       return;
     }
 
@@ -55,7 +62,11 @@ export function PostponeCycleModal({
 
         <div className="px-6 py-4 space-y-3">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">
+            <div
+              ref={errorRef}
+              role="alert"
+              className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700"
+            >
               {error}
             </div>
           )}
@@ -64,6 +75,7 @@ export function PostponeCycleModal({
             <div>
               <label className={labelCls}>New Start Date</label>
               <input
+                ref={newEndDateRef}
                 className={inputCls}
                 type="date"
                 value={newStartDate}
