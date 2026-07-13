@@ -10,6 +10,7 @@ import {
   getCurrentUser,
   getMe,
   login as loginRequest,
+  loginWithGoogle as loginWithGoogleRequest,
   logout as logoutRequest,
   register as registerRequest,
 } from "../services/authService";
@@ -21,6 +22,7 @@ interface AuthContextValue {
   loading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<AuthResponse>;
+  loginWithGoogle: (credential: string) => Promise<AuthResponse>;
   register: (
     fullName: string,
     email: string,
@@ -77,6 +79,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return data;
   };
 
+  const loginWithGoogle = async (credential: string): Promise<AuthResponse> => {
+    const data = await loginWithGoogleRequest(credential);
+    setUser(data.user);
+    return data;
+  };
+
   const register = async (
     fullName: string,
     email: string,
@@ -104,6 +112,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     loading,
     isAuthenticated: Boolean(user),
     login,
+    loginWithGoogle,
     register,
     logout,
   };

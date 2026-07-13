@@ -339,6 +339,7 @@ function OncologistPatientDetail() {
 export default function App() {
   const {
     login: loginUser,
+    loginWithGoogle,
     register: registerUser,
     logout: authLogout,
   } = useAuth();
@@ -390,6 +391,29 @@ export default function App() {
                   }
 
                   return getApiErrorMessage(error, "Invalid email or password");
+                }
+              }}
+              onGoogleLogin={async (credential) => {
+                try {
+                  const data = await loginWithGoogle(credential);
+                  const loggedInUser = data.user;
+
+                  if (loggedInUser.role === "patient") {
+                    const patientProfileId =
+                      getUserPatientProfileId(loggedInUser);
+
+                    if (!patientProfileId) {
+                      return "Login succeeded, but this patient account is not linked to a patient profile yet.";
+                    }
+                  }
+
+                  navigate(getRoleDashboardPath(loggedInUser.role), {
+                    replace: true,
+                  });
+
+                  return null;
+                } catch (error) {
+                  return getApiErrorMessage(error, "Google sign-in failed.");
                 }
               }}
               onGoToRegister={() => navigate("/register")}

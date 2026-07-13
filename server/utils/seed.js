@@ -6,6 +6,7 @@ const connectDB = require("../config/db");
 
 const User = require("../models/User");
 const PatientProfile = require("../models/PatientProfile");
+const normalizeEmail = require("./normalizeEmail");
 
 const seedData = async () => {
   try {
@@ -16,22 +17,22 @@ const seedData = async () => {
     await User.deleteMany({
       email: {
         $in: [
-          "dr.goldstein@oncolog.com",
-          "noa.lab@oncolog.com",
-          "sarah.cohen@email.com",
+          normalizeEmail("dr.goldstein@oncolog.com"),
+          normalizeEmail("noa.lab@oncolog.com"),
+          normalizeEmail("sarah.cohen@email.com"),
         ],
       },
     });
 
     await PatientProfile.deleteMany({
-      email: "sarah.cohen@email.com",
+      email: normalizeEmail("sarah.cohen@email.com"),
     });
 
     console.log("Creating oncologist user...");
 
     const oncologist = await User.create({
       fullName: "Dr. Miriam Goldstein",
-      email: "dr.goldstein@oncolog.com",
+      email: normalizeEmail("dr.goldstein@oncolog.com"),
       password: "onco123",
       role: "oncologist",
     });
@@ -40,7 +41,7 @@ const seedData = async () => {
 
     await User.create({
       fullName: "Noa Ben-David",
-      email: "noa.lab@oncolog.com",
+      email: normalizeEmail("noa.lab@oncolog.com"),
       password: "lab123",
       role: "lab_staff",
     });
@@ -51,7 +52,7 @@ const seedData = async () => {
       oncologist: oncologist._id,
       createdBy: oncologist._id,
       fullName: "Sarah Cohen",
-      email: "sarah.cohen@email.com",
+      email: normalizeEmail("sarah.cohen@email.com"),
       nationalId: "123456789",
       dateOfBirth: new Date("1978-03-14"),
       diagnosis: "Breast Cancer — Stage IIIA",
