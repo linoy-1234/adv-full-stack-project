@@ -247,6 +247,16 @@ const updatePatient = async (req, res, next) => {
     if (req.body.email) {
       const normalizedEmail = normalizeEmail(req.body.email);
 
+      if (
+        normalizedEmail !== patient.email &&
+        patient.accountStatus === "linked"
+      ) {
+        return res.status(409).json({
+          success: false,
+          message: "Email cannot be changed after the patient account is linked.",
+        });
+      }
+
       const existingPatient = await PatientProfile.findOne({
         email: normalizedEmail,
         _id: { $ne: patient._id },
