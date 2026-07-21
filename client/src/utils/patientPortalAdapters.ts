@@ -3,7 +3,6 @@ import type {
   PatientAllergy,
   PatientProfile as ApiPatientProfile,
   TreatmentCycleRecord,
-  TreatmentMedicationRecord,
   TreatmentProtocolRecord,
   TreatmentTypeRecord,
   User,
@@ -25,6 +24,7 @@ import {
   getSurgeryDisplayStatus,
   toDateInputValue,
 } from "./treatmentDisplay";
+import { getMedicationPlan as getSharedMedicationPlan } from "./medicationPlan";
 
 type PersonLike = string | { _id?: string; fullName?: string; email?: string } | null | undefined;
 
@@ -50,54 +50,19 @@ export const getUserPatientProfileId = (user: User | null | undefined) => {
   return patientProfile._id || "";
 };
 
-const normalizeMedication = (
-  medication: TreatmentMedicationRecord
-): Medication => ({
-  id: medication.id || medication._id || `med-${medication.name}`,
-  name: medication.name || "",
-  dose: medication.dose || "",
-  route: (medication.route || "oral") as Medication["route"],
-  frequency: medication.frequency || medication.schedule || "",
-  timing: medication.timing || "",
-  weekdays: medication.weekdays || [],
-  asNeeded: Boolean(medication.asNeeded),
-  category:
-    medication.category === "other"
-      ? "supportive"
-      : medication.category || "supportive",
-  notes: medication.notes || "",
-});
-
+// Medication normalization and plan-building now live in the shared
+// utils/medicationPlan.ts, used by both this (patient) view and the
+// oncologist patient-detail view, so the two views can never disagree on a
+// medication's route or category again. Category is preserved as-is
+// (defaulting only to "other", never remapped to "supportive"), and an
+// unset route stays "" rather than being fabricated as "oral"/"IV".
 export const getMedicationPlan = (
   protocol?: TreatmentProtocolRecord | null
-): Medication[] => {
-  if (!protocol) return [];
-
-  const medications = (protocol.medications || []).map(normalizeMedication);
-  const existingNames = new Set(
-    medications.map((medication) => medication.name.trim().toLowerCase())
-  );
-
-  (protocol.drugs || []).forEach((drug) => {
-    const key = drug.trim().toLowerCase();
-    if (!key || existingNames.has(key)) return;
-
-    medications.push({
-      id: `drug-${key}`,
-      name: drug,
-      dose: "",
-      route: "IV",
-      frequency: "",
-      timing: "",
-      weekdays: [],
-      asNeeded: false,
-      category: "chemotherapy",
-      notes: "Listed in treatment protocol",
-    });
-  });
-
-  return medications;
-};
+): Medication[] =>
+  getSharedMedicationPlan(protocol).map((medication) => ({
+    ...medication,
+    route: medication.route as Medication["route"],
+  }));
 
 export const adaptPatientProfile = (
   patient: ApiPatientProfile,

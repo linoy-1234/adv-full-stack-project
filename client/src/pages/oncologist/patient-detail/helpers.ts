@@ -10,7 +10,6 @@ import type {
   PatientAllergy,
   PatientProfile as ApiPatientProfile,
   TreatmentCycleRecord,
-  TreatmentMedicationRecord,
   TreatmentProtocolRecord,
 } from "../../../types/api";
 import type { CyclePayload, MedicationPayload } from "../../../services/treatmentService";
@@ -20,6 +19,7 @@ import type {
   ProtocolFormResult,
   TreatmentItemType,
 } from "./types";
+import { getMedicationPlan as getSharedMedicationPlan } from "../../../utils/medicationPlan";
 
 export const inputCls =
   "w-full border border-[#E5E2DC] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7CAE8E]";
@@ -115,23 +115,6 @@ export const normalizeWeekdays = (days?: string[]): WeekdayKey[] =>
     (weekdayKeys as readonly string[]).includes(day)
   );
 
-export const getMedicationId = (medication: TreatmentMedicationRecord) =>
-  medication.id || medication._id || `med-${medication.name}`;
-
-export const normalizeMedication = (
-  medication: TreatmentMedicationRecord
-): MedicationFormRecord => ({
-  id: getMedicationId(medication),
-  name: medication.name || "",
-  dose: medication.dose || "",
-  route: medication.route || "IV",
-  timing: medication.timing || "",
-  weekdays: normalizeWeekdays(medication.weekdays),
-  asNeeded: Boolean(medication.asNeeded),
-  category: medication.category || "other",
-  notes: medication.notes || "",
-});
-
 export const getProtocolDrugs = (protocol: TreatmentProtocolRecord | null) => {
   if (!protocol) return [];
   if (protocol.drugs?.length) return protocol.drugs;
@@ -142,33 +125,13 @@ export const getProtocolDrugs = (protocol: TreatmentProtocolRecord | null) => {
     .filter(Boolean);
 };
 
-export const getMedicationPlan = (protocol: TreatmentProtocolRecord | null) => {
-  if (!protocol) return [];
-
-  const medications = protocol.medications.map(normalizeMedication);
-  const existingNames = new Set(
-    medications.map((medication) => medication.name.trim().toLowerCase())
-  );
-
-  getProtocolDrugs(protocol).forEach((drug) => {
-    const key = drug.trim().toLowerCase();
-    if (!key || existingNames.has(key)) return;
-
-    medications.push({
-      id: `drug-${key}`,
-      name: drug,
-      dose: "",
-      route: "",
-      timing: "",
-      weekdays: [],
-      asNeeded: false,
-      category: "chemotherapy",
-      notes: "Listed in treatment protocol",
-    });
-  });
-
-  return medications;
-};
+// Medication normalization and plan-building now live in the shared
+// utils/medicationPlan.ts, used by both this (oncologist) view and the
+// patient portal adapter, so the two views can never disagree on a
+// medication's route or category again.
+export const getMedicationPlan = (
+  protocol: TreatmentProtocolRecord | null
+): MedicationFormRecord[] => getSharedMedicationPlan(protocol);
 
 export const medicationToPayload = (medication: MedicationFormRecord): MedicationPayload => ({
   id: medication.id,
