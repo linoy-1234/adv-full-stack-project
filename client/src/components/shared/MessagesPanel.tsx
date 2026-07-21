@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, memo } from "react";
 import {
   Send,
   MessageSquare,
@@ -75,16 +75,16 @@ interface MessageBubbleProps {
   isEditing: boolean;
   isConfirmingDelete: boolean;
   editDraft: string;
-  onEditStart: () => void;
+  onEditStart: (id: string, text: string) => void;
   onEditDraftChange: (v: string) => void;
-  onEditSave: () => void;
+  onEditSave: (id: string, draft: string) => void;
   onEditCancel: () => void;
-  onDeleteRequest: () => void;
-  onDeleteConfirm: () => void;
+  onDeleteRequest: (id: string) => void;
+  onDeleteConfirm: (id: string) => void;
   onDeleteCancel: () => void;
 }
 
-function MessageBubble({
+const MessageBubble = memo(function MessageBubble({
   msg,
   isOwn,
   isReadByOther,
@@ -136,7 +136,7 @@ function MessageBubble({
             />
             <div className="flex gap-2">
               <button
-                onClick={onEditSave}
+                onClick={() => onEditSave(msg._id, editDraft)}
                 disabled={!editDraft.trim()}
                 className="px-3 py-1 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
                 style={{ backgroundColor: "rgba(255,255,255,0.25)", color: "#fff" }}
@@ -163,14 +163,14 @@ function MessageBubble({
             {canEditDelete && !isConfirmingDelete && (
               <div className="flex items-center gap-1">
                 <button
-                  onClick={onEditStart}
+                  onClick={() => onEditStart(msg._id, msg.text)}
                   title="Edit message"
                   className="opacity-60 hover:opacity-100 transition-opacity"
                 >
                   <Pencil size={11} style={{ color: "rgba(255,255,255,0.9)" }} />
                 </button>
                 <button
-                  onClick={onDeleteRequest}
+                  onClick={() => onDeleteRequest(msg._id)}
                   title="Delete message"
                   className="opacity-60 hover:opacity-100 transition-opacity"
                 >
@@ -184,7 +184,7 @@ function MessageBubble({
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] opacity-80">Delete?</span>
                 <button
-                  onClick={onDeleteConfirm}
+                  onClick={() => onDeleteConfirm(msg._id)}
                   className="text-[10px] px-1.5 py-0.5 rounded font-medium"
                   style={{ backgroundColor: "rgba(239,68,68,0.8)", color: "#fff" }}
                 >
@@ -206,7 +206,7 @@ function MessageBubble({
       </div>
     </div>
   );
-}
+});
 
 // ─── Main panel ───────────────────────────────────────────────────────────────
 
@@ -327,28 +327,61 @@ export function MessagesPanel({
     }
   };
 
-  const handleEditSave = async (messageId: string) => {
-    if (!editDraft.trim()) return;
-    try {
-      await editMessage(messageId, editDraft.trim());
-      setEditingId(null);
-      setEditDraft("");
-      await loadMessages();
-    } catch {
-      setError("Failed to edit message. Please try again.");
-    }
-  };
+  // Stable per-row handlers (referenced by memoized MessageBubble instances) —
+  // each takes the message id/draft as an argument rather than closing over
+  // per-row state, so their identity stays constant across re-renders.
+  const handleEditStart = useCallback((id: string, text: string) => {
+    setConfirmDeleteId(null);
+    setEditingId(id);
+    setEditDraft(text);
+  }, []);
 
-  const handleDeleteConfirm = async (messageId: string) => {
-    try {
-      await deleteMessage(messageId);
-      setConfirmDeleteId(null);
-      await loadMessages();
-    } catch {
-      setError("Failed to delete message. Please try again.");
-      setConfirmDeleteId(null);
-    }
-  };
+  const handleEditDraftChange = useCallback((value: string) => {
+    setEditDraft(value);
+  }, []);
+
+  const handleEditCancel = useCallback(() => {
+    setEditingId(null);
+    setEditDraft("");
+  }, []);
+
+  const handleEditSave = useCallback(
+    async (messageId: string, draft: string) => {
+      if (!draft.trim()) return;
+      try {
+        await editMessage(messageId, draft.trim());
+        setEditingId(null);
+        setEditDraft("");
+        await loadMessages();
+      } catch {
+        setError("Failed to edit message. Please try again.");
+      }
+    },
+    [loadMessages]
+  );
+
+  const handleDeleteRequest = useCallback((id: string) => {
+    setEditingId(null);
+    setConfirmDeleteId(id);
+  }, []);
+
+  const handleDeleteCancel = useCallback(() => {
+    setConfirmDeleteId(null);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(
+    async (messageId: string) => {
+      try {
+        await deleteMessage(messageId);
+        setConfirmDeleteId(null);
+        await loadMessages();
+      } catch {
+        setError("Failed to delete message. Please try again.");
+        setConfirmDeleteId(null);
+      }
+    },
+    [loadMessages]
+  );
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -395,23 +428,13 @@ export function MessagesPanel({
                 isEditing={editingId === msg._id}
                 isConfirmingDelete={confirmDeleteId === msg._id}
                 editDraft={editDraft}
-                onEditStart={() => {
-                  setConfirmDeleteId(null);
-                  setEditingId(msg._id);
-                  setEditDraft(msg.text);
-                }}
-                onEditDraftChange={setEditDraft}
-                onEditSave={() => handleEditSave(msg._id)}
-                onEditCancel={() => {
-                  setEditingId(null);
-                  setEditDraft("");
-                }}
-                onDeleteRequest={() => {
-                  setEditingId(null);
-                  setConfirmDeleteId(msg._id);
-                }}
-                onDeleteConfirm={() => handleDeleteConfirm(msg._id)}
-                onDeleteCancel={() => setConfirmDeleteId(null)}
+                onEditStart={handleEditStart}
+                onEditDraftChange={handleEditDraftChange}
+                onEditSave={handleEditSave}
+                onEditCancel={handleEditCancel}
+                onDeleteRequest={handleDeleteRequest}
+                onDeleteConfirm={handleDeleteConfirm}
+                onDeleteCancel={handleDeleteCancel}
               />
             );
           })

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { Activity, Info } from "lucide-react";
 import { getPatientSymptoms } from "../../services/symptomService";
 import ErrorMessage from "../common/ErrorMessage";
@@ -41,7 +41,7 @@ function formatLogDate(isoString: string) {
   );
 }
 
-function SymptomBadge({ item }: { item: SymptomItem }) {
+const SymptomBadge = memo(function SymptomBadge({ item }: { item: SymptomItem }) {
   const meta = SYMPTOM_META[item.type] ?? { label: item.type, emoji: "•" };
   const label = item.type === "other" && item.customSymptom ? item.customSymptom : meta.label;
   return (
@@ -53,9 +53,9 @@ function SymptomBadge({ item }: { item: SymptomItem }) {
       <span className="text-[10px] opacity-70">({intensityLabel(item.severity)})</span>
     </span>
   );
-}
+});
 
-function EntryCard({ entry }: { entry: SymptomLog }) {
+const EntryCard = memo(function EntryCard({ entry }: { entry: SymptomLog }) {
   return (
     <div
       className="rounded-xl p-4"
@@ -76,7 +76,7 @@ function EntryCard({ entry }: { entry: SymptomLog }) {
       )}
     </div>
   );
-}
+});
 
 export function SymptomJournalPanel({ patientId }: SymptomJournalPanelProps) {
   const [entries, setEntries] = useState<SymptomLog[]>([]);

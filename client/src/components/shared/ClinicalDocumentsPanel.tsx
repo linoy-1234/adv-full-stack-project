@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, memo } from "react";
 import {
   FileText,
   Upload,
@@ -384,7 +384,7 @@ interface DocumentCardProps {
   onDelete: (doc: ClinicalDocumentRecord) => void;
 }
 
-function DocumentCard({ doc, canManage, onEdit, onDelete }: DocumentCardProps) {
+const DocumentCard = memo(function DocumentCard({ doc, canManage, onEdit, onDelete }: DocumentCardProps) {
   const badgeCls = DOCUMENT_TYPE_BADGE_COLORS[doc.documentType];
   const label = DOCUMENT_TYPE_LABELS[doc.documentType];
 
@@ -454,7 +454,7 @@ function DocumentCard({ doc, canManage, onEdit, onDelete }: DocumentCardProps) {
       </div>
     </div>
   );
-}
+});
 
 // ─── Main Panel ───────────────────────────────────────────────────────────────
 
@@ -492,18 +492,21 @@ export function ClinicalDocumentsPanel({
     loadDocuments();
   }, [loadDocuments]);
 
-  const handleDeleteConfirm = async (doc: ClinicalDocumentRecord) => {
-    setDeletingId(doc._id);
-    setDeleteError("");
-    try {
-      await deleteDocument(doc._id);
-      await loadDocuments();
-    } catch {
-      setDeleteError("Failed to delete document. Please try again.");
-    } finally {
-      setDeletingId(null);
-    }
-  };
+  const handleDeleteConfirm = useCallback(
+    async (doc: ClinicalDocumentRecord) => {
+      setDeletingId(doc._id);
+      setDeleteError("");
+      try {
+        await deleteDocument(doc._id);
+        await loadDocuments();
+      } catch {
+        setDeleteError("Failed to delete document. Please try again.");
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [loadDocuments]
+  );
 
   return (
     <>
