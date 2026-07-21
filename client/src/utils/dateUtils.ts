@@ -1,4 +1,4 @@
-export const TODAY = "2026-06-05";
+export const TODAY = new Date().toISOString().slice(0, 10);
 
 export function formatDate(iso: string): string {
   if (!iso) return "No date scheduled";

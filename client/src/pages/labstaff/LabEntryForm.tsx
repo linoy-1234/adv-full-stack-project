@@ -49,10 +49,6 @@ export function LabEntryForm({
     "w-full border border-[#E5E2DC] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7CAE8E]";
   const labelCls =
     "block text-xs font-semibold text-[#6B7280] mb-1 uppercase tracking-wide";
-  const cyclesLoading = false;
-  const chemoCycles: Array<{ _id: string; title: string; startDate: string; endDate: string }> = [];
-  const linkedCycleId = "";
-  const setLinkedCycleId = (_value: string) => {};
 
   useEffect(() => {
     if (externalError) setError(externalError);
@@ -136,30 +132,6 @@ export function LabEntryForm({
               }}
             />
           </div>
-
-          {false && patientId && (
-            <div>
-              <label className={labelCls}>Legacy hidden field</label>
-              {cyclesLoading ? (
-                <p className="text-xs text-[#9CA3AF]">Loading cycles…</p>
-              ) : chemoCycles.length === 0 ? (
-                <p className="text-xs text-[#9CA3AF]">No chemotherapy cycles found for this patient.</p>
-              ) : (
-                <select
-                  className={inputCls}
-                  value={linkedCycleId}
-                  onChange={(e) => setLinkedCycleId(e.target.value)}
-                >
-                  <option value="">Not linked to a cycle</option>
-                  {chemoCycles.map((c) => (
-                    <option key={c._id} value={c._id}>
-                      {c.title} — {formatDate(c.startDate)} → {formatDate(c.endDate)}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-          )}
 
           <div className="border-t border-[#E5E2DC] pt-4">
             <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-3">
