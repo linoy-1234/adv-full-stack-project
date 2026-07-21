@@ -15,6 +15,7 @@ import {
   Scissors,
   Stethoscope,
   Syringe,
+  UserX,
   Zap,
 } from "lucide-react";
 import ErrorMessage from "../../../components/common/ErrorMessage";
@@ -44,6 +45,7 @@ import {
   clearPatientsError,
   editPatient,
   fetchPatientById,
+  removePatient,
 } from "../../../store/slices/patientsSlice";
 import {
   approveCycle,
@@ -99,6 +101,7 @@ import { EditMedicationsModal } from "./components/modals/EditMedicationsModal";
 import { EditProtocolModal } from "./components/modals/EditProtocolModal";
 import { EditTreatmentDatesModal } from "./components/modals/EditTreatmentDatesModal";
 import { PostponeCycleModal } from "./components/modals/PostponeCycleModal";
+import { DeactivatePatientModal } from "./components/modals/DeactivatePatientModal";
 
 interface PatientDetailProps {
   patientId: string;
@@ -190,6 +193,18 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
       return null;
     } catch (error) {
       return typeof error === "string" ? error : "Failed to update patient";
+    }
+  };
+
+  const handleDeactivatePatient = async (): Promise<string | null> => {
+    try {
+      await dispatch(removePatient(patientId)).unwrap();
+      onBack();
+      return null;
+    } catch (error) {
+      return typeof error === "string"
+        ? error
+        : "Failed to deactivate patient";
     }
   };
 
@@ -535,6 +550,19 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
             <ClinicalDocumentsPanel patientId={patientId} canManage={true} />
 
             <SymptomJournalPanel patientId={patientId} />
+
+            <div className="flex justify-end pt-1 pb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  dispatch(clearPatientsError());
+                  setModal("deactivate");
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-colors"
+              >
+                <UserX size={13} /> Deactivate patient
+              </button>
+            </div>
           </>
         )}
       </main>
@@ -566,6 +594,13 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
           cycles={cycles}
           onClose={() => setModal(null)}
           onSave={handleSaveDates}
+        />
+      )}
+      {modal === "deactivate" && profile && (
+        <DeactivatePatientModal
+          profile={profile}
+          onClose={() => setModal(null)}
+          onConfirm={handleDeactivatePatient}
         />
       )}
       {cycleToPostpone && (

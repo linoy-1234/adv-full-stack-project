@@ -5,7 +5,13 @@ import type {
 } from "./api";
 import type { WeekdayKey } from "../utils/treatmentDisplay";
 
-export type ModalName = "profile" | "medications" | "protocol" | "dates" | null;
+export type ModalName =
+  | "profile"
+  | "medications"
+  | "protocol"
+  | "dates"
+  | "deactivate"
+  | null;
 export type MedicationCategory = TreatmentMedicationCategory;
 export type TreatmentItemType = TreatmentKind;
 
