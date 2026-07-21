@@ -2,7 +2,10 @@ const User = require("../models/User");
 const PatientProfile = require("../models/PatientProfile");
 const TreatmentProtocol = require("../models/TreatmentProtocol");
 const TreatmentCycle = require("../models/TreatmentCycle");
+const LabResult = require("../models/LabResult");
 const Message = require("../models/Message");
+const SymptomLog = require("../models/SymptomLog");
+const ClinicalDocument = require("../models/ClinicalDocument");
 const { syncDerivedTreatmentStatus } = require("../utils/treatmentStatus");
 const normalizeEmail = require("../utils/normalizeEmail");
 
@@ -354,9 +357,49 @@ const deletePatient = async (req, res, next) => {
 
     await patient.save();
 
-    if (patient.user) {
-      await User.findByIdAndUpdate(patient.user, { isActive: false });
-    }
+    const cascadeDeletedAt = new Date();
+
+    await Promise.all([
+      patient.user
+        ? User.findByIdAndUpdate(patient.user, { isActive: false })
+        : Promise.resolve(),
+
+      TreatmentProtocol.updateMany(
+        { patient: patient._id, isActive: true },
+        { $set: { isActive: false, updatedBy: req.user._id } }
+      ),
+
+      TreatmentCycle.updateMany(
+        { patient: patient._id, isActive: true },
+        { $set: { isActive: false } }
+      ),
+
+      LabResult.updateMany(
+        { patient: patient._id, isActive: true },
+        { $set: { isActive: false, updatedBy: req.user._id } }
+      ),
+
+      Message.updateMany(
+        { patient: patient._id, isActive: true },
+        { $set: { isActive: false } }
+      ),
+
+      SymptomLog.updateMany(
+        { patient: patient._id, isActive: true },
+        { $set: { isActive: false } }
+      ),
+
+      ClinicalDocument.updateMany(
+        { patient: patient._id, isActive: true },
+        {
+          $set: {
+            isActive: false,
+            deletedAt: cascadeDeletedAt,
+            deletedBy: req.user._id,
+          },
+        }
+      ),
+    ]);
 
     res.status(200).json({
       success: true,
