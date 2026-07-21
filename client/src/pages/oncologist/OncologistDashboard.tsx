@@ -139,7 +139,7 @@ export function OncologistDashboard({ onSelectPatient, onLogout }: OncologistDas
       <RibbonBackground />
 
       <header className="sticky top-0 z-20 bg-[#FAF8F5]/95 backdrop-blur border-b border-[#E5E2DC]">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-y-2">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-[#7CAE8E]/20 flex items-center justify-center">
               <Stethoscope size={18} className="text-[#7CAE8E]" />
@@ -196,7 +196,7 @@ export function OncologistDashboard({ onSelectPatient, onLogout }: OncologistDas
         )}
 
         <div className="bg-white rounded-2xl shadow-sm border border-[#E5E2DC] overflow-hidden">
-          <div className="grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1.5fr_0.5fr] gap-4 px-5 py-3 bg-[#F5F2EE] border-b border-[#E5E2DC] text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
+          <div className="hidden md:grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1.5fr_0.5fr] gap-4 px-5 py-3 bg-[#F5F2EE] border-b border-[#E5E2DC] text-xs font-semibold text-[#6B7280] uppercase tracking-wide">
             <span>Patient</span>
             <span>Diagnosis</span>
             <span>Treatment Status</span>
@@ -212,7 +212,7 @@ export function OncologistDashboard({ onSelectPatient, onLogout }: OncologistDas
           ) : (
             filtered.map((profile) => {
               return (
-                <div key={profile._id} className="grid grid-cols-[2fr_2fr_1.5fr_1.5fr_1.5fr_0.5fr] gap-4 px-5 py-4 border-b border-[#F5F2EE] last:border-0 hover:bg-[#FAF8F5] transition-colors items-center">
+                <div key={profile._id} className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.5fr_1.5fr_0.5fr] gap-3 md:gap-4 px-5 py-4 border-b border-[#F5F2EE] last:border-0 hover:bg-[#FAF8F5] transition-colors md:items-center">
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold text-[#2C3E2D]">{profile.fullName}</p>
@@ -230,9 +230,11 @@ export function OncologistDashboard({ onSelectPatient, onLogout }: OncologistDas
                     {profile.nationalId && <p className="text-xs text-[#9CA3AF]">ID: {profile.nationalId}</p>}
                   </div>
                   <div>
+                    <span className="md:hidden block text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wide">Diagnosis</span>
                     <p className="text-sm text-[#374151] leading-snug">{profile.diagnosis || "—"}</p>
                   </div>
                   <div>
+                    <span className="md:hidden block text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wide">Treatment Status</span>
                     {profile.treatmentSummary ? (
                       <>
                         <p className="text-sm font-medium text-[#374151] leading-snug">{profile.treatmentSummary.protocolName}</p>
@@ -249,12 +251,14 @@ export function OncologistDashboard({ onSelectPatient, onLogout }: OncologistDas
                     )}
                   </div>
                   <div>
+                    <span className="md:hidden block text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wide mb-0.5">Account</span>
                     <AccountBadge status={profile.accountStatus} />
                   </div>
                   <div>
+                    <span className="md:hidden block text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wide mb-0.5">Pending Action</span>
                     <PendingBadges actions={profile.pendingActions ?? [profile.pendingAction ?? "none"]} />
                   </div>
-                  <div className="flex justify-end">
+                  <div className="flex justify-start md:justify-end">
                     <button onClick={() => handleOpenPatient(profile)} className="flex items-center gap-0.5 text-sm text-[#7CAE8E] hover:text-[#5A8A6A] font-medium">
                       Open <ChevronRight size={14} />
                     </button>

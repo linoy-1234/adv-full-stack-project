@@ -181,7 +181,7 @@ export function LabStaffDashboard({ onLogout }: LabStaffDashboardProps) {
       <RibbonBackground />
 
       <header className="sticky top-0 z-20 bg-[#FAF8F5]/95 backdrop-blur border-b border-[#E5E2DC]">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-y-2">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-[#7CAE8E]/20 flex items-center justify-center">
               <FlaskConical size={18} className="text-[#7CAE8E]" />
@@ -225,7 +225,7 @@ export function LabStaffDashboard({ onLogout }: LabStaffDashboardProps) {
           />
         )}
 
-        <div className="grid grid-cols-[1fr_2fr] gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-6">
           {/* Patient list */}
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -334,7 +334,7 @@ export function LabStaffDashboard({ onLogout }: LabStaffDashboardProps) {
                               </button>
                             </div>
                           </div>
-                          <div className="grid grid-cols-3 gap-2 text-xs mb-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs mb-2">
                             {(["wbc", "neutrophils", "hemoglobin", "platelets", "alt", "creatinine"] as LabFieldKey[]).map(
                               (field) => (
                                 <div key={field} className="flex items-center gap-2">
