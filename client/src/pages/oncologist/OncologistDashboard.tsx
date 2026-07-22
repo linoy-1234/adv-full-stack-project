@@ -211,57 +211,111 @@ export function OncologistDashboard({ onSelectPatient, onLogout }: OncologistDas
             <div className="px-5 py-12 text-center text-sm text-[#9CA3AF]">No patients found.</div>
           ) : (
             filtered.map((profile) => {
+              const pendingActions = profile.pendingActions ?? [profile.pendingAction ?? "none"];
+              const unreadBadge = (unreadCounts[profile._id] ?? 0) > 0 && (
+                <span
+                  title={`${unreadCounts[profile._id]} unread message${unreadCounts[profile._id] === 1 ? "" : "s"}`}
+                  className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold leading-none shrink-0"
+                  style={{ backgroundColor: "#EF4444", color: "#ffffff" }}
+                >
+                  {unreadCounts[profile._id]}
+                </span>
+              );
+
               return (
-                <div key={profile._id} className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.5fr_1.5fr_0.5fr] gap-3 md:gap-4 px-5 py-4 border-b border-[#F5F2EE] last:border-0 hover:bg-[#FAF8F5] transition-colors md:items-center">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-[#2C3E2D]">{profile.fullName}</p>
-                      {(unreadCounts[profile._id] ?? 0) > 0 && (
-                        <span
-                          title={`${unreadCounts[profile._id]} unread message${unreadCounts[profile._id] === 1 ? "" : "s"}`}
-                          className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold leading-none"
-                          style={{ backgroundColor: "#EF4444", color: "#ffffff" }}
-                        >
-                          {unreadCounts[profile._id]}
-                        </span>
+                <div key={profile._id} className="md:border-b md:border-[#F5F2EE] last:md:border-0">
+                  {/* Desktop / tablet row */}
+                  <div className="hidden md:grid md:grid-cols-[2fr_2fr_1.5fr_1.5fr_1.5fr_0.5fr] gap-4 px-5 py-4 hover:bg-[#FAF8F5] transition-colors md:items-center">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-[#2C3E2D]">{profile.fullName}</p>
+                        {unreadBadge}
+                      </div>
+                      <p className="text-xs text-[#9CA3AF]">{profile.email}</p>
+                      {profile.nationalId && <p className="text-xs text-[#9CA3AF]">ID: {profile.nationalId}</p>}
+                    </div>
+                    <div>
+                      <p className="text-sm text-[#374151] leading-snug">{profile.diagnosis || "—"}</p>
+                    </div>
+                    <div>
+                      {profile.treatmentSummary ? (
+                        <>
+                          <p className="text-sm font-medium text-[#374151] leading-snug">{profile.treatmentSummary.protocolName}</p>
+                          {profile.treatmentSummary.treatmentTypes.length > 0 && (
+                            <p className="text-xs text-[#9CA3AF]">
+                              {profile.treatmentSummary.treatmentTypes
+                                .map((t) => t.charAt(0).toUpperCase() + t.slice(1))
+                                .join(" · ")}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-[#9CA3AF]">No active treatment protocol</p>
                       )}
                     </div>
-                    <p className="text-xs text-[#9CA3AF]">{profile.email}</p>
-                    {profile.nationalId && <p className="text-xs text-[#9CA3AF]">ID: {profile.nationalId}</p>}
+                    <div>
+                      <AccountBadge status={profile.accountStatus} />
+                    </div>
+                    <div>
+                      <PendingBadges actions={pendingActions} />
+                    </div>
+                    <div className="flex justify-end">
+                      <button onClick={() => handleOpenPatient(profile)} className="flex items-center gap-0.5 text-sm text-[#7CAE8E] hover:text-[#5A8A6A] font-medium">
+                        Open <ChevronRight size={14} />
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <span className="md:hidden block text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wide">Diagnosis</span>
-                    <p className="text-sm text-[#374151] leading-snug">{profile.diagnosis || "—"}</p>
-                  </div>
-                  <div>
-                    <span className="md:hidden block text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wide">Treatment Status</span>
-                    {profile.treatmentSummary ? (
-                      <>
-                        <p className="text-sm font-medium text-[#374151] leading-snug">{profile.treatmentSummary.protocolName}</p>
-                        {profile.treatmentSummary.treatmentTypes.length > 0 && (
-                          <p className="text-xs text-[#9CA3AF]">
-                            {profile.treatmentSummary.treatmentTypes
-                              .map((t) => t.charAt(0).toUpperCase() + t.slice(1))
-                              .join(" · ")}
-                          </p>
-                        )}
-                      </>
-                    ) : (
-                      <p className="text-sm text-[#9CA3AF]">No active treatment protocol</p>
-                    )}
-                  </div>
-                  <div>
-                    <span className="md:hidden block text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wide mb-0.5">Account</span>
-                    <AccountBadge status={profile.accountStatus} />
-                  </div>
-                  <div>
-                    <span className="md:hidden block text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wide mb-0.5">Pending Action</span>
-                    <PendingBadges actions={profile.pendingActions ?? [profile.pendingAction ?? "none"]} />
-                  </div>
-                  <div className="flex justify-start md:justify-end">
-                    <button onClick={() => handleOpenPatient(profile)} className="flex items-center gap-0.5 text-sm text-[#7CAE8E] hover:text-[#5A8A6A] font-medium">
-                      Open <ChevronRight size={14} />
-                    </button>
+
+                  {/* Mobile card */}
+                  <div className="md:hidden px-3 pt-3 last:pb-3">
+                    <div className="bg-white border border-[#E5E2DC] rounded-xl shadow-sm overflow-hidden active:bg-[#FAF8F5] transition-colors">
+                      <div className="px-3.5 pt-3 pb-2.5">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-[#2C3E2D]">{profile.fullName}</p>
+                            {unreadBadge}
+                          </div>
+                          <p className="text-xs text-[#9CA3AF] break-all mt-0.5">{profile.email}</p>
+                          {profile.nationalId && <p className="text-xs text-[#9CA3AF] mt-0.5">ID: {profile.nationalId}</p>}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3">
+                          <div className="min-w-0">
+                            <span className="block text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wide">Diagnosis</span>
+                            <p className="text-xs text-[#374151] leading-snug mt-0.5">{profile.diagnosis || "—"}</p>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="block text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wide">Treatment</span>
+                            {profile.treatmentSummary ? (
+                              <>
+                                <p className="text-xs font-medium text-[#374151] leading-snug mt-0.5">{profile.treatmentSummary.protocolName}</p>
+                                {profile.treatmentSummary.treatmentTypes.length > 0 && (
+                                  <p className="text-[11px] text-[#9CA3AF] mt-0.5">
+                                    {profile.treatmentSummary.treatmentTypes
+                                      .map((t) => t.charAt(0).toUpperCase() + t.slice(1))
+                                      .join(" · ")}
+                                  </p>
+                                )}
+                              </>
+                            ) : (
+                              <p className="text-xs text-[#9CA3AF] mt-0.5">No active protocol</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                          <AccountBadge status={profile.accountStatus} />
+                          <PendingBadges actions={pendingActions} />
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleOpenPatient(profile)}
+                        className="flex items-center justify-center gap-1 w-full px-3.5 py-2 text-sm text-[#7CAE8E] hover:text-[#5A8A6A] font-medium border-t border-[#F5F2EE] bg-[#FAF8F5]/60"
+                      >
+                        Open <ChevronRight size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
