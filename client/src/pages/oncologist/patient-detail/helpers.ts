@@ -284,9 +284,7 @@ export const buildInitialCycles = (result: ProtocolFormResult): CyclePayload[] =
     );
   }
 
-  return cycles.length > 0
-    ? cycles
-    : [makeGeneratedCycle("chemotherapy", 1, "Cycle 1", todayIso(), shiftDate(todayIso(), 20))];
+  return cycles;
 };
 
 export const getApiErrorMessage = (error: unknown, fallback: string): string => {
@@ -298,4 +296,3 @@ export const getApiErrorMessage = (error: unknown, fallback: string): string => 
   if (error instanceof Error) return error.message;
   return fallback;
 };
-

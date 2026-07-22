@@ -15,10 +15,17 @@ const treatmentTypeSchema = Joi.object({
     .valid("chemotherapy", "radiation", "surgery", "supportive")
     .required(),
 
-  plannedCount: Joi.number()
-    .integer()
-    .min(0)
-    .default(0),
+  plannedCount: Joi.when("type", {
+    is: "supportive",
+    then: Joi.number()
+      .integer()
+      .min(0)
+      .default(0),
+    otherwise: Joi.number()
+      .integer()
+      .min(1)
+      .required(),
+  }),
 
   notes: Joi.string()
     .allow("")
@@ -159,7 +166,6 @@ const createTreatmentProtocolSchema = Joi.object({
 
   treatmentTypes: Joi.array()
     .items(treatmentTypeSchema)
-    .min(1)
     .required(),
 
   medications: Joi.array()
@@ -177,8 +183,7 @@ const createTreatmentProtocolSchema = Joi.object({
 
   cycles: Joi.array()
     .items(cycleSchema)
-    .min(1)
-    .required(),
+    .default([]),
 });
 
 const updateTreatmentProtocolSchema = Joi.object({
@@ -191,8 +196,7 @@ const updateTreatmentProtocolSchema = Joi.object({
     .max(160),
 
   treatmentTypes: Joi.array()
-    .items(treatmentTypeSchema)
-    .min(1),
+    .items(treatmentTypeSchema),
 
   medications: Joi.array()
     .items(medicationSchema),

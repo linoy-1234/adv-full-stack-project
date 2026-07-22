@@ -157,7 +157,7 @@ export function LoginPage({
               className="block text-sm mb-1.5"
               style={{ color: "#374151" }}
             >
-              Email Address
+              Email Address *
             </label>
 
             <input
@@ -186,7 +186,7 @@ export function LoginPage({
               className="block text-sm mb-1.5"
               style={{ color: "#374151" }}
             >
-              Password
+              Password *
             </label>
 
             <div className="relative">

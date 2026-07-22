@@ -215,25 +215,15 @@ const syncProtocolPlannedCounts = async (protocol, updatedBy) => {
   const existingTypes = protocol.treatmentTypes.map((entry) =>
     typeof entry.toObject === "function" ? entry.toObject() : entry
   );
-  const existingTypeNames = existingTypes.map((entry) => entry.type);
-  const activeTypeNames = countableTreatmentTypes.filter(
-    (type) => calculatePlannedCount(type, activeCycles) > 0
-  );
-  const typeNames = Array.from(new Set([...existingTypeNames, ...activeTypeNames]));
 
-  protocol.treatmentTypes = typeNames.map((type) => {
-    const existing = existingTypes.find((entry) => entry.type === type) || {
-      type,
-      notes: "",
-    };
-
-    if (!countableTreatmentTypes.includes(type)) {
+  protocol.treatmentTypes = existingTypes.map((existing) => {
+    if (!countableTreatmentTypes.includes(existing.type)) {
       return existing;
     }
 
     return {
       ...existing,
-      plannedCount: calculatePlannedCount(type, activeCycles),
+      plannedCount: calculatePlannedCount(existing.type, activeCycles),
     };
   });
 
@@ -322,7 +312,9 @@ const createTreatmentProtocol = async (req, res, next) => {
       };
     });
 
-    await TreatmentCycle.insertMany(cyclesToCreate);
+    if (cyclesToCreate.length > 0) {
+      await TreatmentCycle.insertMany(cyclesToCreate);
+    }
     const payload = await hydrateProtocolResponse(protocol._id);
 
     res.status(201).json({

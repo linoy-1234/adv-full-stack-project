@@ -139,32 +139,32 @@ export function LabEntryForm({
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>WBC (×10⁹/L)</label>
+                <label className={labelCls}>WBC (×10⁹/L) *</label>
                 <input className={inputCls} type="number" step="0.1" placeholder="e.g. 5.2" value={wbc} onChange={(e) => { clearError(); setWbc(e.target.value); }} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.wbc.min}–{LAB_NORMS.wbc.max}</p>
               </div>
               <div>
-                <label className={labelCls}>Neutrophils (×10⁹/L)</label>
+                <label className={labelCls}>Neutrophils (×10⁹/L) *</label>
                 <input className={inputCls} type="number" step="0.1" placeholder="e.g. 2.8" value={neutrophils} onChange={(e) => { clearError(); setNeutrophils(e.target.value); }} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.neutrophils.min}–{LAB_NORMS.neutrophils.max}</p>
               </div>
               <div>
-                <label className={labelCls}>Hemoglobin (g/dL)</label>
+                <label className={labelCls}>Hemoglobin (g/dL) *</label>
                 <input className={inputCls} type="number" step="0.1" placeholder="e.g. 12.0" value={hemoglobin} onChange={(e) => { clearError(); setHemoglobin(e.target.value); }} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.hemoglobin.min}–{LAB_NORMS.hemoglobin.max}</p>
               </div>
               <div>
-                <label className={labelCls}>Platelets (×10⁹/L)</label>
+                <label className={labelCls}>Platelets (×10⁹/L) *</label>
                 <input className={inputCls} type="number" step="1" placeholder="e.g. 200" value={platelets} onChange={(e) => { clearError(); setPlatelets(e.target.value); }} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.platelets.min}–{LAB_NORMS.platelets.max}</p>
               </div>
               <div>
-                <label className={labelCls}>ALT (U/L)</label>
+                <label className={labelCls}>ALT (U/L) *</label>
                 <input className={inputCls} type="number" step="1" placeholder="e.g. 28" value={alt} onChange={(e) => { clearError(); setAlt(e.target.value); }} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.alt.min}–{LAB_NORMS.alt.max}</p>
               </div>
               <div>
-                <label className={labelCls}>Creatinine (mg/dL)</label>
+                <label className={labelCls}>Creatinine (mg/dL) *</label>
                 <input className={inputCls} type="number" step="0.01" placeholder="e.g. 0.85" value={creatinine} onChange={(e) => { clearError(); setCreatinine(e.target.value); }} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.creatinine.min}–{LAB_NORMS.creatinine.max}</p>
               </div>

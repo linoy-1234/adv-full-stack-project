@@ -77,7 +77,7 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label className="block text-sm mb-1.5" style={{ color: '#374151' }}>Email Address</label>
+            <label className="block text-sm mb-1.5" style={{ color: '#374151' }}>Email Address *</label>
             <input
               ref={emailRef}
               type="email"
@@ -92,7 +92,7 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
             />
           </div>
           <div>
-            <label className="block text-sm mb-1.5" style={{ color: '#374151' }}>Create Password</label>
+            <label className="block text-sm mb-1.5" style={{ color: '#374151' }}>Create Password *</label>
             <div className="relative">
               <input
                 ref={passwordRef}
@@ -112,7 +112,7 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
             </div>
           </div>
           <div>
-            <label className="block text-sm mb-1.5" style={{ color: '#374151' }}>Confirm Password</label>
+            <label className="block text-sm mb-1.5" style={{ color: '#374151' }}>Confirm Password *</label>
             <input
               ref={confirmPasswordRef}
               type="password"

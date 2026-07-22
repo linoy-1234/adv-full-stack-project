@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Stethoscope, X } from "lucide-react";
 
+import { focusFirstField } from "../../../../../hooks/useErrorVisibility";
 import type {
   TreatmentProtocolRecord,
   TreatmentTypeRecord,
@@ -25,6 +26,11 @@ export function EditProtocolModal({
   onClose: () => void;
   onSave: (result: ProtocolFormResult) => Promise<void>;
 }) {
+  type QuantityField =
+    | "numberOfChemoCycles"
+    | "numberOfRadiationSessions"
+    | "numberOfSurgeryCheckpoints";
+
   const [form, setForm] = useState({
     protocolName: protocol?.protocolName || "",
     diagnosis: protocol?.diagnosis || profileDiagnosis,
@@ -39,26 +45,103 @@ export function EditProtocolModal({
     numberOfSurgeryCheckpoints: getTreatmentCount(protocol, "surgery")?.toString() || "",
   });
   const [saving, setSaving] = useState(false);
+  const [quantityErrors, setQuantityErrors] = useState<
+    Partial<Record<QuantityField, string>>
+  >({});
+  const chemoCountRef = useRef<HTMLInputElement | null>(null);
+  const radiationCountRef = useRef<HTMLInputElement | null>(null);
+  const surgeryCountRef = useRef<HTMLInputElement | null>(null);
+
+  const quantityError = (value: string, label: string) => {
+    const trimmed = value.trim();
+    const parsed = Number(trimmed);
+
+    if (
+      !trimmed ||
+      Number.isNaN(parsed) ||
+      !Number.isInteger(parsed) ||
+      parsed < 1
+    ) {
+      return `${label} must be a whole number of at least 1.`;
+    }
+
+    return "";
+  };
+
+  const requiredCount = (field: QuantityField) => {
+    const parsed = Number(form[field]);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  };
+
+  const clearQuantityError = (field: QuantityField) => {
+    setQuantityErrors((current) => {
+      if (!current[field]) return current;
+      const { [field]: _removed, ...rest } = current;
+      return rest;
+    });
+  };
 
   const handleSave = async () => {
+    const nextQuantityErrors: Partial<Record<QuantityField, string>> = {};
+
+    if (form.includeChemotherapy) {
+      const error = quantityError(
+        form.numberOfChemoCycles,
+        "Number of chemotherapy cycles"
+      );
+      if (error) nextQuantityErrors.numberOfChemoCycles = error;
+    }
+
+    if (form.includeRadiation) {
+      const error = quantityError(
+        form.numberOfRadiationSessions,
+        "Number of radiation sessions"
+      );
+      if (error) nextQuantityErrors.numberOfRadiationSessions = error;
+    }
+
+    if (form.includeSurgery) {
+      const error = quantityError(
+        form.numberOfSurgeryCheckpoints,
+        "Number of surgery checkpoints"
+      );
+      if (error) nextQuantityErrors.numberOfSurgeryCheckpoints = error;
+    }
+
+    if (Object.keys(nextQuantityErrors).length > 0) {
+      setQuantityErrors(nextQuantityErrors);
+      focusFirstField([
+        nextQuantityErrors.numberOfChemoCycles
+          ? chemoCountRef
+          : { current: null },
+        nextQuantityErrors.numberOfRadiationSessions
+          ? radiationCountRef
+          : { current: null },
+        nextQuantityErrors.numberOfSurgeryCheckpoints
+          ? surgeryCountRef
+          : { current: null },
+      ]);
+      return;
+    }
+
     const treatmentTypes: TreatmentTypeRecord[] = [];
 
     if (form.includeChemotherapy) {
       treatmentTypes.push({
         type: "chemotherapy",
-        plannedCount: Number(form.numberOfChemoCycles) || 1,
+        plannedCount: requiredCount("numberOfChemoCycles"),
       });
     }
     if (form.includeRadiation) {
       treatmentTypes.push({
         type: "radiation",
-        plannedCount: Number(form.numberOfRadiationSessions) || 1,
+        plannedCount: requiredCount("numberOfRadiationSessions"),
       });
     }
     if (form.includeSurgery) {
       treatmentTypes.push({
         type: "surgery",
-        plannedCount: Number(form.numberOfSurgeryCheckpoints) || 1,
+        plannedCount: requiredCount("numberOfSurgeryCheckpoints"),
       });
     }
     if (form.includeSupportive) {
@@ -69,10 +152,7 @@ export function EditProtocolModal({
     await onSave({
       protocolName: form.protocolName.trim(),
       diagnosis: form.diagnosis.trim(),
-      treatmentTypes:
-        treatmentTypes.length > 0
-          ? treatmentTypes
-          : [{ type: "chemotherapy", plannedCount: 1 }],
+      treatmentTypes,
       drugs: form.drugs
         .split(",")
         .map((drug) => drug.trim())
@@ -102,7 +182,7 @@ export function EditProtocolModal({
 
         <div className="px-6 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
           <div>
-            <label className={labelCls}>Protocol Name</label>
+            <label className={labelCls}>Protocol Name *</label>
             <input
               className={inputCls}
               value={form.protocolName}
@@ -115,7 +195,7 @@ export function EditProtocolModal({
             />
           </div>
           <div>
-            <label className={labelCls}>Diagnosis</label>
+            <label className={labelCls}>Diagnosis *</label>
             <input
               className={inputCls}
               value={form.diagnosis}
@@ -145,12 +225,17 @@ export function EditProtocolModal({
               {form.includeChemotherapy && (
                 <div className="ml-6">
                   <label className="block text-xs text-[#6B7280] mb-1">
-                    Number of Chemotherapy Cycles
+                    Number of Chemotherapy Cycles *
                   </label>
                   <input
+                    ref={chemoCountRef}
                     type="number"
                     min="1"
-                    className={inputCls}
+                    className={`${inputCls} ${
+                      quantityErrors.numberOfChemoCycles
+                        ? "border-red-300 focus:ring-red-300"
+                        : ""
+                    }`}
                     value={form.numberOfChemoCycles}
                     onChange={(event) =>
                       setForm((current) => ({
@@ -158,8 +243,14 @@ export function EditProtocolModal({
                         numberOfChemoCycles: event.target.value,
                       }))
                     }
+                    onInput={() => clearQuantityError("numberOfChemoCycles")}
                     placeholder="e.g., 6"
                   />
+                  {quantityErrors.numberOfChemoCycles && (
+                    <p className="mt-1 text-xs text-red-600">
+                      {quantityErrors.numberOfChemoCycles}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -180,12 +271,17 @@ export function EditProtocolModal({
               {form.includeRadiation && (
                 <div className="ml-6">
                   <label className="block text-xs text-[#6B7280] mb-1">
-                    Number of Radiation Sessions
+                    Number of Radiation Sessions *
                   </label>
                   <input
+                    ref={radiationCountRef}
                     type="number"
                     min="1"
-                    className={inputCls}
+                    className={`${inputCls} ${
+                      quantityErrors.numberOfRadiationSessions
+                        ? "border-red-300 focus:ring-red-300"
+                        : ""
+                    }`}
                     value={form.numberOfRadiationSessions}
                     onChange={(event) =>
                       setForm((current) => ({
@@ -193,8 +289,16 @@ export function EditProtocolModal({
                         numberOfRadiationSessions: event.target.value,
                       }))
                     }
+                    onInput={() =>
+                      clearQuantityError("numberOfRadiationSessions")
+                    }
                     placeholder="e.g., 30"
                   />
+                  {quantityErrors.numberOfRadiationSessions && (
+                    <p className="mt-1 text-xs text-red-600">
+                      {quantityErrors.numberOfRadiationSessions}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -215,12 +319,17 @@ export function EditProtocolModal({
               {form.includeSurgery && (
                 <div className="ml-6">
                   <label className="block text-xs text-[#6B7280] mb-1">
-                    Number of Surgery Checkpoints
+                    Number of Surgery Checkpoints *
                   </label>
                   <input
+                    ref={surgeryCountRef}
                     type="number"
                     min="1"
-                    className={inputCls}
+                    className={`${inputCls} ${
+                      quantityErrors.numberOfSurgeryCheckpoints
+                        ? "border-red-300 focus:ring-red-300"
+                        : ""
+                    }`}
                     value={form.numberOfSurgeryCheckpoints}
                     onChange={(event) =>
                       setForm((current) => ({
@@ -228,8 +337,16 @@ export function EditProtocolModal({
                         numberOfSurgeryCheckpoints: event.target.value,
                       }))
                     }
+                    onInput={() =>
+                      clearQuantityError("numberOfSurgeryCheckpoints")
+                    }
                     placeholder="e.g., 1"
                   />
+                  {quantityErrors.numberOfSurgeryCheckpoints && (
+                    <p className="mt-1 text-xs text-red-600">
+                      {quantityErrors.numberOfSurgeryCheckpoints}
+                    </p>
+                  )}
                 </div>
               )}
 

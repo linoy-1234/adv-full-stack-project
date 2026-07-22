@@ -84,7 +84,7 @@ export function DeactivatePatientModal({
           </div>
 
           <div>
-            <label className={labelCls}>Type DEACTIVATE to confirm</label>
+            <label className={labelCls}>Type DEACTIVATE to confirm *</label>
             <input
               className={inputCls}
               value={confirmation}

@@ -73,7 +73,7 @@ export function PostponeCycleModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>New Start Date</label>
+              <label className={labelCls}>New Start Date *</label>
               <input
                 ref={newEndDateRef}
                 className={inputCls}
@@ -83,7 +83,7 @@ export function PostponeCycleModal({
               />
             </div>
             <div>
-              <label className={labelCls}>New End Date</label>
+              <label className={labelCls}>New End Date *</label>
               <input
                 className={inputCls}
                 type="date"

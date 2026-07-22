@@ -132,7 +132,7 @@ export function EditProfileModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className={labelCls}>Full Name</label>
+              <label className={labelCls}>Full Name *</label>
               <input
                 ref={fullNameRef}
                 className={inputCls}
@@ -146,7 +146,7 @@ export function EditProfileModal({
               />
             </div>
             <div>
-              <label className={labelCls}>Email</label>
+              <label className={labelCls}>Email *</label>
               <input
                 ref={emailRef}
                 className={inputCls}
@@ -167,7 +167,7 @@ export function EditProfileModal({
               )}
             </div>
             <div>
-              <label className={labelCls}>National ID</label>
+              <label className={labelCls}>National ID *</label>
               <input
                 ref={nationalIdRef}
                 className={inputCls}
@@ -181,7 +181,7 @@ export function EditProfileModal({
               />
             </div>
             <div>
-              <label className={labelCls}>Date of Birth</label>
+              <label className={labelCls}>Date of Birth *</label>
               <input
                 ref={dateOfBirthRef}
                 className={inputCls}
@@ -215,7 +215,7 @@ export function EditProfileModal({
               </select>
             </div>
             <div className="col-span-2">
-              <label className={labelCls}>Diagnosis</label>
+              <label className={labelCls}>Diagnosis *</label>
               <input
                 ref={diagnosisRef}
                 className={inputCls}

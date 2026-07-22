@@ -257,16 +257,32 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
       (cycle) => cycle.treatmentType === "surgery"
     );
 
-    for (const cycle of existingChemo.slice(targetChemo)) {
+    if (targetChemo === 0) {
+      for (const cycle of existingChemo) await deleteCycle(cycle._id);
+    }
+
+    if (targetRadiation === 0) {
+      for (const cycle of existingRadiation) await deleteCycle(cycle._id);
+    }
+
+    if (targetSurgery === 0) {
+      for (const cycle of existingSurgery) await deleteCycle(cycle._id);
+    }
+
+    const retainedChemo = targetChemo > 0 ? existingChemo : [];
+    const retainedRadiation = targetRadiation > 0 ? existingRadiation : [];
+    const retainedSurgery = targetSurgery > 0 ? existingSurgery : [];
+
+    for (const cycle of retainedChemo.slice(targetChemo)) {
       await deleteCycle(cycle._id);
     }
 
     let chemoReferenceEnd =
-      targetChemo > 0 && existingChemo.length > 0
-        ? toDateInputValue(existingChemo[Math.min(existingChemo.length, targetChemo) - 1].endDate)
+      targetChemo > 0 && retainedChemo.length > 0
+        ? toDateInputValue(retainedChemo[Math.min(retainedChemo.length, targetChemo) - 1].endDate)
         : "";
 
-    for (let index = existingChemo.length; index < targetChemo; index += 1) {
+    for (let index = retainedChemo.length; index < targetChemo; index += 1) {
       const startDate = chemoReferenceEnd ? shiftDate(chemoReferenceEnd, 1) : todayIso();
       const endDate = shiftDate(startDate, 20);
       chemoReferenceEnd = endDate;
@@ -277,8 +293,8 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
     }
 
     if (targetRadiation > 0) {
-      if (existingRadiation.length > 0) {
-        const [firstRadiation, ...extraRadiation] = existingRadiation;
+      if (retainedRadiation.length > 0) {
+        const [firstRadiation, ...extraRadiation] = retainedRadiation;
         await updateCycle(firstRadiation._id, {
           totalSessions: targetRadiation,
           completedSessions: firstRadiation.completedSessions || 0,
@@ -298,14 +314,12 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
           })
         );
       }
-    } else {
-      for (const cycle of existingRadiation) await deleteCycle(cycle._id);
     }
 
-    for (const cycle of existingSurgery.slice(targetSurgery)) {
+    for (const cycle of retainedSurgery.slice(targetSurgery)) {
       await deleteCycle(cycle._id);
     }
-    for (let index = existingSurgery.length; index < targetSurgery; index += 1) {
+    for (let index = retainedSurgery.length; index < targetSurgery; index += 1) {
       const plannedDate = shiftDate(todayIso(), 30 + index * 14);
       await createCycle(
         protocolId,

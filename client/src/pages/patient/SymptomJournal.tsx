@@ -310,7 +310,7 @@ export function SymptomJournal() {
           <h3 style={{ color: "#374151" }} className="mb-3">When are you logging?</h3>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs mb-1" style={{ color: "#6B7280" }}>Date</label>
+              <label className="block text-xs mb-1" style={{ color: "#6B7280" }}>Date *</label>
               <input
                 type="date"
                 value={date}
@@ -321,7 +321,7 @@ export function SymptomJournal() {
               />
             </div>
             <div>
-              <label className="block text-xs mb-1" style={{ color: "#6B7280" }}>Time</label>
+              <label className="block text-xs mb-1" style={{ color: "#6B7280" }}>Time *</label>
               <input
                 type="time"
                 value={time}

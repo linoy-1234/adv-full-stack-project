@@ -181,7 +181,7 @@ export function EditTreatmentDatesModal({
               {item.treatmentType === "chemotherapy" && (
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className={labelCls}>Start Date</label>
+                    <label className={labelCls}>Start Date *</label>
                     <input
                       className={inputCls}
                       type="date"
@@ -190,7 +190,7 @@ export function EditTreatmentDatesModal({
                     />
                   </div>
                   <div>
-                    <label className={labelCls}>End Date</label>
+                    <label className={labelCls}>End Date *</label>
                     <input
                       className={inputCls}
                       type="date"
@@ -212,7 +212,7 @@ export function EditTreatmentDatesModal({
               {item.treatmentType === "radiation" && (
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className={labelCls}>Start Date</label>
+                    <label className={labelCls}>Start Date *</label>
                     <input
                       className={inputCls}
                       type="date"
@@ -221,7 +221,7 @@ export function EditTreatmentDatesModal({
                     />
                   </div>
                   <div>
-                    <label className={labelCls}>End Date</label>
+                    <label className={labelCls}>End Date *</label>
                     <input
                       className={inputCls}
                       type="date"
@@ -242,7 +242,7 @@ export function EditTreatmentDatesModal({
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className={labelCls}>Radiation Weekdays</label>
+                    <label className={labelCls}>Radiation Weekdays *</label>
                     <WeekdaySelector
                       selected={normalizeWeekdays(item.weekdays)}
                       disabled={saving}
@@ -263,7 +263,7 @@ export function EditTreatmentDatesModal({
               {item.treatmentType === "surgery" && (
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className={labelCls}>Planned Date</label>
+                    <label className={labelCls}>Planned Date *</label>
                     <input
                       className={inputCls}
                       type="date"
