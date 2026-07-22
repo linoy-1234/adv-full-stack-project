@@ -55,7 +55,7 @@ export function PatientMedicalProfileCard({
         </button>
       }
     >
-      <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
         <MetaRow label="Full Name" value={profile.fullName} />
         <MetaRow label="Email" value={profile.email} />
         <MetaRow label="National ID" value={profile.nationalId} />
@@ -72,19 +72,19 @@ export function PatientMedicalProfileCard({
           }
         />
         <MetaRow label="Oncologist" value={getOncologistName(profile)} />
-        <div className="col-span-2">
+        <div className="md:col-span-2">
           <MetaRow label="Diagnosis" value={profile.diagnosis} />
         </div>
         {allergies.length > 0 && (
-          <div className="col-span-2 flex gap-2 items-center">
+          <div className="md:col-span-2 flex gap-2 items-center min-w-0">
             <span className="text-xs text-[#9CA3AF] w-28 shrink-0">
               Allergies
             </span>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1 min-w-0">
               {allergies.map((allergy) => (
                 <span
                   key={allergy}
-                  className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs border border-red-200"
+                  className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs border border-red-200 break-words max-w-full"
                 >
                   {allergy}
                 </span>
@@ -93,7 +93,7 @@ export function PatientMedicalProfileCard({
           </div>
         )}
         {profile.notes && (
-          <div className="col-span-2">
+          <div className="md:col-span-2">
             <MetaRow label="Notes" value={profile.notes} />
           </div>
         )}

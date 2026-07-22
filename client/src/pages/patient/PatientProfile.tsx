@@ -52,9 +52,9 @@ function SectionCard({
 
 function MetaRow({ label, value }: { label: string; value?: string }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 min-w-0">
       <span className="text-xs text-[#9CA3AF] w-28 shrink-0">{label}</span>
-      <span className="text-sm text-[#2C3E2D]">{value || "-"}</span>
+      <span className="text-sm text-[#2C3E2D] min-w-0 flex-1 break-words">{value || "-"}</span>
     </div>
   );
 }
@@ -124,7 +124,7 @@ export function PatientProfile({ profile, protocol }: PatientProfileProps) {
             : undefined
         }
       >
-        <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
           <MetaRow label="Full Name" value={profile.fullName} />
           <MetaRow label="Email" value={profile.email} />
           <MetaRow label="National ID" value={profile.nationalId} />
@@ -137,24 +137,24 @@ export function PatientProfile({ profile, protocol }: PatientProfileProps) {
             value={profile.bloodType !== "unknown" ? profile.bloodType : "Unknown"}
           />
           <MetaRow label="Oncologist" value={profile.oncologistName || "Assigned oncologist"} />
-          <div className="col-span-2">
+          <div className="md:col-span-2">
             <MetaRow label="Diagnosis" value={profile.diagnosis} />
           </div>
           {hasAllergies ? (
-            <div className="col-span-2 flex gap-2 items-center">
+            <div className="md:col-span-2 flex gap-2 items-center min-w-0">
               <span className="text-xs text-[#9CA3AF] w-28 shrink-0 flex items-center gap-1">
                 <AlertTriangle size={11} className="text-red-500" /> Allergies
               </span>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1 min-w-0">
                 {profile.allergies.map((a) => (
-                  <span key={a} className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs border border-red-200">
+                  <span key={a} className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs border border-red-200 break-words max-w-full">
                     {a}
                   </span>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="col-span-2">
+            <div className="md:col-span-2">
               <span className="text-xs text-[#9CA3AF]">No known drug allergies</span>
             </div>
           )}
@@ -237,7 +237,7 @@ export function PatientProfile({ profile, protocol }: PatientProfileProps) {
           }
         >
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
               <MetaRow label="Protocol" value={protocol.protocolName} />
               <MetaRow label="Diagnosis" value={protocol.diagnosis} />
             </div>
@@ -257,7 +257,7 @@ export function PatientProfile({ profile, protocol }: PatientProfileProps) {
             </div>
 
             {protocol.treatmentTypes.includes("chemotherapy") && protocol.numberOfChemoCycles ? (
-              <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                 <MetaRow
                   label="Chemo Cycles"
                   value={`${protocol.numberOfChemoCycles} cycles planned`}
@@ -266,7 +266,7 @@ export function PatientProfile({ profile, protocol }: PatientProfileProps) {
             ) : null}
 
             {protocol.treatmentTypes.includes("radiation") && protocol.numberOfRadiationSessions ? (
-              <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                 <MetaRow
                   label="Radiation"
                   value={`${protocol.numberOfRadiationSessions} sessions planned`}
@@ -275,7 +275,7 @@ export function PatientProfile({ profile, protocol }: PatientProfileProps) {
             ) : null}
 
             {protocol.treatmentTypes.includes("surgery") && protocol.numberOfSurgeryCheckpoints ? (
-              <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                 <MetaRow
                   label="Surgery"
                   value={`${protocol.numberOfSurgeryCheckpoints} checkpoint(s) planned`}
@@ -290,7 +290,7 @@ export function PatientProfile({ profile, protocol }: PatientProfileProps) {
                   protocol.drugs.map((d) => (
                     <span
                       key={d}
-                      className="px-2.5 py-0.5 bg-[#F5F2EE] border border-[#E5E2DC] text-xs text-[#374151] rounded-full"
+                      className="px-2.5 py-0.5 bg-[#F5F2EE] border border-[#E5E2DC] text-xs text-[#374151] rounded-full break-words max-w-full"
                     >
                       {d}
                     </span>
