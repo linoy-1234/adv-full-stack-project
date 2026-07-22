@@ -23,7 +23,7 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
   const emailRef = useRef<HTMLInputElement | null>(null);
   const passwordRef = useRef<HTMLInputElement | null>(null);
   const confirmPasswordRef = useRef<HTMLInputElement | null>(null);
-  const errorRef = useErrorVisibility(error);
+  const errorRef = useErrorVisibility<HTMLParagraphElement>(error);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

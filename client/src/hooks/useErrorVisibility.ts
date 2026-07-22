@@ -1,10 +1,9 @@
 import { useEffect, useRef, type RefObject } from "react";
 
-type ErrorElement = HTMLElement;
 type FocusableField = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 
-export function useErrorVisibility(error: string) {
-  const errorRef = useRef<ErrorElement | null>(null);
+export function useErrorVisibility<T extends HTMLElement = HTMLElement>(error: string) {
+  const errorRef = useRef<T | null>(null);
 
   useEffect(() => {
     if (!error) return;

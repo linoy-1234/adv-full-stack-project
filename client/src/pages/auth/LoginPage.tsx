@@ -34,7 +34,7 @@ export function LoginPage({
   const [loading, setLoading] = useState(false);
   const emailRef = useRef<HTMLInputElement | null>(null);
   const passwordRef = useRef<HTMLInputElement | null>(null);
-  const errorRef = useErrorVisibility(error);
+  const errorRef = useErrorVisibility<HTMLParagraphElement>(error);
 
   const getErrorMessage = (error: unknown): string => {
     if (error instanceof Error) {
