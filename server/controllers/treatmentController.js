@@ -67,19 +67,6 @@ const getAuthorizedProtocol = async (req, protocolId) => {
   return protocol;
 };
 
-const requireOncologist = (req, res) => {
-  if (req.user.role !== "oncologist") {
-    res.status(403).json({
-      success: false,
-      message: "Only oncologists can perform this action",
-    });
-
-    return false;
-  }
-
-  return true;
-};
-
 const normalizeMedications = (medications = []) =>
   medications.map((medication) => {
     const frequency = medication.frequency || "";
@@ -280,8 +267,6 @@ const hydrateProtocolResponse = async (protocolId) => {
 
 const createTreatmentProtocol = async (req, res, next) => {
   try {
-    if (!requireOncologist(req, res)) return;
-
     const { patientId } = req.params;
 
     const patient = await getAuthorizedPatient(req, patientId);
@@ -405,13 +390,6 @@ const getPatientTreatmentProtocol = async (req, res, next) => {
 
 const getMyTreatmentProtocol = async (req, res, next) => {
   try {
-    if (req.user.role !== "patient") {
-      return res.status(403).json({
-        success: false,
-        message: "Only patients can access their own treatment protocol here",
-      });
-    }
-
     const patient = await PatientProfile.findOne({
       user: req.user._id,
       isActive: true,
@@ -434,8 +412,6 @@ const getMyTreatmentProtocol = async (req, res, next) => {
 
 const updateTreatmentProtocol = async (req, res, next) => {
   try {
-    if (!requireOncologist(req, res)) return;
-
     const { protocolId } = req.params;
 
     const protocol = await getAuthorizedProtocol(req, protocolId);
@@ -473,8 +449,6 @@ const updateTreatmentProtocol = async (req, res, next) => {
 
 const deleteTreatmentProtocol = async (req, res, next) => {
   try {
-    if (!requireOncologist(req, res)) return;
-
     const { protocolId } = req.params;
 
     const protocol = await getAuthorizedProtocol(req, protocolId);
@@ -506,8 +480,6 @@ const deleteTreatmentProtocol = async (req, res, next) => {
 
 const createCycle = async (req, res, next) => {
   try {
-    if (!requireOncologist(req, res)) return;
-
     const { protocolId } = req.params;
 
     const protocol = await getAuthorizedProtocol(req, protocolId);
@@ -590,8 +562,6 @@ const getProtocolCycles = async (req, res, next) => {
 
 const updateCycle = async (req, res, next) => {
   try {
-    if (!requireOncologist(req, res)) return;
-
     const { cycleId } = req.params;
 
     if (!isValidId(cycleId)) {
@@ -660,8 +630,6 @@ const updateCycle = async (req, res, next) => {
 
 const bulkUpdateCycles = async (req, res, next) => {
   try {
-    if (!requireOncologist(req, res)) return;
-
     const { protocolId } = req.params;
     const protocol = await getAuthorizedProtocol(req, protocolId);
 
@@ -738,8 +706,6 @@ const bulkUpdateCycles = async (req, res, next) => {
 
 const deleteCycle = async (req, res, next) => {
   try {
-    if (!requireOncologist(req, res)) return;
-
     const { cycleId } = req.params;
 
     if (!isValidId(cycleId)) {
@@ -789,8 +755,6 @@ const deleteCycle = async (req, res, next) => {
 
 const approveCycle = async (req, res, next) => {
   try {
-    if (!requireOncologist(req, res)) return;
-
     const { cycleId } = req.params;
 
     const cycle = await TreatmentCycle.findOne({
@@ -849,8 +813,6 @@ const approveCycle = async (req, res, next) => {
 
 const delayCycle = async (req, res, next) => {
   try {
-    if (!requireOncologist(req, res)) return;
-
     const { cycleId } = req.params;
 
     const cycle = await TreatmentCycle.findOne({

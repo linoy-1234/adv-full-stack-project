@@ -11,6 +11,7 @@ const {
 
 const validate = require("../middleware/validate");
 const { protect } = require("../middleware/authMiddleware");
+const { authorizeRoles } = require("../middleware/roleMiddleware");
 
 const {
   createLabResultSchema,
@@ -21,24 +22,34 @@ const router = express.Router();
 
 router.use(protect);
 
-router.get("/my", getMyLabResults);
+router.get("/my", authorizeRoles("patient"), getMyLabResults);
 
-router.get("/patients/:patientId", getPatientLabResults);
+router.get(
+  "/patients/:patientId",
+  authorizeRoles("oncologist", "patient", "lab_staff"),
+  getPatientLabResults
+);
 
-router.get("/:labResultId", getLabResultById);
+router.get(
+  "/:labResultId",
+  authorizeRoles("oncologist", "patient", "lab_staff"),
+  getLabResultById
+);
 
 router.post(
   "/patients/:patientId",
+  authorizeRoles("lab_staff"),
   validate(createLabResultSchema),
   createLabResult
 );
 
 router.put(
   "/:labResultId",
+  authorizeRoles("lab_staff"),
   validate(updateLabResultSchema),
   updateLabResult
 );
 
-router.delete("/:labResultId", deleteLabResult);
+router.delete("/:labResultId", authorizeRoles("lab_staff"), deleteLabResult);
 
 module.exports = router;

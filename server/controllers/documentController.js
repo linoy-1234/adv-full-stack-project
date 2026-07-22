@@ -39,13 +39,6 @@ const uploadToCloudinary = (buffer, options) =>
 
 const uploadDocument = async (req, res, next) => {
   try {
-    if (req.user.role !== "oncologist") {
-      return res.status(403).json({
-        success: false,
-        message: "Only oncologists can upload clinical documents",
-      });
-    }
-
     const { patientId } = req.params;
     const patient = await getAuthorizedPatient(req, patientId);
 
@@ -131,13 +124,6 @@ const getPatientDocuments = async (req, res, next) => {
 
 const updateDocumentMetadata = async (req, res, next) => {
   try {
-    if (req.user.role !== "oncologist") {
-      return res.status(403).json({
-        success: false,
-        message: "Only oncologists can edit document metadata",
-      });
-    }
-
     const { documentId } = req.params;
     if (!isValidId(documentId)) {
       return res.status(400).json({
@@ -191,13 +177,6 @@ const updateDocumentMetadata = async (req, res, next) => {
 
 const softDeleteDocument = async (req, res, next) => {
   try {
-    if (req.user.role !== "oncologist") {
-      return res.status(403).json({
-        success: false,
-        message: "Only oncologists can delete documents",
-      });
-    }
-
     const { documentId } = req.params;
     if (!isValidId(documentId)) {
       return res.status(400).json({

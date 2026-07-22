@@ -11,6 +11,7 @@ const {
 
 const validate = require("../middleware/validate");
 const { protect } = require("../middleware/authMiddleware");
+const { authorizeRoles } = require("../middleware/roleMiddleware");
 
 const {
   createSymptomLogSchema,
@@ -23,8 +24,8 @@ router.use(protect);
 
 router
   .route("/my")
-  .get(getMySymptomLogs)
-  .post(validate(createSymptomLogSchema), createSymptomLog);
+  .get(authorizeRoles("patient"), getMySymptomLogs)
+  .post(authorizeRoles("patient"), validate(createSymptomLogSchema), createSymptomLog);
 
 router.get("/patients/:patientId", getPatientSymptomLogs);
 
@@ -32,10 +33,11 @@ router.get("/:symptomLogId", getSymptomLogById);
 
 router.put(
   "/:symptomLogId",
+  authorizeRoles("patient"),
   validate(updateSymptomLogSchema),
   updateSymptomLog
 );
 
-router.delete("/:symptomLogId", deleteSymptomLog);
+router.delete("/:symptomLogId", authorizeRoles("patient"), deleteSymptomLog);
 
 module.exports = router;

@@ -45,13 +45,6 @@ const getAuthorizedMessage = async (req, messageId) => {
 
 const sendMessage = async (req, res, next) => {
   try {
-    if (!["patient", "oncologist"].includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: "Only patients and oncologists can send messages",
-      });
-    }
-
     const { patientId } = req.params;
     const patient = await getAuthorizedPatient(req, patientId);
 
@@ -116,13 +109,6 @@ const getPatientMessages = async (req, res, next) => {
 
 const getMyMessages = async (req, res, next) => {
   try {
-    if (req.user.role !== "patient") {
-      return res.status(403).json({
-        success: false,
-        message: "Only patients can access their own messages here",
-      });
-    }
-
     const patient = await PatientProfile.findOne({
       user: req.user._id,
       isActive: true,
@@ -145,13 +131,6 @@ const getMyMessages = async (req, res, next) => {
 // Returns the count of unread messages from the oncologist side for the logged-in patient
 const getMyUnreadCount = async (req, res, next) => {
   try {
-    if (req.user.role !== "patient") {
-      return res.status(403).json({
-        success: false,
-        message: "Only patients can access this endpoint",
-      });
-    }
-
     const patient = await PatientProfile.findOne({
       user: req.user._id,
       isActive: true,
@@ -180,13 +159,6 @@ const getMyUnreadCount = async (req, res, next) => {
 // Returns { [PatientProfile._id]: count } for every patient with unread messages from patients
 const getOncologistUnreadCounts = async (req, res, next) => {
   try {
-    if (req.user.role !== "oncologist") {
-      return res.status(403).json({
-        success: false,
-        message: "Only oncologists can access this endpoint",
-      });
-    }
-
     const patients = await PatientProfile.find({
       oncologist: req.user._id,
       isActive: true,

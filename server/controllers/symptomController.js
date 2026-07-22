@@ -5,19 +5,6 @@ const SymptomLog = require("../models/SymptomLog");
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
-const requirePatient = (req, res) => {
-  if (req.user.role !== "patient") {
-    res.status(403).json({
-      success: false,
-      message: "Only patients can perform this action",
-    });
-
-    return false;
-  }
-
-  return true;
-};
-
 const getPatientProfileForCurrentUser = async (req) => {
   return PatientProfile.findOne({
     user: req.user._id,
@@ -77,8 +64,6 @@ const getAuthorizedSymptomLog = async (req, symptomLogId) => {
 
 const createSymptomLog = async (req, res, next) => {
   try {
-    if (!requirePatient(req, res)) return;
-
     const patient = await getPatientProfileForCurrentUser(req);
 
     if (!patient) {
@@ -110,13 +95,6 @@ const createSymptomLog = async (req, res, next) => {
 
 const getMySymptomLogs = async (req, res, next) => {
   try {
-    if (req.user.role !== "patient") {
-      return res.status(403).json({
-        success: false,
-        message: "Only patients can access their own symptom logs here",
-      });
-    }
-
     const patient = await getPatientProfileForCurrentUser(req);
 
     if (!patient) {
@@ -199,8 +177,6 @@ const getSymptomLogById = async (req, res, next) => {
 
 const updateSymptomLog = async (req, res, next) => {
   try {
-    if (!requirePatient(req, res)) return;
-
     const { symptomLogId } = req.params;
 
     const symptomLog = await getAuthorizedSymptomLog(req, symptomLogId);
@@ -243,8 +219,6 @@ const updateSymptomLog = async (req, res, next) => {
 
 const deleteSymptomLog = async (req, res, next) => {
   try {
-    if (!requirePatient(req, res)) return;
-
     const { symptomLogId } = req.params;
 
     const symptomLog = await getAuthorizedSymptomLog(req, symptomLogId);

@@ -1,6 +1,7 @@
 const express = require("express");
 
 const { protect } = require("../middleware/authMiddleware");
+const { authorizeRoles } = require("../middleware/roleMiddleware");
 const validate = require("../middleware/validate");
 const uploadCloud = require("../middleware/uploadCloud");
 const {
@@ -21,6 +22,7 @@ router.use(protect);
 
 router.post(
   "/patients/:patientId",
+  authorizeRoles("oncologist"),
   uploadCloud.single("file"),
   validate(uploadDocumentSchema),
   uploadDocument
@@ -28,9 +30,14 @@ router.post(
 
 router.get("/patients/:patientId", getPatientDocuments);
 
-router.put("/:documentId", validate(updateDocumentSchema), updateDocumentMetadata);
+router.put(
+  "/:documentId",
+  authorizeRoles("oncologist"),
+  validate(updateDocumentSchema),
+  updateDocumentMetadata
+);
 
-router.delete("/:documentId", softDeleteDocument);
+router.delete("/:documentId", authorizeRoles("oncologist"), softDeleteDocument);
 
 router.get("/:documentId/url", getDocumentUrl);
 

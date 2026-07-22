@@ -4,19 +4,6 @@ const LabResult = require("../models/LabResult");
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
-const requireLabStaff = (req, res) => {
-  if (req.user.role !== "lab_staff") {
-    res.status(403).json({
-      success: false,
-      message: "Only lab staff can perform this action",
-    });
-
-    return false;
-  }
-
-  return true;
-};
-
 const getAuthorizedPatient = async (req, patientId) => {
   if (!isValidId(patientId)) {
     return null;
@@ -76,8 +63,6 @@ const getAuthorizedLabResult = async (req, labResultId) => {
 
 const createLabResult = async (req, res, next) => {
   try {
-    if (!requireLabStaff(req, res)) return;
-
     const { patientId } = req.params;
 
     const patient = await getAuthorizedPatient(req, patientId);
@@ -152,13 +137,6 @@ const getPatientLabResults = async (req, res, next) => {
 
 const getMyLabResults = async (req, res, next) => {
   try {
-    if (req.user.role !== "patient") {
-      return res.status(403).json({
-        success: false,
-        message: "Only patients can access their own lab results here",
-      });
-    }
-
     const patient = await PatientProfile.findOne({
       user: req.user._id,
       isActive: true,
@@ -209,8 +187,6 @@ const getLabResultById = async (req, res, next) => {
 
 const updateLabResult = async (req, res, next) => {
   try {
-    if (!requireLabStaff(req, res)) return;
-
     const { labResultId } = req.params;
 
     const labResult = await getAuthorizedLabResult(req, labResultId);
@@ -255,8 +231,6 @@ const updateLabResult = async (req, res, next) => {
 
 const deleteLabResult = async (req, res, next) => {
   try {
-    if (!requireLabStaff(req, res)) return;
-
     const { labResultId } = req.params;
 
     const labResult = await getAuthorizedLabResult(req, labResultId);
