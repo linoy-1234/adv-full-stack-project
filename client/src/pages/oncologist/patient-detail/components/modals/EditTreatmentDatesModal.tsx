@@ -28,7 +28,7 @@ export function EditTreatmentDatesModal({
   const [removedCycleIds, setRemovedCycleIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const errorRef = useErrorVisibility(error);
+  const errorRef = useErrorVisibility<HTMLDivElement>(error);
 
   const updateItem = (
     id: string,

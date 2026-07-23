@@ -22,7 +22,7 @@ export function PostponeCycleModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const newEndDateRef = useRef<HTMLInputElement | null>(null);
-  const errorRef = useErrorVisibility(error);
+  const errorRef = useErrorVisibility<HTMLDivElement>(error);
 
   const confirmPostpone = async () => {
     if (!newStartDate || !newEndDate) return;

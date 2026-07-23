@@ -19,7 +19,7 @@ export function DeactivatePatientModal({
   const [confirmation, setConfirmation] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const errorRef = useErrorVisibility(error);
+  const errorRef = useErrorVisibility<HTMLDivElement>(error);
   const canConfirm = confirmation.trim() === CONFIRMATION_TEXT;
 
   const handleDeactivate = async () => {

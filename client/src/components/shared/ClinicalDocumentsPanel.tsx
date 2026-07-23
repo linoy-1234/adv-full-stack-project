@@ -57,6 +57,15 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function getErrorMessage(err: unknown): string | undefined {
+  if (err && typeof err === "object" && "response" in err) {
+    const message = (err as { response?: { data?: { message?: string } } })
+      .response?.data?.message;
+    if (typeof message === "string") return message;
+  }
+  return undefined;
+}
+
 function getUploaderName(
   uploadedBy: ClinicalDocumentRecord["uploadedBy"]
 ): string {
@@ -107,13 +116,7 @@ function UploadModal({ patientId, onClose, onSuccess }: UploadModalProps) {
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      const msg =
-        err &&
-        typeof err === "object" &&
-        "response" in err &&
-        (err as { response?: { data?: { message?: string } } }).response?.data
-          ?.message;
-      setError(msg || "Upload failed. Please try again.");
+      setError(getErrorMessage(err) ?? "Upload failed. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -275,13 +278,7 @@ function EditModal({ doc, onClose, onSuccess }: EditModalProps) {
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      const msg =
-        err &&
-        typeof err === "object" &&
-        "response" in err &&
-        (err as { response?: { data?: { message?: string } } }).response?.data
-          ?.message;
-      setError(msg || "Failed to save changes.");
+      setError(getErrorMessage(err) ?? "Failed to save changes.");
     } finally {
       setSaving(false);
     }

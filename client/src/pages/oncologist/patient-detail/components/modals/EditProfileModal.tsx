@@ -43,7 +43,7 @@ export function EditProfileModal({
   const nationalIdRef = useRef<HTMLInputElement | null>(null);
   const dateOfBirthRef = useRef<HTMLInputElement | null>(null);
   const diagnosisRef = useRef<HTMLInputElement | null>(null);
-  const errorRef = useErrorVisibility(error);
+  const errorRef = useErrorVisibility<HTMLDivElement>(error);
 
   const handleSave = async () => {
     if (

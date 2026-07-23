@@ -123,7 +123,7 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
   const [treatmentLoading, setTreatmentLoading] = useState(false);
   const [treatmentError, setTreatmentError] = useState("");
   const [savingTreatment, setSavingTreatment] = useState(false);
-  const treatmentErrorRef = useErrorVisibility(treatmentError);
+  const treatmentErrorRef = useErrorVisibility<HTMLDivElement>(treatmentError);
   const [expandedCycle, setExpandedCycle] = useState<string | null>(null);
   const [cycleToPostpone, setCycleToPostpone] = useState<TreatmentCycleRecord | null>(null);
 

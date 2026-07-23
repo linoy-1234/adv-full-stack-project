@@ -29,7 +29,7 @@ export function EditMedicationsModal({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const errorRef = useErrorVisibility(error);
+  const errorRef = useErrorVisibility<HTMLDivElement>(error);
 
   const addMedication = () => {
     const draft = prepareMedicationDraft(medForm);
