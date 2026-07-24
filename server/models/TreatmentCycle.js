@@ -4,7 +4,7 @@ const decisionSchema = new mongoose.Schema(
   {
     decisionStatus: {
       type: String,
-      enum: ["none", "approved", "delayed"],
+      enum: ["none", "approved"],
       default: "none",
     },
 
@@ -23,22 +23,6 @@ const decisionSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: "",
-    },
-
-    delayReason: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-
-    delayedToStartDate: {
-      type: Date,
-      default: null,
-    },
-
-    delayedToEndDate: {
-      type: Date,
-      default: null,
     },
   },
   { _id: false }
@@ -107,10 +91,8 @@ const treatmentCycleSchema = new mongoose.Schema(
         "approved",
         "active",
         "completed",
-        "delayed",
         "cancelled",
         "in_progress",
-        "postponed",
       ],
       default: "upcoming",
     },

@@ -8,9 +8,6 @@ const emptyDecision = () => ({
   decidedBy: null,
   decidedAt: null,
   decisionNotes: "",
-  delayReason: "",
-  delayedToStartDate: null,
-  delayedToEndDate: null,
 });
 
 const isCycleApproved = (cycle) =>

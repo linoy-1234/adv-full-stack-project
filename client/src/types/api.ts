@@ -63,7 +63,6 @@ export type PendingAction =
   | "labs_received"
   | "cycle_ready_review"
   | "unread_message"
-  | "treatment_delayed"
   | "none";
 
 export interface AuthResponse {
@@ -92,10 +91,8 @@ export type TreatmentCycleStatus =
   | "approved"
   | "active"
   | "completed"
-  | "delayed"
   | "cancelled"
-  | "in_progress"
-  | "postponed";
+  | "in_progress";
 
 export type TreatmentMedicationCategory =
   | "chemotherapy"
@@ -127,7 +124,7 @@ export interface TreatmentMedicationRecord {
 }
 
 export interface TreatmentDecision {
-  decisionStatus?: "none" | "approved" | "delayed";
+  decisionStatus?: "none" | "approved";
   decidedBy?:
     | string
     | {
@@ -139,9 +136,6 @@ export interface TreatmentDecision {
     | null;
   decidedAt?: string | null;
   decisionNotes?: string;
-  delayReason?: string;
-  delayedToStartDate?: string | null;
-  delayedToEndDate?: string | null;
 }
 
 export interface TreatmentProtocolRecord {

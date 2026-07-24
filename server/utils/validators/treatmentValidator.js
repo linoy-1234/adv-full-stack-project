@@ -140,10 +140,8 @@ const cycleSchema = Joi.object({
       "approved",
       "active",
       "completed",
-      "delayed",
       "cancelled",
-      "in_progress",
-      "postponed"
+      "in_progress"
     )
     .default("upcoming"),
 
@@ -254,10 +252,8 @@ const updateCycleSchema = Joi.object({
       "approved",
       "active",
       "completed",
-      "delayed",
       "cancelled",
-      "in_progress",
-      "postponed"
+      "in_progress"
     ),
 
   notes: Joi.string()
@@ -279,11 +275,6 @@ const delayCycleSchema = Joi.object({
   newEndDate: Joi.date()
     .min(Joi.ref("newStartDate"))
     .required(),
-
-  delayReason: Joi.string()
-    .max(500)
-    .allow("")
-    .optional(),
 
   decisionNotes: Joi.string()
     .allow("")

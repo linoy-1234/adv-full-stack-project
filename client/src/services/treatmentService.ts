@@ -40,10 +40,8 @@ export interface CyclePayload {
     | "approved"
     | "active"
     | "completed"
-    | "delayed"
     | "cancelled"
-    | "in_progress"
-    | "postponed";
+    | "in_progress";
   notes?: string;
 }
 
@@ -60,7 +58,6 @@ export interface ProtocolPayload {
 export interface DelayCyclePayload {
   newStartDate: string;
   newEndDate: string;
-  delayReason?: string;
   decisionNotes?: string;
 }
 
@@ -202,7 +199,5 @@ export const postponeCycle = async (
 
   return data;
 };
-
-export const delayCycle = postponeCycle;
 
 //the protocol of the treatment,(approve,deny treatment, CRUD protocol, CRUD rounds)

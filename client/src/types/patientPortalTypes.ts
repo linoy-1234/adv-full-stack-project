@@ -26,7 +26,6 @@ export type CycleStatus =
   | "waiting_for_review"
   | "waiting_labs"
   | "active"
-  | "delayed"
   | "completed"
   | "approved";
 
@@ -40,9 +39,6 @@ export interface ChemoCycle {
   status: CycleStatus;
   approvedDate?: string;
   approvedBy?: string;
-  delayedTo?: string;
-  delayedEndDate?: string;
-  delayReason?: string;
   notes?: string;
   labResultId?: string;
 }
@@ -65,7 +61,7 @@ export interface SurgeryCheckpoint {
   type: "surgery";
   title: string;
   plannedDate: string;
-  status: "upcoming" | "completed" | "postponed" | "today";
+  status: "upcoming" | "completed" | "today";
   notes?: string;
 }
 

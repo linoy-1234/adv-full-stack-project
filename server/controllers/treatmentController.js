@@ -784,9 +784,6 @@ const approveCycle = async (req, res, next) => {
       decidedBy: req.user._id,
       decidedAt: new Date(),
       decisionNotes: req.body.decisionNotes || "",
-      delayReason: "",
-      delayedToStartDate: null,
-      delayedToEndDate: null,
     };
     syncDerivedTreatmentStatus(cycle);
 

@@ -6,7 +6,7 @@ import {
   SurgeryCheckpoint,
 } from "../../types/patientPortalTypes";
 import { formatDate } from "../../utils/dateUtils";
-import { Calendar, CheckCircle2, Clock, Syringe, Zap, Scissors, AlertTriangle, Info } from "lucide-react";
+import { Calendar, CheckCircle2, Clock, Syringe, Zap, Scissors, Info } from "lucide-react";
 import { todayIso } from "../../utils/treatmentDisplay";
 
 interface TreatmentCyclesProps {
@@ -20,7 +20,6 @@ function CycleStatusBadge({ status }: { status: string }) {
     active:       { label: "Active",         color: "bg-emerald-100 text-emerald-700",  icon: <CheckCircle2 size={11} /> },
     waiting_for_review: { label: "Waiting for Review", color: "bg-violet-100 text-violet-700", icon: <Clock size={11} /> },
     upcoming:     { label: "Upcoming",       color: "bg-blue-100 text-blue-700",        icon: <Clock size={11} /> },
-    postponed:    { label: "Postponed",      color: "bg-red-100 text-red-700",          icon: <AlertTriangle size={11} /> },
     today:        { label: "Today",          color: "bg-blue-500 text-white",           icon: <Calendar size={11} /> },
   };
   const { label, color, icon } = cfg[status] ?? { label: status, color: "bg-gray-100 text-gray-600", icon: null };
