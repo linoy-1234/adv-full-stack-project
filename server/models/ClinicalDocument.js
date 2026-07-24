@@ -1,11 +1,5 @@
 const mongoose = require("mongoose");
-
-const DOCUMENT_TYPES = [
-  "visit_summary",
-  "medical_certificate",
-  "prescription",
-  "other",
-];
+const DOCUMENT_TYPES = require("../utils/documentTypes");
 
 const clinicalDocumentSchema = new mongoose.Schema(
   {

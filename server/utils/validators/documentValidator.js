@@ -1,11 +1,5 @@
 const Joi = require("joi");
-
-const DOCUMENT_TYPES = [
-  "visit_summary",
-  "medical_certificate",
-  "prescription",
-  "other",
-];
+const DOCUMENT_TYPES = require("../documentTypes");
 
 const uploadDocumentSchema = Joi.object({
   title: Joi.string().trim().max(120).required(),

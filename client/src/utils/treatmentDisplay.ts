@@ -77,3 +77,30 @@ export const getRadiationDisplayStatus = (
   if (endDate && today > endDate) return "completed";
   return "active";
 };
+
+export const getRoadmapItemTitle = (cycle: TreatmentCycleRecord) => {
+  if (cycle.treatmentType === "chemotherapy") {
+    return cycle.title || `Cycle ${cycle.cycleNumber}`;
+  }
+
+  if (cycle.treatmentType === "radiation") {
+    return cycle.title && !/^cycle\b/i.test(cycle.title)
+      ? cycle.title
+      : cycle.cycleNumber > 1
+      ? `Radiation Course ${cycle.cycleNumber}`
+      : "Radiation Course";
+  }
+
+  if (cycle.treatmentType === "surgery") {
+    return cycle.title && !/^cycle\b/i.test(cycle.title) && cycle.title !== "Surgery Checkpoint"
+      ? cycle.title
+      : `Surgery Checkpoint ${cycle.cycleNumber}`;
+  }
+
+  return cycle.title;
+};
+
+export const normalizeWeekdays = (days?: string[]): WeekdayKey[] =>
+  (days || []).filter((day): day is WeekdayKey =>
+    (weekdayKeys as readonly string[]).includes(day)
+  );

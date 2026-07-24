@@ -1,9 +1,6 @@
-const mongoose = require("mongoose");
-
 const PatientProfile = require("../models/PatientProfile");
 const SymptomLog = require("../models/SymptomLog");
-
-const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+const isValidId = require("../utils/isValidId");
 
 const getPatientProfileForCurrentUser = async (req) => {
   return PatientProfile.findOne({

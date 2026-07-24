@@ -1,10 +1,7 @@
-const mongoose = require("mongoose");
-
 const cloudinary = require("../config/cloudinary");
 const ClinicalDocument = require("../models/ClinicalDocument");
 const PatientProfile = require("../models/PatientProfile");
-
-const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+const isValidId = require("../utils/isValidId");
 
 const getAuthorizedPatient = async (req, patientId) => {
   if (!isValidId(patientId)) return null;

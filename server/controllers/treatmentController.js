@@ -7,8 +7,8 @@ const {
   resetCycleApproval,
   syncDerivedTreatmentStatus,
 } = require("../utils/treatmentStatus");
+const isValidId = require("../utils/isValidId");
 
-const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const CHEMO_OVERLAP_MESSAGE =
   "This chemotherapy cycle overlaps with another chemotherapy cycle. Please choose different dates.";

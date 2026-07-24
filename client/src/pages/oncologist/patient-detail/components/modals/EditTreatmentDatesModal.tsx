@@ -3,14 +3,14 @@ import { Calendar, Scissors, Syringe, X, Zap } from "lucide-react";
 
 import { useErrorVisibility } from "../../../../../hooks/useErrorVisibility";
 import { shiftDate } from "../../../../../utils/dateUtils";
-import { toDateInputValue, type WeekdayKey } from "../../../../../utils/treatmentDisplay";
-import type { TreatmentCycleRecord } from "../../../../../types/api";
 import {
   getRoadmapItemTitle,
-  inputCls,
-  labelCls,
   normalizeWeekdays,
-} from "../../helpers";
+  toDateInputValue,
+  type WeekdayKey,
+} from "../../../../../utils/treatmentDisplay";
+import type { TreatmentCycleRecord } from "../../../../../types/api";
+import { inputCls, labelCls } from "../../helpers";
 import { WeekdaySelector } from "../shared/PatientDetailShared";
 
 export function EditTreatmentDatesModal({

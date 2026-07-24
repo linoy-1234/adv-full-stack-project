@@ -1,9 +1,6 @@
-const mongoose = require("mongoose");
-
 const PatientProfile = require("../models/PatientProfile");
 const Message = require("../models/Message");
-
-const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+const isValidId = require("../utils/isValidId");
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 

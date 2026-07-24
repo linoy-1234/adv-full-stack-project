@@ -1,5 +1,5 @@
 import type { TreatmentMedicationRecord, TreatmentProtocolRecord } from "../types/api";
-import { weekdayKeys, type WeekdayKey } from "./treatmentDisplay";
+import { normalizeWeekdays, type WeekdayKey } from "./treatmentDisplay";
 
 export type MedicationCategory = "chemotherapy" | "supportive" | "chronic" | "other";
 
@@ -15,11 +15,6 @@ export interface CanonicalMedication {
   category: MedicationCategory;
   notes: string;
 }
-
-const normalizeWeekdays = (days?: string[]): WeekdayKey[] =>
-  (days || []).filter((day): day is WeekdayKey =>
-    (weekdayKeys as readonly string[]).includes(day)
-  );
 
 // Canonical medication normalization shared by the oncologist and patient
 // views. Category is preserved as-is (defaulting only a missing value to
