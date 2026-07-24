@@ -34,14 +34,10 @@ export interface CyclePayload {
   medications?: string[];
   status?:
     | "upcoming"
-    | "waiting_for_labs"
     | "waiting_for_review"
-    | "pending_review"
-    | "approved"
     | "active"
     | "completed"
-    | "cancelled"
-    | "in_progress";
+    | "cancelled";
   notes?: string;
 }
 
@@ -58,7 +54,6 @@ export interface ProtocolPayload {
 export interface DelayCyclePayload {
   newStartDate: string;
   newEndDate: string;
-  decisionNotes?: string;
 }
 
 export interface BulkCycleUpdatePayload {
@@ -175,14 +170,10 @@ export const deleteCycle = async (
 };
 
 export const approveCycle = async (
-  cycleId: string,
-  decisionNotes = ""
+  cycleId: string
 ): Promise<TreatmentProtocolResponse> => {
   const { data } = await api.patch<TreatmentProtocolResponse>(
-    `/treatments/cycles/${cycleId}/approve`,
-    {
-      decisionNotes,
-    }
+    `/treatments/cycles/${cycleId}/approve`
   );
 
   return data;

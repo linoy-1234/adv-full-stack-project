@@ -654,7 +654,6 @@ const bulkUpdateCycles = async (req, res, next) => {
       cycle.isActive = false;
       cycle.cancelledAt = new Date();
       cycle.cancelledBy = req.user._id;
-      cycle.cancelReason = "Removed from roadmap";
       await cycle.save();
     }
 
@@ -732,7 +731,6 @@ const deleteCycle = async (req, res, next) => {
     cycle.isActive = false;
     cycle.cancelledAt = new Date();
     cycle.cancelledBy = req.user._id;
-    cycle.cancelReason = req.body?.cancelReason || "Removed from roadmap";
     await cycle.save();
     await syncProtocolPlannedCounts(protocol, req.user._id);
 
@@ -783,7 +781,6 @@ const approveCycle = async (req, res, next) => {
       decisionStatus: "approved",
       decidedBy: req.user._id,
       decidedAt: new Date(),
-      decisionNotes: req.body.decisionNotes || "",
     };
     syncDerivedTreatmentStatus(cycle);
 

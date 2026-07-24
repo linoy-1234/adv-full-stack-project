@@ -134,14 +134,10 @@ const cycleSchema = Joi.object({
   status: Joi.string()
     .valid(
       "upcoming",
-      "waiting_for_labs",
       "waiting_for_review",
-      "pending_review",
-      "approved",
       "active",
       "completed",
-      "cancelled",
-      "in_progress"
+      "cancelled"
     )
     .default("upcoming"),
 
@@ -246,27 +242,16 @@ const updateCycleSchema = Joi.object({
   status: Joi.string()
     .valid(
       "upcoming",
-      "waiting_for_labs",
       "waiting_for_review",
-      "pending_review",
-      "approved",
       "active",
       "completed",
-      "cancelled",
-      "in_progress"
+      "cancelled"
     ),
 
   notes: Joi.string()
     .allow("")
     .max(500),
 }).min(1);
-
-const approveCycleSchema = Joi.object({
-  decisionNotes: Joi.string()
-    .allow("")
-    .max(500)
-    .default(""),
-});
 
 const delayCycleSchema = Joi.object({
   newStartDate: Joi.date()
@@ -275,11 +260,6 @@ const delayCycleSchema = Joi.object({
   newEndDate: Joi.date()
     .min(Joi.ref("newStartDate"))
     .required(),
-
-  decisionNotes: Joi.string()
-    .allow("")
-    .max(500)
-    .default(""),
 });
 
 const bulkUpdateCycleSchema = Joi.object({
@@ -304,6 +284,5 @@ module.exports = {
   createCycleSchema,
   updateCycleSchema,
   bulkUpdateCycleSchema,
-  approveCycleSchema,
   delayCycleSchema,
 };

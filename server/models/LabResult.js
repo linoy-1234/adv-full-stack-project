@@ -8,12 +8,6 @@ const labResultSchema = new mongoose.Schema(
       required: [true, "Patient is required"],
     },
 
-    cycle: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "TreatmentCycle",
-      default: null,
-    },
-
     enteredBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -85,7 +79,6 @@ const labResultSchema = new mongoose.Schema(
 );
 
 labResultSchema.index({ patient: 1, testDate: -1 });
-labResultSchema.index({ cycle: 1 });
 
 module.exports = mongoose.model("LabResult", labResultSchema);
 

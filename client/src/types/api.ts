@@ -85,14 +85,10 @@ export type TreatmentKind =
 
 export type TreatmentCycleStatus =
   | "upcoming"
-  | "waiting_for_labs"
   | "waiting_for_review"
-  | "pending_review"
-  | "approved"
   | "active"
   | "completed"
-  | "cancelled"
-  | "in_progress";
+  | "cancelled";
 
 export type TreatmentMedicationCategory =
   | "chemotherapy"
@@ -135,7 +131,6 @@ export interface TreatmentDecision {
       }
     | null;
   decidedAt?: string | null;
-  decisionNotes?: string;
 }
 
 export interface TreatmentProtocolRecord {
@@ -191,7 +186,6 @@ export interface TreatmentCycleRecord {
   decision?: TreatmentDecision;
   cancelledAt?: string | null;
   cancelledBy?: string | User | null;
-  cancelReason?: string;
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -215,16 +209,6 @@ export interface TreatmentProtocolResponse {
   message?: string;
 }
 
-export interface ApiLabResultCycle {
-  _id: string;
-  title: string;
-  cycleNumber: number;
-  treatmentType: string;
-  status: TreatmentCycleStatus;
-  startDate: string;
-  endDate: string;
-}
-
 export interface ApiLabResultUser {
   _id: string;
   fullName: string;
@@ -235,7 +219,6 @@ export interface ApiLabResultUser {
 export interface ApiLabResult {
   _id: string;
   patient: string;
-  cycle: ApiLabResultCycle | null;
   enteredBy: ApiLabResultUser;
   updatedBy: ApiLabResultUser | null;
   testDate: string;
@@ -263,15 +246,6 @@ export interface LabResultsResponse {
   labResults: ApiLabResult[];
 }
 
-export interface MessageAttachmentRecord {
-  originalName: string;
-  storedName: string;
-  fileUrl: string;
-  mimeType: string;
-  size: number;
-  uploadedAt: string;
-}
-
 export interface MessageRecord {
   _id: string;
   patient: string;
@@ -280,7 +254,6 @@ export interface MessageRecord {
     | string;
   senderRole: "patient" | "oncologist";
   text: string;
-  attachments?: MessageAttachmentRecord[];
   readByPatient: boolean;
   readByOncologist: boolean;
   isActive: boolean;

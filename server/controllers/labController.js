@@ -76,7 +76,6 @@ const createLabResult = async (req, res, next) => {
 
     const labResult = await LabResult.create({
       patient: patient._id,
-      cycle: null,
       enteredBy: req.user._id,
       updatedBy: req.user._id,
       testDate: req.body.testDate,
@@ -120,15 +119,10 @@ const getPatientLabResults = async (req, res, next) => {
       .populate("enteredBy", "fullName email role")
       .populate("updatedBy", "fullName email role");
 
-    const independentLabResults = labResults.map((labResult) => ({
-      ...labResult.toObject(),
-      cycle: null,
-    }));
-
     res.status(200).json({
       success: true,
-      count: independentLabResults.length,
-      labResults: independentLabResults,
+      count: labResults.length,
+      labResults: labResults.map((labResult) => labResult.toObject()),
     });
   } catch (error) {
     next(error);
@@ -175,10 +169,7 @@ const getLabResultById = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      labResult: {
-        ...labResult.toObject(),
-        cycle: null,
-      },
+      labResult: labResult.toObject(),
     });
   } catch (error) {
     next(error);

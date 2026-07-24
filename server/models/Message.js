@@ -1,45 +1,5 @@
 const mongoose = require("mongoose");
 
-const attachmentSchema = new mongoose.Schema(
-  {
-    originalName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    storedName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    fileUrl: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    mimeType: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    size: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-
-    uploadedAt: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-  { _id: false }
-);
-
 const messageSchema = new mongoose.Schema(
   {
     patient: {
@@ -65,11 +25,6 @@ const messageSchema = new mongoose.Schema(
       trim: true,
       maxlength: [2000, "Message text cannot exceed 2000 characters"],
       default: "",
-    },
-
-    attachments: {
-      type: [attachmentSchema],
-      default: [],
     },
 
     readByPatient: {

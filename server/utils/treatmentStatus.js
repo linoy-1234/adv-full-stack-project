@@ -7,7 +7,6 @@ const emptyDecision = () => ({
   decisionStatus: "none",
   decidedBy: null,
   decidedAt: null,
-  decisionNotes: "",
 });
 
 const isCycleApproved = (cycle) =>

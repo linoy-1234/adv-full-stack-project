@@ -24,10 +24,8 @@ export type TreatmentItemType =
 export type CycleStatus =
   | "upcoming"
   | "waiting_for_review"
-  | "waiting_labs"
   | "active"
-  | "completed"
-  | "approved";
+  | "completed";
 
 export interface ChemoCycle {
   id: string;
@@ -40,7 +38,6 @@ export interface ChemoCycle {
   approvedDate?: string;
   approvedBy?: string;
   notes?: string;
-  labResultId?: string;
 }
 
 export interface RadiationCourse {
@@ -96,8 +93,6 @@ export interface LabResult {
   notes?: string;
   enteredBy: string;
   enteredAt: string;
-  linkedCycleId?: string;
-  linkedCycleLabel?: string;
 }
 
 export type AccountStatus = "waiting_registration" | "linked";

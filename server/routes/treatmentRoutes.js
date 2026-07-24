@@ -25,7 +25,6 @@ const {
   createCycleSchema,
   updateCycleSchema,
   bulkUpdateCycleSchema,
-  approveCycleSchema,
   delayCycleSchema,
 } = require("../utils/validators/treatmentValidator");
 
@@ -101,7 +100,6 @@ router.delete(
 router.patch(
   "/cycles/:cycleId/approve",
   authorizeRoles("oncologist"),
-  validate(approveCycleSchema),
   approveCycle
 );
 

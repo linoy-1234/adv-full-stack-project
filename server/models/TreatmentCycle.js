@@ -18,12 +18,6 @@ const decisionSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-
-    decisionNotes: {
-      type: String,
-      trim: true,
-      default: "",
-    },
   },
   { _id: false }
 );
@@ -85,14 +79,10 @@ const treatmentCycleSchema = new mongoose.Schema(
       type: String,
       enum: [
         "upcoming",
-        "waiting_for_labs",
         "waiting_for_review",
-        "pending_review",
-        "approved",
         "active",
         "completed",
         "cancelled",
-        "in_progress",
       ],
       default: "upcoming",
     },
@@ -140,12 +130,6 @@ const treatmentCycleSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
-    },
-
-    cancelReason: {
-      type: String,
-      trim: true,
-      default: "",
     },
 
     isActive: {
