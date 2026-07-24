@@ -113,10 +113,12 @@ interface PatientDetailProps {
 export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps) {
   const dispatch = useAppDispatch();
   const {
+    list: patients,
     selectedPatient,
     loading,
     error: patientsError,
   } = useAppSelector((state) => state.patients);
+  const cachedPatient = patients.find((p) => p._id === patientId) ?? null;
   const [modal, setModal] = useState<ModalName>(null);
   const [protocol, setProtocol] = useState<TreatmentProtocolRecord | null>(null);
   const [cycles, setCycles] = useState<TreatmentCycleRecord[]>([]);
@@ -133,8 +135,11 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
 
   useEffect(() => {
     dispatch(clearPatientsError());
-    dispatch(fetchPatientById(patientId));
-  }, [dispatch, patientId]);
+
+    if (!cachedPatient) {
+      dispatch(fetchPatientById(patientId));
+    }
+  }, [dispatch, patientId, cachedPatient]);
 
   useEffect(() => {
     setLabsLoading(true);
@@ -176,7 +181,9 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
   }, [patientId]);
 
   const profile =
-    selectedPatient && selectedPatient._id === patientId ? selectedPatient : null;
+    (selectedPatient && selectedPatient._id === patientId
+      ? selectedPatient
+      : null) ?? cachedPatient;
   const allergies = getAllergyNames(profile?.allergies);
 
   const medicationPlan = useMemo(() => getMedicationPlan(protocol), [protocol]);
