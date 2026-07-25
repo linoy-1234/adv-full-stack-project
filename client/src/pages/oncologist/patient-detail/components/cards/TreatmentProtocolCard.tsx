@@ -48,7 +48,7 @@ export function TreatmentProtocolCard({
         </PhasePlaceholder>
       ) : (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
             <MetaRow label="Protocol" value={protocol.protocolName} />
             <MetaRow label="Diagnosis" value={protocol.diagnosis} />
           </div>
@@ -69,7 +69,7 @@ export function TreatmentProtocolCard({
           </div>
           {getTreatmentTypes(protocol).includes("chemotherapy") &&
             getTreatmentCount(protocol, "chemotherapy") > 0 && (
-              <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                 <MetaRow
                   label="Chemotherapy Cycles"
                   value={`${getTreatmentCount(protocol, "chemotherapy")} cycles planned`}
@@ -78,7 +78,7 @@ export function TreatmentProtocolCard({
             )}
           {getTreatmentTypes(protocol).includes("radiation") &&
             getTreatmentCount(protocol, "radiation") > 0 && (
-              <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                 <MetaRow
                   label="Radiation Sessions"
                   value={`${getTreatmentCount(protocol, "radiation")} sessions planned`}
@@ -87,7 +87,7 @@ export function TreatmentProtocolCard({
             )}
           {getTreatmentTypes(protocol).includes("surgery") &&
             getTreatmentCount(protocol, "surgery") > 0 && (
-              <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                 <MetaRow
                   label="Surgery Checkpoints"
                   value={`${getTreatmentCount(protocol, "surgery")} checkpoint(s) planned`}
@@ -101,7 +101,7 @@ export function TreatmentProtocolCard({
                 getProtocolDrugs(protocol).map((drug) => (
                   <span
                     key={drug}
-                    className="px-2.5 py-0.5 bg-[#F5F2EE] border border-[#E5E2DC] text-xs text-[#374151] rounded-full"
+                    className="px-2.5 py-0.5 bg-[#F5F2EE] border border-[#E5E2DC] text-xs text-[#374151] rounded-full break-words max-w-full"
                   >
                     {drug}
                   </span>
