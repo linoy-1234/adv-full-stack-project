@@ -33,20 +33,11 @@ const sendMessage = async (req, res, next) => {
       });
     }
 
-    const text = req.body.text ? req.body.text.trim() : "";
-
-    if (!text) {
-      return res.status(400).json({
-        success: false,
-        message: "Message text is required",
-      });
-    }
-
     const message = await Message.create({
       patient: patient._id,
       sender: req.user._id,
       senderRole: req.user.role,
-      text,
+      text: req.body.text,
       readByPatient: req.user.role === "patient",
       readByOncologist: req.user.role === "oncologist",
     });

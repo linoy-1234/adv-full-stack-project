@@ -12,6 +12,8 @@ import PrivateRoute from "./components/common/PrivateRoute";
 import Unauthorized from "./components/common/Unauthorized";
 import { getUserPatientProfileId } from "./utils/patientPortalAdapters";
 import { getApiErrorMessage, getApiStatus } from "./utils/apiError";
+import { useAppDispatch } from "./store/hooks";
+import { resetPatients } from "./store/slices/patientsSlice";
 import type { UserRole } from "./types/api";
 
 const LandingPage = lazy(() =>
@@ -83,9 +85,11 @@ export default function App() {
     logout: authLogout,
   } = useAuth();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
   const logout = () => {
     authLogout();
+    dispatch(resetPatients());
     navigate("/", { replace: true });
   };
 

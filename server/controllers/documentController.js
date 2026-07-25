@@ -1,6 +1,7 @@
 const cloudinary = require("../config/cloudinary");
 const ClinicalDocument = require("../models/ClinicalDocument");
 const isValidId = require("../utils/isValidId");
+const DOCUMENT_TYPES = require("../utils/documentTypes");
 const {
   authorizePatientOwnerOnly: getAuthorizedPatient,
 } = require("../utils/authorizePatient");
@@ -82,6 +83,12 @@ const getPatientDocuments = async (req, res, next) => {
 
     const { documentType } = req.query;
     if (documentType && documentType !== "all") {
+      if (typeof documentType !== "string" || !DOCUMENT_TYPES.includes(documentType)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid document type filter",
+        });
+      }
       query.documentType = documentType;
     }
 

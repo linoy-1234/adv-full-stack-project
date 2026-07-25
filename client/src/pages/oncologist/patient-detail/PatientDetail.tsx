@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -142,11 +142,21 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
   }, [dispatch, patientId, cachedPatient]);
 
   useEffect(() => {
+    let cancelled = false;
     setLabsLoading(true);
     getPatientLabs(patientId)
-      .then((res) => setLabResults(res.labResults))
-      .catch(() => setLabResults([]))
-      .finally(() => setLabsLoading(false));
+      .then((res) => {
+        if (!cancelled) setLabResults(res.labResults);
+      })
+      .catch(() => {
+        if (!cancelled) setLabResults([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLabsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [patientId]);
 
   const applyTreatmentResponse = (response: TreatmentProtocolResponse) => {
@@ -154,14 +164,19 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
     setCycles(sortCycles(response.cycles || []));
   };
 
+  const activePatientIdRef = useRef(patientId);
+
   const refreshTreatment = async () => {
+    const requestedPatientId = patientId;
     setTreatmentLoading(true);
     setTreatmentError("");
 
     try {
-      const response = await getPatientProtocol(patientId);
+      const response = await getPatientProtocol(requestedPatientId);
+      if (activePatientIdRef.current !== requestedPatientId) return;
       applyTreatmentResponse(response);
     } catch (error) {
+      if (activePatientIdRef.current !== requestedPatientId) return;
       const maybeResponse = error as { response?: { status?: number } };
       if (maybeResponse.response?.status === 404) {
         setProtocol(null);
@@ -172,11 +187,14 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
         );
       }
     } finally {
-      setTreatmentLoading(false);
+      if (activePatientIdRef.current === requestedPatientId) {
+        setTreatmentLoading(false);
+      }
     }
   };
 
   useEffect(() => {
+    activePatientIdRef.current = patientId;
     void refreshTreatment();
   }, [patientId]);
 

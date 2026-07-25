@@ -3,9 +3,9 @@ const Joi = require("joi");
 const sendMessageSchema = Joi.object({
   text: Joi.string()
     .trim()
-    .allow("")
+    .min(1)
     .max(2000)
-    .default(""),
+    .required(),
 });
 
 const editMessageSchema = Joi.object({

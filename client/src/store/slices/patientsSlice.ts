@@ -114,6 +114,7 @@ const patientsSlice = createSlice({
     clearPatientsError: (state) => {
       state.error = null;
     },
+    resetPatients: () => initialState,
   },
   extraReducers: (builder) => {
     builder
@@ -200,7 +201,7 @@ const patientsSlice = createSlice({
   },
 });
 
-export const { clearSelectedPatient, clearPatientsError } =
+export const { clearSelectedPatient, clearPatientsError, resetPatients } =
   patientsSlice.actions;
 
 export default patientsSlice.reducer;
