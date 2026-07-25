@@ -79,6 +79,7 @@ function OncologistPatientDetail() {
 
 export default function App() {
   const {
+    user,
     login: loginUser,
     loginWithGoogle,
     register: registerUser,
@@ -310,10 +311,18 @@ export default function App() {
           }
         />
 
-        <Route path="/unauthorized" element={<Unauthorized />} />
+        <Route
+          path="/unauthorized"
+          element={
+            <Unauthorized
+              onGoToDashboard={() =>
+                navigate(user ? getRoleDashboardPath(user.role) : "/")
+              }
+            />
+          }
+        />
         <Route path="*" element={<NotFound onGoHome={() => navigate("/")} />} />
       </Routes>
     </Suspense>
   );
 }
-
