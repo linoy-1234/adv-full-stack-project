@@ -18,6 +18,8 @@ import {
   deleteMessage,
 } from "../../services/messageService";
 import type { MessageRecord } from "../../types/api";
+import ErrorMessage from "../common/ErrorMessage";
+import FieldError from "../common/FieldError";
 
 interface MessagesPanelProps {
   patientId: string;
@@ -75,6 +77,8 @@ interface MessageBubbleProps {
   isEditing: boolean;
   isConfirmingDelete: boolean;
   editDraft: string;
+  editError: string;
+  editSaving: boolean;
   onEditStart: (id: string, text: string) => void;
   onEditDraftChange: (v: string) => void;
   onEditSave: (id: string, draft: string) => void;
@@ -92,6 +96,8 @@ const MessageBubble = memo(function MessageBubble({
   isEditing,
   isConfirmingDelete,
   editDraft,
+  editError,
+  editSaving,
   onEditStart,
   onEditDraftChange,
   onEditSave,
@@ -101,6 +107,13 @@ const MessageBubble = memo(function MessageBubble({
   onDeleteCancel,
 }: MessageBubbleProps) {
   const senderName = getSenderName(msg.sender, msg.senderRole);
+  const editInputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (!editError) return;
+    editInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    editInputRef.current?.focus({ preventScroll: true });
+  }, [editError]);
 
   return (
     <div className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
@@ -123,28 +136,34 @@ const MessageBubble = memo(function MessageBubble({
         {isEditing ? (
           <div className="space-y-2 mt-1">
             <textarea
+              ref={editInputRef}
               className="w-full rounded-lg px-2 py-1.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-white/50"
               style={{
                 backgroundColor: "rgba(255,255,255,0.15)",
                 color: "#ffffff",
-                border: "1px solid rgba(255,255,255,0.3)",
+                border: editError
+                  ? "1px solid #FCA5A5"
+                  : "1px solid rgba(255,255,255,0.3)",
                 minHeight: 60,
               }}
               value={editDraft}
               onChange={(e) => onEditDraftChange(e.target.value)}
+              disabled={editSaving}
               autoFocus
             />
+            <FieldError message={editError} className="text-red-100" />
             <div className="flex gap-2">
               <button
                 onClick={() => onEditSave(msg._id, editDraft)}
-                disabled={!editDraft.trim()}
-                className="px-3 py-1 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                disabled={editSaving}
+                className="px-3 py-1 rounded-lg text-xs font-medium transition-colors"
                 style={{ backgroundColor: "rgba(255,255,255,0.25)", color: "#fff" }}
               >
-                Save
+                {editSaving ? "Saving…" : "Save"}
               </button>
               <button
                 onClick={onEditCancel}
+                disabled={editSaving}
                 className="px-3 py-1 rounded-lg text-xs transition-colors"
                 style={{ color: "rgba(255,255,255,0.7)" }}
               >
@@ -223,9 +242,13 @@ export function MessagesPanel({
   const [markingRead, setMarkingRead] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
+  const [editFieldError, setEditFieldError] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [sendFieldError, setSendFieldError] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -307,7 +330,22 @@ export function MessagesPanel({
 
   const handleSend = async () => {
     const trimmed = text.trim();
-    if (!trimmed || sending) return;
+    if (sending) return;
+    if (!trimmed) {
+      setSendFieldError("Message is required.");
+      messageInputRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      messageInputRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    if (trimmed.length > 2000) {
+      setSendFieldError("Message cannot exceed 2,000 characters.");
+      messageInputRef.current?.focus();
+      return;
+    }
+    setSendFieldError("");
     setSending(true);
     try {
       await sendMessage(patientId, trimmed);
@@ -334,27 +372,42 @@ export function MessagesPanel({
     setConfirmDeleteId(null);
     setEditingId(id);
     setEditDraft(text);
+    setEditFieldError("");
   }, []);
 
   const handleEditDraftChange = useCallback((value: string) => {
+    setEditFieldError("");
     setEditDraft(value);
   }, []);
 
   const handleEditCancel = useCallback(() => {
     setEditingId(null);
     setEditDraft("");
+    setEditFieldError("");
   }, []);
 
   const handleEditSave = useCallback(
     async (messageId: string, draft: string) => {
-      if (!draft.trim()) return;
+      const trimmed = draft.trim();
+      if (!trimmed) {
+        setEditFieldError("Message is required.");
+        return;
+      }
+      if (trimmed.length > 2000) {
+        setEditFieldError("Message cannot exceed 2,000 characters.");
+        return;
+      }
+      setEditFieldError("");
+      setEditSaving(true);
       try {
-        await editMessage(messageId, draft.trim());
+        await editMessage(messageId, trimmed);
         setEditingId(null);
         setEditDraft("");
         await loadMessages();
       } catch {
         setError("Failed to edit message. Please try again.");
+      } finally {
+        setEditSaving(false);
       }
     },
     [loadMessages]
@@ -404,8 +457,8 @@ export function MessagesPanel({
             Loading messages…
           </div>
         ) : error && messages.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-sm text-red-500">
-            {error}
+          <div className="flex items-center justify-center h-32">
+            <ErrorMessage message={error} />
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 gap-2 text-[#9CA3AF]">
@@ -428,6 +481,8 @@ export function MessagesPanel({
                 isEditing={editingId === msg._id}
                 isConfirmingDelete={confirmDeleteId === msg._id}
                 editDraft={editDraft}
+                editError={editingId === msg._id ? editFieldError : ""}
+                editSaving={editingId === msg._id && editSaving}
                 onEditStart={handleEditStart}
                 onEditDraftChange={handleEditDraftChange}
                 onEditSave={handleEditSave}
@@ -444,7 +499,7 @@ export function MessagesPanel({
       {/* Input / mark-as-read area */}
       <div className="border-t border-[#E5E2DC] px-5 py-3 bg-[#F5F2EE]">
         {error && !loading && messages.length > 0 && (
-          <p className="text-xs text-red-500 mb-2">{error}</p>
+          <ErrorMessage message={error} className="mb-2" />
         )}
 
         {hasUnreadIncoming ? (
@@ -469,24 +524,40 @@ export function MessagesPanel({
           </div>
         ) : (
           /* ── Normal reply input ────────────────────────────────────────── */
-          <div className="flex gap-2 items-end">
+          <div>
+            <label className="block text-xs font-semibold text-[#6B7280] mb-1">
+              Message *
+            </label>
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
             <textarea
-              className="flex-1 bg-white border border-[#E5E2DC] rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#7CAE8E]"
+              ref={messageInputRef}
+              className={`w-full bg-white border rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 ${
+                sendFieldError
+                  ? "border-red-400 focus:ring-red-300"
+                  : "border-[#E5E2DC] focus:ring-[#7CAE8E]"
+              }`}
               rows={2}
               placeholder="Type a message…"
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                setSendFieldError("");
+                setText(e.target.value);
+              }}
               onKeyDown={onKey}
               disabled={sending}
             />
+                <FieldError message={sendFieldError} />
+              </div>
             <button
               onClick={handleSend}
-              disabled={!text.trim() || sending}
+              disabled={sending}
               className="px-3 py-2 bg-[#7CAE8E] text-white rounded-xl hover:bg-[#5A8A6A] disabled:opacity-50 transition-colors flex items-center gap-1.5 text-sm shrink-0"
             >
               <Send size={14} />
               {sending ? "Sending…" : "Send"}
             </button>
+            </div>
           </div>
         )}
       </div>

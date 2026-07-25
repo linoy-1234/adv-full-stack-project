@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { RibbonBackground } from '../../components/shared/RibbonBackground';
-import { focusFirstField, useErrorVisibility } from '../../hooks/useErrorVisibility';
+import ErrorMessage from '../../components/common/ErrorMessage';
+import FieldError from '../../components/common/FieldError';
+import { focusFirstField } from '../../hooks/useErrorVisibility';
 
 interface RegisterPageProps {
   onRegister: (
@@ -20,19 +22,45 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+  }>({});
   const emailRef = useRef<HTMLInputElement | null>(null);
   const passwordRef = useRef<HTMLInputElement | null>(null);
   const confirmPasswordRef = useRef<HTMLInputElement | null>(null);
-  const errorRef = useErrorVisibility<HTMLParagraphElement>(error);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!email.includes('@')) { setError('Please enter a valid email address.'); focusFirstField([emailRef]); return; }
-    if (password.length < 6) { setError('Password must be at least 6 characters.'); focusFirstField([passwordRef]); return; }
-    if (password !== confirmPassword) { setError('Passwords do not match.'); focusFirstField([confirmPasswordRef]); return; }
+    const normalizedEmail = email.trim().toLowerCase();
+    const nextErrors: typeof fieldErrors = {};
+    if (!normalizedEmail) nextErrors.email = 'Email address is required.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail))
+      nextErrors.email = 'Enter a valid email address.';
+    if (!password) nextErrors.password = 'Password is required.';
+    else if (password.length < 6)
+      nextErrors.password = 'Password must be at least 6 characters.';
+    else if (password.length > 100)
+      nextErrors.password = 'Password cannot exceed 100 characters.';
+    if (!confirmPassword)
+      nextErrors.confirmPassword = 'Confirm password is required.';
+    else if (password !== confirmPassword)
+      nextErrors.confirmPassword = 'Passwords do not match.';
 
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      focusFirstField([
+        nextErrors.email ? emailRef : { current: null },
+        nextErrors.password ? passwordRef : { current: null },
+        nextErrors.confirmPassword ? confirmPasswordRef : { current: null },
+      ]);
+      return;
+    }
+
+    setFieldErrors({});
     setLoading(true);
     try {
       const err = await onRegister(
@@ -75,7 +103,7 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
           <strong>How registration works:</strong> Your oncologist must first create your medical profile in the system using your email address. Enter that email below to activate your patient account.
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
           <div>
             <label className="block text-sm mb-1.5" style={{ color: '#374151' }}>Email Address *</label>
             <input
@@ -83,13 +111,16 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
               type="email"
               placeholder="The email your oncologist registered you with"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              onChange={(e) => {
+                setFieldErrors((current) => ({ ...current, email: undefined }));
+                setEmail(e.target.value);
+              }}
               className="w-full rounded-xl px-4 py-3 text-sm outline-none"
-              style={{ backgroundColor: '#F9FAFB', border: '2px solid #E5E7EB' }}
-              onFocus={(e) => (e.target.style.borderColor = '#7CAE8E')}
-              onBlur={(e) => (e.target.style.borderColor = '#E5E7EB')}
+              style={{ backgroundColor: '#F9FAFB', border: `2px solid ${fieldErrors.email ? '#F87171' : '#E5E7EB'}` }}
+              onFocus={(e) => (e.target.style.borderColor = fieldErrors.email ? '#F87171' : '#7CAE8E')}
+              onBlur={(e) => (e.target.style.borderColor = fieldErrors.email ? '#F87171' : '#E5E7EB')}
             />
+            <FieldError message={fieldErrors.email} />
           </div>
           <div>
             <label className="block text-sm mb-1.5" style={{ color: '#374151' }}>Create Password *</label>
@@ -99,17 +130,20 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Min. 6 characters"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                onChange={(e) => {
+                  setFieldErrors((current) => ({ ...current, password: undefined }));
+                  setPassword(e.target.value);
+                }}
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none pr-12"
-                style={{ backgroundColor: '#F9FAFB', border: '2px solid #E5E7EB' }}
-                onFocus={(e) => (e.target.style.borderColor = '#7CAE8E')}
-                onBlur={(e) => (e.target.style.borderColor = '#E5E7EB')}
+                style={{ backgroundColor: '#F9FAFB', border: `2px solid ${fieldErrors.password ? '#F87171' : '#E5E7EB'}` }}
+                onFocus={(e) => (e.target.style.borderColor = fieldErrors.password ? '#F87171' : '#7CAE8E')}
+                onBlur={(e) => (e.target.style.borderColor = fieldErrors.password ? '#F87171' : '#E5E7EB')}
               />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }}>
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            <FieldError message={fieldErrors.password} />
           </div>
           <div>
             <label className="block text-sm mb-1.5" style={{ color: '#374151' }}>Confirm Password *</label>
@@ -118,18 +152,19 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
               type="password"
               placeholder="Repeat your password"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
+              onChange={(e) => {
+                setFieldErrors((current) => ({ ...current, confirmPassword: undefined }));
+                setConfirmPassword(e.target.value);
+              }}
               className="w-full rounded-xl px-4 py-3 text-sm outline-none"
-              style={{ backgroundColor: '#F9FAFB', border: '2px solid #E5E7EB' }}
-              onFocus={(e) => (e.target.style.borderColor = '#7CAE8E')}
-              onBlur={(e) => (e.target.style.borderColor = '#E5E7EB')}
+              style={{ backgroundColor: '#F9FAFB', border: `2px solid ${fieldErrors.confirmPassword ? '#F87171' : '#E5E7EB'}` }}
+              onFocus={(e) => (e.target.style.borderColor = fieldErrors.confirmPassword ? '#F87171' : '#7CAE8E')}
+              onBlur={(e) => (e.target.style.borderColor = fieldErrors.confirmPassword ? '#F87171' : '#E5E7EB')}
             />
+            <FieldError message={fieldErrors.confirmPassword} />
           </div>
 
-          {error && (
-            <p ref={errorRef} role="alert" className="text-sm rounded-xl px-4 py-2.5" style={{ backgroundColor: '#FEF2F2', color: '#DC2626' }}>{error}</p>
-          )}
+          {error && <ErrorMessage message={error} />}
 
           <button
             type="submit"

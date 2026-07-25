@@ -1,5 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CheckCircle, Edit2, Trash2, X } from "lucide-react";
+import ErrorMessage from "../../components/common/ErrorMessage";
+import FieldError from "../../components/common/FieldError";
+import { focusFirstField } from "../../hooks/useErrorVisibility";
 import { todayIso } from "../../utils/treatmentDisplay";
 import {
   getMySymptoms,
@@ -111,8 +114,18 @@ export function SymptomJournal() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{
+    date?: string;
+    time?: string;
+    symptoms?: string;
+    otherText?: string;
+  }>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const dateRef = useRef<HTMLInputElement | null>(null);
+  const timeRef = useRef<HTMLInputElement | null>(null);
+  const symptomsRef = useRef<HTMLDivElement | null>(null);
+  const otherTextRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -126,14 +139,13 @@ export function SymptomJournal() {
   }, []);
 
   const toggleSymptom = (key: SymptomKey) => {
+    setFieldErrors((current) => ({ ...current, symptoms: undefined }));
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   };
-
-  const canSubmit = selected.size > 0 || (otherChecked && otherText.trim().length > 0);
 
   const resetForm = () => {
     setDate(TODAY);
@@ -146,6 +158,7 @@ export function SymptomJournal() {
     setNotes("");
     setEditingId(null);
     setError("");
+    setFieldErrors({});
   };
 
   const handleEdit = (log: SymptomLog) => {
@@ -202,9 +215,29 @@ export function SymptomJournal() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit) return;
+    const nextErrors: typeof fieldErrors = {};
+    if (!date) nextErrors.date = "Date is required.";
+    else if (date > TODAY) nextErrors.date = "Date cannot be in the future.";
+    if (!time) nextErrors.time = "Time is required.";
+    if (selected.size === 0 && !otherChecked)
+      nextErrors.symptoms = "Select at least one symptom.";
+    if (otherChecked && !otherText.trim())
+      nextErrors.otherText = "Describe the other symptom.";
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      focusFirstField([
+        nextErrors.date ? dateRef : { current: null },
+        nextErrors.time ? timeRef : { current: null },
+        nextErrors.symptoms ? symptomsRef : { current: null },
+        nextErrors.otherText ? otherTextRef : { current: null },
+      ]);
+      return;
+    }
+
     setLoading(true);
     setError("");
+    setFieldErrors({});
 
     try {
       const symptoms: SymptomItemPayload[] = [
@@ -285,11 +318,7 @@ export function SymptomJournal() {
         </div>
       )}
 
-      {error && (
-        <div className="rounded-xl p-3" style={{ backgroundColor: "#FEF2F2", border: "1.5px solid #FCA5A5" }}>
-          <p className="text-sm" style={{ color: "#DC2626" }}>{error}</p>
-        </div>
-      )}
+      {error && <ErrorMessage message={error} className="rounded-xl" />}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {/* Date & Time */}
@@ -299,31 +328,47 @@ export function SymptomJournal() {
             <div>
               <label className="block text-xs mb-1" style={{ color: "#6B7280" }}>Date *</label>
               <input
+                ref={dateRef}
                 type="date"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={(e) => {
+                  setFieldErrors((current) => ({ ...current, date: undefined }));
+                  setDate(e.target.value);
+                }}
                 max={TODAY}
                 className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-                style={{ backgroundColor: "#F9FAFB", border: "1.5px solid #E5E7EB" }}
+                style={{ backgroundColor: "#F9FAFB", border: `1.5px solid ${fieldErrors.date ? "#F87171" : "#E5E7EB"}` }}
               />
+              <FieldError message={fieldErrors.date} />
             </div>
             <div>
               <label className="block text-xs mb-1" style={{ color: "#6B7280" }}>Time *</label>
               <input
+                ref={timeRef}
                 type="time"
                 value={time}
-                onChange={(e) => setTime(e.target.value)}
+                onChange={(e) => {
+                  setFieldErrors((current) => ({ ...current, time: undefined }));
+                  setTime(e.target.value);
+                }}
                 className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-                style={{ backgroundColor: "#F9FAFB", border: "1.5px solid #E5E7EB" }}
+                style={{ backgroundColor: "#F9FAFB", border: `1.5px solid ${fieldErrors.time ? "#F87171" : "#E5E7EB"}` }}
               />
+              <FieldError message={fieldErrors.time} />
             </div>
           </div>
         </div>
 
         {/* Symptoms */}
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#FFFFFF", border: "2px solid #E5E7EB" }}>
-          <h3 style={{ color: "#374151" }} className="mb-3">Which symptoms are you experiencing?</h3>
-          <div className="grid grid-cols-2 gap-2">
+          <h3 style={{ color: "#374151" }} className="mb-3">Which symptoms are you experiencing? *</h3>
+          <div
+            ref={symptomsRef}
+            tabIndex={-1}
+            className={`grid grid-cols-2 gap-2 rounded-xl ${
+              fieldErrors.symptoms ? "border border-red-400 p-2" : ""
+            }`}
+          >
             {SYMPTOMS.map((s) => {
               const active = selected.has(s.key);
               return (
@@ -344,7 +389,14 @@ export function SymptomJournal() {
             })}
             <button
               type="button"
-              onClick={() => setOtherChecked((p) => !p)}
+              onClick={() => {
+                setFieldErrors((current) => ({
+                  ...current,
+                  symptoms: undefined,
+                  otherText: undefined,
+                }));
+                setOtherChecked((p) => !p);
+              }}
               className="col-span-2 flex items-center gap-2 p-3 rounded-xl text-left transition-all"
               style={{
                 backgroundColor: otherChecked ? "#FEF9C3" : "#F9FAFB",
@@ -355,17 +407,29 @@ export function SymptomJournal() {
               <span className="text-sm" style={{ color: otherChecked ? "#92400E" : "#374151" }}>Other</span>
             </button>
           </div>
+          <FieldError message={fieldErrors.symptoms} />
           {otherChecked && (
             <div className="mt-3">
+              <label className="block text-xs mb-1 text-[#6B7280]">
+                Other symptom *
+              </label>
               <input
+                ref={otherTextRef}
                 type="text"
                 value={otherText}
-                onChange={(e) => setOtherText(e.target.value)}
+                onChange={(e) => {
+                  setFieldErrors((current) => ({
+                    ...current,
+                    otherText: undefined,
+                  }));
+                  setOtherText(e.target.value);
+                }}
                 placeholder="e.g. tingling in fingers, hair thinning..."
                 maxLength={120}
                 className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
-                style={{ backgroundColor: "#FFFBEB", border: "1.5px solid #FCD34D", color: "#374151" }}
+                style={{ backgroundColor: "#FFFBEB", border: `1.5px solid ${fieldErrors.otherText ? "#F87171" : "#FCD34D"}`, color: "#374151" }}
               />
+              <FieldError message={fieldErrors.otherText} />
             </div>
           )}
         </div>
@@ -423,7 +487,7 @@ export function SymptomJournal() {
 
         <button
           type="submit"
-          disabled={!canSubmit || loading}
+          disabled={loading}
           className="w-full py-3.5 rounded-xl text-white text-sm hover:opacity-90 disabled:opacity-40 transition-opacity"
           style={{ backgroundColor: "#7CAE8E" }}
         >
@@ -436,9 +500,7 @@ export function SymptomJournal() {
             Loading your entries...
           </div>
         ) : fetchError ? (
-          <div className="rounded-xl p-3" style={{ backgroundColor: "#FEF2F2", border: "1.5px solid #FCA5A5" }}>
-            <p className="text-sm" style={{ color: "#DC2626" }}>{fetchError}</p>
-          </div>
+          <ErrorMessage message={fetchError} className="rounded-xl" />
         ) : entries.length === 0 ? (
           <div className="py-8 text-center">
             <p className="text-sm" style={{ color: "#9CA3AF" }}>

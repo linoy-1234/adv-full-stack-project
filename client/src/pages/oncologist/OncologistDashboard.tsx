@@ -5,6 +5,7 @@ import { AddPatientModal } from "./dashboard/AddPatientModal";
 import { useAuth } from "../../context/AuthContext";
 import { getOncologistUnreadCounts } from "../../services/messageService";
 import { RibbonBackground } from "../../components/shared/RibbonBackground";
+import ErrorMessage from "../../components/common/ErrorMessage";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   addPatient,
@@ -22,7 +23,6 @@ import {
   Clock,
   CheckCircle2,
   ChevronRight,
-  X,
   Stethoscope,
   UserCheck,
   UserX,
@@ -180,19 +180,14 @@ export function OncologistDashboard({ onSelectPatient, onLogout }: OncologistDas
         </div>
 
         {directoryError && (
-          <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700 flex items-center justify-between gap-3">
-            <span>{directoryError}</span>
-            <button
-              type="button"
-              onClick={() => {
+          <ErrorMessage
+            message={directoryError}
+            className="mb-4"
+            onDismiss={() => {
                 setActionError("");
                 dispatch(clearPatientsError());
-              }}
-              className="text-red-500 hover:text-red-700"
-            >
-              <X size={14} />
-            </button>
-          </div>
+            }}
+          />
         )}
 
         <div className="bg-white rounded-2xl shadow-sm border border-[#E5E2DC] overflow-hidden">

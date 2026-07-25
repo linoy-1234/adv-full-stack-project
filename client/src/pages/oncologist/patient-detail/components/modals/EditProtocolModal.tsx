@@ -1,6 +1,10 @@
 import { useRef, useState } from "react";
 import { Stethoscope, X } from "lucide-react";
 
+import ErrorMessage from "../../../../../components/common/ErrorMessage";
+import FieldError, {
+  invalidFieldClass,
+} from "../../../../../components/common/FieldError";
 import { focusFirstField } from "../../../../../hooks/useErrorVisibility";
 import type {
   TreatmentProtocolRecord,
@@ -30,6 +34,12 @@ export function EditProtocolModal({
     | "numberOfChemoCycles"
     | "numberOfRadiationSessions"
     | "numberOfSurgeryCheckpoints";
+  type ProtocolField =
+    | "protocolName"
+    | "diagnosis"
+    | "drugs"
+    | "notes"
+    | QuantityField;
 
   const [form, setForm] = useState({
     protocolName: protocol?.protocolName || "",
@@ -45,12 +55,17 @@ export function EditProtocolModal({
     numberOfSurgeryCheckpoints: getTreatmentCount(protocol, "surgery")?.toString() || "",
   });
   const [saving, setSaving] = useState(false);
-  const [quantityErrors, setQuantityErrors] = useState<
-    Partial<Record<QuantityField, string>>
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<ProtocolField, string>>
   >({});
+  const [formError, setFormError] = useState("");
+  const protocolNameRef = useRef<HTMLInputElement | null>(null);
+  const diagnosisRef = useRef<HTMLInputElement | null>(null);
   const chemoCountRef = useRef<HTMLInputElement | null>(null);
   const radiationCountRef = useRef<HTMLInputElement | null>(null);
   const surgeryCountRef = useRef<HTMLInputElement | null>(null);
+  const drugsRef = useRef<HTMLInputElement | null>(null);
+  const notesRef = useRef<HTMLTextAreaElement | null>(null);
 
   const quantityError = (value: string, label: string) => {
     const trimmed = value.trim();
@@ -73,8 +88,8 @@ export function EditProtocolModal({
     return Number.isNaN(parsed) ? 0 : parsed;
   };
 
-  const clearQuantityError = (field: QuantityField) => {
-    setQuantityErrors((current) => {
+  const clearFieldError = (field: ProtocolField) => {
+    setFieldErrors((current) => {
       if (!current[field]) return current;
       const { [field]: _removed, ...rest } = current;
       return rest;
@@ -82,14 +97,32 @@ export function EditProtocolModal({
   };
 
   const handleSave = async () => {
-    const nextQuantityErrors: Partial<Record<QuantityField, string>> = {};
+    const nextErrors: Partial<Record<ProtocolField, string>> = {};
+    const protocolName = form.protocolName.trim();
+    const diagnosis = form.diagnosis.trim();
+    const drugs = form.drugs
+      .split(",")
+      .map((drug) => drug.trim())
+      .filter(Boolean);
+
+    if (!protocolName) nextErrors.protocolName = "Protocol name is required.";
+    else if (protocolName.length < 2)
+      nextErrors.protocolName = "Protocol name must be at least 2 characters.";
+    else if (protocolName.length > 120)
+      nextErrors.protocolName = "Protocol name cannot exceed 120 characters.";
+
+    if (!diagnosis) nextErrors.diagnosis = "Diagnosis is required.";
+    else if (diagnosis.length < 2)
+      nextErrors.diagnosis = "Diagnosis must be at least 2 characters.";
+    else if (diagnosis.length > 160)
+      nextErrors.diagnosis = "Diagnosis cannot exceed 160 characters.";
 
     if (form.includeChemotherapy) {
       const error = quantityError(
         form.numberOfChemoCycles,
         "Number of chemotherapy cycles"
       );
-      if (error) nextQuantityErrors.numberOfChemoCycles = error;
+      if (error) nextErrors.numberOfChemoCycles = error;
     }
 
     if (form.includeRadiation) {
@@ -97,7 +130,7 @@ export function EditProtocolModal({
         form.numberOfRadiationSessions,
         "Number of radiation sessions"
       );
-      if (error) nextQuantityErrors.numberOfRadiationSessions = error;
+      if (error) nextErrors.numberOfRadiationSessions = error;
     }
 
     if (form.includeSurgery) {
@@ -105,21 +138,32 @@ export function EditProtocolModal({
         form.numberOfSurgeryCheckpoints,
         "Number of surgery checkpoints"
       );
-      if (error) nextQuantityErrors.numberOfSurgeryCheckpoints = error;
+      if (error) nextErrors.numberOfSurgeryCheckpoints = error;
     }
 
-    if (Object.keys(nextQuantityErrors).length > 0) {
-      setQuantityErrors(nextQuantityErrors);
+    if (drugs.some((drug) => drug.length > 100)) {
+      nextErrors.drugs = "Each drug or medication must be 100 characters or fewer.";
+    }
+    if (form.notes.trim().length > 1000) {
+      nextErrors.notes = "Notes cannot exceed 1,000 characters.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
       focusFirstField([
-        nextQuantityErrors.numberOfChemoCycles
+        nextErrors.protocolName ? protocolNameRef : { current: null },
+        nextErrors.diagnosis ? diagnosisRef : { current: null },
+        nextErrors.numberOfChemoCycles
           ? chemoCountRef
           : { current: null },
-        nextQuantityErrors.numberOfRadiationSessions
+        nextErrors.numberOfRadiationSessions
           ? radiationCountRef
           : { current: null },
-        nextQuantityErrors.numberOfSurgeryCheckpoints
+        nextErrors.numberOfSurgeryCheckpoints
           ? surgeryCountRef
           : { current: null },
+        nextErrors.drugs ? drugsRef : { current: null },
+        nextErrors.notes ? notesRef : { current: null },
       ]);
       return;
     }
@@ -149,18 +193,24 @@ export function EditProtocolModal({
     }
 
     setSaving(true);
-    await onSave({
-      protocolName: form.protocolName.trim(),
-      diagnosis: form.diagnosis.trim(),
-      treatmentTypes,
-      drugs: form.drugs
-        .split(",")
-        .map((drug) => drug.trim())
-        .filter(Boolean),
-      notes: form.notes.trim(),
-    });
-    setSaving(false);
-    onClose();
+    setFieldErrors({});
+    setFormError("");
+    try {
+      await onSave({
+        protocolName,
+        diagnosis,
+        treatmentTypes,
+        drugs,
+        notes: form.notes.trim(),
+      });
+      onClose();
+    } catch (error) {
+      setFormError(
+        error instanceof Error ? error.message : "Failed to save protocol"
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -181,27 +231,52 @@ export function EditProtocolModal({
         </div>
 
         <div className="px-6 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+          {formError && <ErrorMessage message={formError} />}
           <div>
             <label className={labelCls}>Protocol Name *</label>
             <input
-              className={inputCls}
+              ref={protocolNameRef}
+              className={`${inputCls} ${
+                fieldErrors.protocolName ? invalidFieldClass : ""
+              }`}
               value={form.protocolName}
-              onChange={(event) =>
+              aria-invalid={!!fieldErrors.protocolName}
+              aria-describedby={
+                fieldErrors.protocolName ? "protocol-name-error" : undefined
+              }
+              onChange={(event) => {
+                clearFieldError("protocolName");
                 setForm((current) => ({
                   ...current,
                   protocolName: event.target.value,
-                }))
-              }
+                }));
+              }}
+            />
+            <FieldError
+              id="protocol-name-error"
+              message={fieldErrors.protocolName}
             />
           </div>
           <div>
             <label className={labelCls}>Diagnosis *</label>
             <input
-              className={inputCls}
+              ref={diagnosisRef}
+              className={`${inputCls} ${
+                fieldErrors.diagnosis ? invalidFieldClass : ""
+              }`}
               value={form.diagnosis}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, diagnosis: event.target.value }))
+              aria-invalid={!!fieldErrors.diagnosis}
+              aria-describedby={
+                fieldErrors.diagnosis ? "protocol-diagnosis-error" : undefined
               }
+              onChange={(event) => {
+                clearFieldError("diagnosis");
+                setForm((current) => ({ ...current, diagnosis: event.target.value }));
+              }}
+            />
+            <FieldError
+              id="protocol-diagnosis-error"
+              message={fieldErrors.diagnosis}
             />
           </div>
 
@@ -232,7 +307,7 @@ export function EditProtocolModal({
                     type="number"
                     min="1"
                     className={`${inputCls} ${
-                      quantityErrors.numberOfChemoCycles
+                      fieldErrors.numberOfChemoCycles
                         ? "border-red-300 focus:ring-red-300"
                         : ""
                     }`}
@@ -243,14 +318,10 @@ export function EditProtocolModal({
                         numberOfChemoCycles: event.target.value,
                       }))
                     }
-                    onInput={() => clearQuantityError("numberOfChemoCycles")}
+                    onInput={() => clearFieldError("numberOfChemoCycles")}
                     placeholder="e.g., 6"
                   />
-                  {quantityErrors.numberOfChemoCycles && (
-                    <p className="mt-1 text-xs text-red-600">
-                      {quantityErrors.numberOfChemoCycles}
-                    </p>
-                  )}
+                  <FieldError message={fieldErrors.numberOfChemoCycles} />
                 </div>
               )}
 
@@ -278,7 +349,7 @@ export function EditProtocolModal({
                     type="number"
                     min="1"
                     className={`${inputCls} ${
-                      quantityErrors.numberOfRadiationSessions
+                      fieldErrors.numberOfRadiationSessions
                         ? "border-red-300 focus:ring-red-300"
                         : ""
                     }`}
@@ -290,15 +361,11 @@ export function EditProtocolModal({
                       }))
                     }
                     onInput={() =>
-                      clearQuantityError("numberOfRadiationSessions")
+                      clearFieldError("numberOfRadiationSessions")
                     }
                     placeholder="e.g., 30"
                   />
-                  {quantityErrors.numberOfRadiationSessions && (
-                    <p className="mt-1 text-xs text-red-600">
-                      {quantityErrors.numberOfRadiationSessions}
-                    </p>
-                  )}
+                  <FieldError message={fieldErrors.numberOfRadiationSessions} />
                 </div>
               )}
 
@@ -326,7 +393,7 @@ export function EditProtocolModal({
                     type="number"
                     min="1"
                     className={`${inputCls} ${
-                      quantityErrors.numberOfSurgeryCheckpoints
+                      fieldErrors.numberOfSurgeryCheckpoints
                         ? "border-red-300 focus:ring-red-300"
                         : ""
                     }`}
@@ -338,15 +405,11 @@ export function EditProtocolModal({
                       }))
                     }
                     onInput={() =>
-                      clearQuantityError("numberOfSurgeryCheckpoints")
+                      clearFieldError("numberOfSurgeryCheckpoints")
                     }
                     placeholder="e.g., 1"
                   />
-                  {quantityErrors.numberOfSurgeryCheckpoints && (
-                    <p className="mt-1 text-xs text-red-600">
-                      {quantityErrors.numberOfSurgeryCheckpoints}
-                    </p>
-                  )}
+                  <FieldError message={fieldErrors.numberOfSurgeryCheckpoints} />
                 </div>
               )}
 
@@ -370,23 +433,31 @@ export function EditProtocolModal({
           <div>
             <label className={labelCls}>Drugs / Medications (comma separated)</label>
             <input
-              className={inputCls}
+              ref={drugsRef}
+              className={`${inputCls} ${fieldErrors.drugs ? invalidFieldClass : ""}`}
               value={form.drugs}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, drugs: event.target.value }))
-              }
+              onChange={(event) => {
+                clearFieldError("drugs");
+                setForm((current) => ({ ...current, drugs: event.target.value }));
+              }}
             />
+            <FieldError message={fieldErrors.drugs} />
           </div>
           <div>
             <label className={labelCls}>Notes</label>
             <textarea
-              className={`${inputCls} resize-none`}
+              ref={notesRef}
+              className={`${inputCls} resize-none ${
+                fieldErrors.notes ? invalidFieldClass : ""
+              }`}
               rows={3}
               value={form.notes}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, notes: event.target.value }))
-              }
+              onChange={(event) => {
+                clearFieldError("notes");
+                setForm((current) => ({ ...current, notes: event.target.value }));
+              }}
             />
+            <FieldError message={fieldErrors.notes} />
           </div>
         </div>
 
@@ -400,7 +471,7 @@ export function EditProtocolModal({
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !form.protocolName.trim() || !form.diagnosis.trim()}
+            disabled={saving}
             className="px-4 py-2 rounded-lg bg-[#7CAE8E] text-white text-sm font-medium hover:bg-[#5A8A6A] disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save Protocol"}

@@ -2,10 +2,9 @@ import { useRef, useState, type FormEvent } from "react";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { RibbonBackground } from "../../components/shared/RibbonBackground";
 import { GoogleAuthButton } from "../../components/auth/GoogleAuthButton";
-import {
-  focusFirstField,
-  useErrorVisibility,
-} from "../../hooks/useErrorVisibility";
+import ErrorMessage from "../../components/common/ErrorMessage";
+import FieldError from "../../components/common/FieldError";
+import { focusFirstField } from "../../hooks/useErrorVisibility";
 import { getApiErrorMessage } from "../../utils/apiError";
 
 interface LoginPageProps {
@@ -32,10 +31,13 @@ export function LoginPage({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{
+    email?: string;
+    password?: string;
+  }>({});
   const [loading, setLoading] = useState(false);
   const emailRef = useRef<HTMLInputElement | null>(null);
   const passwordRef = useRef<HTMLInputElement | null>(null);
-  const errorRef = useErrorVisibility<HTMLParagraphElement>(error);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -44,18 +46,25 @@ export function LoginPage({
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (!normalizedEmail.includes("@")) {
-      setError("Please enter a valid email address.");
-      focusFirstField([emailRef]);
+    const nextErrors: typeof fieldErrors = {};
+    if (!normalizedEmail)
+      nextErrors.email = "Email address is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail))
+      nextErrors.email = "Enter a valid email address.";
+    if (!password) nextErrors.password = "Password is required.";
+    else if (password.length < 6)
+      nextErrors.password = "Password must be at least 6 characters.";
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      focusFirstField([
+        nextErrors.email ? emailRef : { current: null },
+        nextErrors.password ? passwordRef : { current: null },
+      ]);
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      focusFirstField([passwordRef]);
-      return;
-    }
-
+    setFieldErrors({});
     setLoading(true);
 
     try {
@@ -144,7 +153,7 @@ export function LoginPage({
           <div className="h-px flex-1 bg-[#E5E7EB]" />
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
           <div>
             <label
               className="block text-sm mb-1.5"
@@ -158,20 +167,29 @@ export function LoginPage({
               type="email"
               placeholder="your@email.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              onChange={(e) => {
+                setFieldErrors((current) => ({ ...current, email: undefined }));
+                setEmail(e.target.value);
+              }}
               className="w-full rounded-xl px-4 py-3 text-sm outline-none"
               style={{
                 backgroundColor: "#F9FAFB",
-                border: "2px solid #E5E7EB",
+                border: `2px solid ${
+                  fieldErrors.email ? "#F87171" : "#E5E7EB"
+                }`,
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = "#7CAE8E";
+                e.target.style.borderColor = fieldErrors.email
+                  ? "#F87171"
+                  : "#7CAE8E";
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = "#E5E7EB";
+                e.target.style.borderColor = fieldErrors.email
+                  ? "#F87171"
+                  : "#E5E7EB";
               }}
             />
+            <FieldError message={fieldErrors.email} />
           </div>
 
           <div>
@@ -188,18 +206,29 @@ export function LoginPage({
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                onChange={(e) => {
+                  setFieldErrors((current) => ({
+                    ...current,
+                    password: undefined,
+                  }));
+                  setPassword(e.target.value);
+                }}
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none pr-12"
                 style={{
                   backgroundColor: "#F9FAFB",
-                  border: "2px solid #E5E7EB",
+                  border: `2px solid ${
+                    fieldErrors.password ? "#F87171" : "#E5E7EB"
+                  }`,
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = "#7CAE8E";
+                  e.target.style.borderColor = fieldErrors.password
+                    ? "#F87171"
+                    : "#7CAE8E";
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = "#E5E7EB";
+                  e.target.style.borderColor = fieldErrors.password
+                    ? "#F87171"
+                    : "#E5E7EB";
                 }}
               />
 
@@ -216,18 +245,10 @@ export function LoginPage({
                 )}
               </button>
             </div>
+            <FieldError message={fieldErrors.password} />
           </div>
 
-          {error && (
-            <p
-              ref={errorRef}
-              role="alert"
-              className="text-sm text-center rounded-xl px-4 py-2.5"
-              style={{ backgroundColor: "#FEF2F2", color: "#DC2626" }}
-            >
-              {error}
-            </p>
-          )}
+          {error && <ErrorMessage message={error} />}
 
           <button
             type="submit"

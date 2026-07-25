@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Calendar, Scissors, Syringe, X, Zap } from "lucide-react";
 
-import { useErrorVisibility } from "../../../../../hooks/useErrorVisibility";
+import ErrorMessage from "../../../../../components/common/ErrorMessage";
+import FieldError, {
+  invalidFieldClass,
+} from "../../../../../components/common/FieldError";
+import { focusFirstField } from "../../../../../hooks/useErrorVisibility";
 import { shiftDate } from "../../../../../utils/dateUtils";
 import {
   getRoadmapItemTitle,
@@ -28,13 +32,35 @@ export function EditTreatmentDatesModal({
   const [removedCycleIds, setRemovedCycleIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const errorRef = useErrorVisibility<HTMLDivElement>(error);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const fieldRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  const clearFieldError = (key: string) => {
+    setFieldErrors((current) => {
+      if (!current[key]) return current;
+      const { [key]: _removed, ...rest } = current;
+      return rest;
+    });
+  };
 
   const updateItem = (
     id: string,
     field: keyof TreatmentCycleRecord,
     value: string | number | WeekdayKey[]
   ) => {
+    const suffix =
+      field === "startDate" || field === "plannedDate"
+        ? "start"
+        : field === "endDate"
+          ? "end"
+          : field === "weekdays"
+            ? "weekdays"
+            : field === "totalSessions"
+              ? "sessions"
+              : field === "notes"
+                ? "notes"
+                : "";
+    if (suffix) clearFieldError(`${id}-${suffix}`);
     setItems((current) =>
       current.map((item) => (item._id === id ? { ...item, [field]: value } : item))
     );
@@ -46,6 +72,7 @@ export function EditTreatmentDatesModal({
   };
 
   const updateChemoStartDate = (changedId: string, newStart: string) => {
+    clearFieldError(`${changedId}-start`);
     setItems((current) => {
       const changedItem = current.find((item) => item._id === changedId);
       if (!changedItem) return current;
@@ -77,16 +104,54 @@ export function EditTreatmentDatesModal({
   };
 
   const saveDates = async () => {
-    const radiationMissingWeekdays = items.some(
-      (item) =>
-        item.treatmentType === "radiation" &&
-        normalizeWeekdays(item.weekdays).length === 0
-    );
-
-    if (radiationMissingWeekdays) {
-      setError("Select at least one weekday for each radiation course.");
+    if (items.length === 0) {
+      setError("At least one treatment item must remain on the roadmap.");
       return;
     }
+
+    const nextErrors: Record<string, string> = {};
+    items.forEach((item) => {
+      const start = toDateInputValue(
+        item.treatmentType === "surgery"
+          ? item.plannedDate || item.startDate
+          : item.startDate
+      );
+      const end =
+        item.treatmentType === "surgery"
+          ? start
+          : toDateInputValue(item.endDate);
+
+      if (!start) {
+        nextErrors[`${item._id}-start`] =
+          item.treatmentType === "surgery"
+            ? "Planned date is required."
+            : "Start date is required.";
+      }
+      if (item.treatmentType !== "surgery" && !end) {
+        nextErrors[`${item._id}-end`] = "End date is required.";
+      } else if (start && end && end < start) {
+        nextErrors[`${item._id}-end`] =
+          "End date must be on or after start date.";
+      }
+      if (
+        item.treatmentType === "radiation" &&
+        normalizeWeekdays(item.weekdays).length === 0
+      ) {
+        nextErrors[`${item._id}-weekdays`] =
+          "Select at least one radiation weekday.";
+      }
+      if (
+        item.treatmentType === "radiation" &&
+        (!Number.isInteger(item.totalSessions) || item.totalSessions < 0)
+      ) {
+        nextErrors[`${item._id}-sessions`] =
+          "Total sessions must be a whole number of zero or more.";
+      }
+      if ((item.notes || "").length > 500) {
+        nextErrors[`${item._id}-notes`] =
+          "Notes cannot exceed 500 characters.";
+      }
+    });
 
     const chemoItems = items.filter((item) => item.treatmentType === "chemotherapy");
     for (let index = 0; index < chemoItems.length; index += 1) {
@@ -100,14 +165,24 @@ export function EditTreatmentDatesModal({
         const nextEnd = toDateInputValue(next.endDate);
 
         if (currentStart <= nextEnd && currentEnd >= nextStart) {
-          setError("This chemotherapy cycle overlaps with another chemotherapy cycle. Please choose different dates.");
-          return;
+          nextErrors[`${next._id}-start`] =
+            "This cycle overlaps another chemotherapy cycle.";
         }
       }
     }
 
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      const firstKey = Object.keys(nextErrors)[0];
+      focusFirstField([
+        { current: firstKey ? fieldRefs.current[firstKey] : null },
+      ]);
+      return;
+    }
+
     setSaving(true);
     setError("");
+    setFieldErrors({});
     try {
       await onSave(items, removedCycleIds);
       setSaving(false);
@@ -139,15 +214,7 @@ export function EditTreatmentDatesModal({
         </div>
 
         <div className="px-6 py-4 max-h-[65vh] overflow-y-auto space-y-3">
-          {error && (
-            <div
-              ref={errorRef}
-              role="alert"
-              className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700"
-            >
-              {error}
-            </div>
-          )}
+          {error && <ErrorMessage message={error} />}
 
           {items.map((item) => (
             <div key={item._id} className="bg-white border border-[#E5E2DC] rounded-xl p-3 space-y-2">
@@ -183,28 +250,46 @@ export function EditTreatmentDatesModal({
                   <div>
                     <label className={labelCls}>Start Date *</label>
                     <input
-                      className={inputCls}
+                      ref={(element) => {
+                        fieldRefs.current[`${item._id}-start`] = element;
+                      }}
+                      className={`${inputCls} ${
+                        fieldErrors[`${item._id}-start`] ? invalidFieldClass : ""
+                      }`}
                       type="date"
                       value={toDateInputValue(item.startDate)}
                       onChange={(event) => updateChemoStartDate(item._id, event.target.value)}
                     />
+                    <FieldError message={fieldErrors[`${item._id}-start`]} />
                   </div>
                   <div>
                     <label className={labelCls}>End Date *</label>
                     <input
-                      className={inputCls}
+                      ref={(element) => {
+                        fieldRefs.current[`${item._id}-end`] = element;
+                      }}
+                      className={`${inputCls} ${
+                        fieldErrors[`${item._id}-end`] ? invalidFieldClass : ""
+                      }`}
                       type="date"
                       value={toDateInputValue(item.endDate)}
                       onChange={(event) => updateItem(item._id, "endDate", event.target.value)}
                     />
+                    <FieldError message={fieldErrors[`${item._id}-end`]} />
                   </div>
                   <div className="col-span-2">
                     <label className={labelCls}>Notes</label>
                     <input
-                      className={inputCls}
+                      ref={(element) => {
+                        fieldRefs.current[`${item._id}-notes`] = element;
+                      }}
+                      className={`${inputCls} ${
+                        fieldErrors[`${item._id}-notes`] ? invalidFieldClass : ""
+                      }`}
                       value={item.notes || ""}
                       onChange={(event) => updateItem(item._id, "notes", event.target.value)}
                     />
+                    <FieldError message={fieldErrors[`${item._id}-notes`]} />
                   </div>
                 </div>
               )}
@@ -214,25 +299,42 @@ export function EditTreatmentDatesModal({
                   <div>
                     <label className={labelCls}>Start Date *</label>
                     <input
-                      className={inputCls}
+                      ref={(element) => {
+                        fieldRefs.current[`${item._id}-start`] = element;
+                      }}
+                      className={`${inputCls} ${
+                        fieldErrors[`${item._id}-start`] ? invalidFieldClass : ""
+                      }`}
                       type="date"
                       value={toDateInputValue(item.startDate)}
                       onChange={(event) => updateItem(item._id, "startDate", event.target.value)}
                     />
+                    <FieldError message={fieldErrors[`${item._id}-start`]} />
                   </div>
                   <div>
                     <label className={labelCls}>End Date *</label>
                     <input
-                      className={inputCls}
+                      ref={(element) => {
+                        fieldRefs.current[`${item._id}-end`] = element;
+                      }}
+                      className={`${inputCls} ${
+                        fieldErrors[`${item._id}-end`] ? invalidFieldClass : ""
+                      }`}
                       type="date"
                       value={toDateInputValue(item.endDate)}
                       onChange={(event) => updateItem(item._id, "endDate", event.target.value)}
                     />
+                    <FieldError message={fieldErrors[`${item._id}-end`]} />
                   </div>
                   <div>
                     <label className={labelCls}>Total Sessions</label>
                     <input
-                      className={inputCls}
+                      ref={(element) => {
+                        fieldRefs.current[`${item._id}-sessions`] = element;
+                      }}
+                      className={`${inputCls} ${
+                        fieldErrors[`${item._id}-sessions`] ? invalidFieldClass : ""
+                      }`}
                       type="number"
                       min="0"
                       value={item.totalSessions || 0}
@@ -240,22 +342,46 @@ export function EditTreatmentDatesModal({
                         updateItem(item._id, "totalSessions", Number(event.target.value))
                       }
                     />
+                    <FieldError message={fieldErrors[`${item._id}-sessions`]} />
                   </div>
                   <div className="col-span-2">
                     <label className={labelCls}>Radiation Weekdays *</label>
-                    <WeekdaySelector
-                      selected={normalizeWeekdays(item.weekdays)}
-                      disabled={saving}
-                      onChange={(days) => updateItem(item._id, "weekdays", days)}
+                    <div
+                      ref={(element) => {
+                        fieldRefs.current[`${item._id}-weekdays`] = element;
+                      }}
+                      tabIndex={-1}
+                      className={`rounded-lg ${
+                        fieldErrors[`${item._id}-weekdays`]
+                          ? "border border-red-400 p-2"
+                          : ""
+                      }`}
+                    >
+                      <WeekdaySelector
+                        selected={normalizeWeekdays(item.weekdays)}
+                        disabled={saving}
+                        onChange={(days) =>
+                          updateItem(item._id, "weekdays", days)
+                        }
+                      />
+                    </div>
+                    <FieldError
+                      message={fieldErrors[`${item._id}-weekdays`]}
                     />
                   </div>
                   <div className="col-span-2">
                     <label className={labelCls}>Notes</label>
                     <input
-                      className={inputCls}
+                      ref={(element) => {
+                        fieldRefs.current[`${item._id}-notes`] = element;
+                      }}
+                      className={`${inputCls} ${
+                        fieldErrors[`${item._id}-notes`] ? invalidFieldClass : ""
+                      }`}
                       value={item.notes || ""}
                       onChange={(event) => updateItem(item._id, "notes", event.target.value)}
                     />
+                    <FieldError message={fieldErrors[`${item._id}-notes`]} />
                   </div>
                 </div>
               )}
@@ -265,7 +391,12 @@ export function EditTreatmentDatesModal({
                   <div>
                     <label className={labelCls}>Planned Date *</label>
                     <input
-                      className={inputCls}
+                      ref={(element) => {
+                        fieldRefs.current[`${item._id}-start`] = element;
+                      }}
+                      className={`${inputCls} ${
+                        fieldErrors[`${item._id}-start`] ? invalidFieldClass : ""
+                      }`}
                       type="date"
                       value={toDateInputValue(item.plannedDate || item.startDate)}
                       onChange={(event) => {
@@ -274,14 +405,21 @@ export function EditTreatmentDatesModal({
                         updateItem(item._id, "endDate", event.target.value);
                       }}
                     />
+                    <FieldError message={fieldErrors[`${item._id}-start`]} />
                   </div>
                   <div>
                     <label className={labelCls}>Notes</label>
                     <input
-                      className={inputCls}
+                      ref={(element) => {
+                        fieldRefs.current[`${item._id}-notes`] = element;
+                      }}
+                      className={`${inputCls} ${
+                        fieldErrors[`${item._id}-notes`] ? invalidFieldClass : ""
+                      }`}
                       value={item.notes || ""}
                       onChange={(event) => updateItem(item._id, "notes", event.target.value)}
                     />
+                    <FieldError message={fieldErrors[`${item._id}-notes`]} />
                   </div>
                 </div>
               )}
@@ -309,4 +447,3 @@ export function EditTreatmentDatesModal({
     </div>
   );
 }
-

@@ -27,6 +27,68 @@ export const labelCls =
   "block text-xs font-semibold text-[#6B7280] mb-1 uppercase tracking-wide";
 export const bloodTypes = ["unknown", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
+export type PatientFormField =
+  | "fullName"
+  | "email"
+  | "nationalId"
+  | "dateOfBirth"
+  | "diagnosis"
+  | "allergiesRaw"
+  | "notes";
+
+export const validatePatientForm = (form: {
+  fullName: string;
+  email: string;
+  nationalId: string;
+  dateOfBirth: string;
+  diagnosis: string;
+  allergiesRaw: string;
+  notes: string;
+}) => {
+  const errors: Partial<Record<PatientFormField, string>> = {};
+  const fullName = form.fullName.trim();
+  const email = form.email.trim();
+  const nationalId = form.nationalId.trim();
+  const diagnosis = form.diagnosis.trim();
+  const allergyNames = form.allergiesRaw
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+
+  if (!fullName) errors.fullName = "Full name is required.";
+  else if (fullName.length < 2)
+    errors.fullName = "Full name must be at least 2 characters.";
+  else if (fullName.length > 80)
+    errors.fullName = "Full name cannot exceed 80 characters.";
+
+  if (!email) errors.email = "Email is required.";
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    errors.email = "Enter a valid email address.";
+
+  if (!nationalId) errors.nationalId = "National ID is required.";
+  else if (nationalId.length < 5)
+    errors.nationalId = "National ID must be at least 5 characters.";
+  else if (nationalId.length > 20)
+    errors.nationalId = "National ID cannot exceed 20 characters.";
+
+  if (!form.dateOfBirth) errors.dateOfBirth = "Date of birth is required.";
+
+  if (!diagnosis) errors.diagnosis = "Diagnosis is required.";
+  else if (diagnosis.length < 2)
+    errors.diagnosis = "Diagnosis must be at least 2 characters.";
+  else if (diagnosis.length > 200)
+    errors.diagnosis = "Diagnosis cannot exceed 200 characters.";
+
+  if (allergyNames.some((name) => name.length < 2 || name.length > 80)) {
+    errors.allergiesRaw =
+      "Each allergy must be between 2 and 80 characters.";
+  }
+  if (form.notes.trim().length > 1000)
+    errors.notes = "Notes cannot exceed 1,000 characters.";
+
+  return errors;
+};
+
 export const getAllergyNames = (allergies?: PatientAllergy[]) =>
   (allergies ?? []).map((allergy) => allergy.name).filter(Boolean);
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react";
 
-type FocusableField = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+type FocusableField = HTMLElement;
 
 export function useErrorVisibility<T extends HTMLElement = HTMLElement>(error: string) {
   const errorRef = useRef<T | null>(null);
@@ -31,6 +31,11 @@ export function focusFirstField(
       return element && !element.disabled;
     })?.current;
 
-    field?.focus();
+    field?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest",
+    });
+    field?.focus({ preventScroll: true });
   });
 }

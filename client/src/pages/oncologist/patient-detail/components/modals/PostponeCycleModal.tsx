@@ -1,10 +1,11 @@
 import { useRef, useState } from "react";
 import { X } from "lucide-react";
 
-import {
-  focusFirstField,
-  useErrorVisibility,
-} from "../../../../../hooks/useErrorVisibility";
+import ErrorMessage from "../../../../../components/common/ErrorMessage";
+import FieldError, {
+  invalidFieldClass,
+} from "../../../../../components/common/FieldError";
+import { focusFirstField } from "../../../../../hooks/useErrorVisibility";
 import type { TreatmentCycleRecord } from "../../../../../types/api";
 import { inputCls, labelCls } from "../../helpers";
 
@@ -21,19 +22,32 @@ export function PostponeCycleModal({
   const [newEndDate, setNewEndDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{
+    start?: string;
+    end?: string;
+  }>({});
+  const newStartDateRef = useRef<HTMLInputElement | null>(null);
   const newEndDateRef = useRef<HTMLInputElement | null>(null);
-  const errorRef = useErrorVisibility<HTMLDivElement>(error);
 
   const confirmPostpone = async () => {
-    if (!newStartDate || !newEndDate) return;
-    if (newEndDate < newStartDate) {
-      setError("End date must be on or after start date.");
-      focusFirstField([newEndDateRef]);
+    const nextErrors: { start?: string; end?: string } = {};
+    if (!newStartDate) nextErrors.start = "New start date is required.";
+    if (!newEndDate) nextErrors.end = "New end date is required.";
+    else if (newStartDate && newEndDate < newStartDate)
+      nextErrors.end = "End date must be on or after start date.";
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      focusFirstField([
+        nextErrors.start ? newStartDateRef : { current: null },
+        nextErrors.end ? newEndDateRef : { current: null },
+      ]);
       return;
     }
 
     setSaving(true);
     setError("");
+    setFieldErrors({});
     try {
       await onConfirm(newStartDate, newEndDate);
       setSaving(false);
@@ -61,35 +75,40 @@ export function PostponeCycleModal({
         </div>
 
         <div className="px-6 py-4 space-y-3">
-          {error && (
-            <div
-              ref={errorRef}
-              role="alert"
-              className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700"
-            >
-              {error}
-            </div>
-          )}
+          {error && <ErrorMessage message={error} />}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>New Start Date *</label>
               <input
-                ref={newEndDateRef}
-                className={inputCls}
+                ref={newStartDateRef}
+                className={`${inputCls} ${
+                  fieldErrors.start ? invalidFieldClass : ""
+                }`}
                 type="date"
                 value={newStartDate}
-                onChange={(event) => setNewStartDate(event.target.value)}
+                onChange={(event) => {
+                  setFieldErrors((current) => ({ ...current, start: undefined }));
+                  setNewStartDate(event.target.value);
+                }}
               />
+              <FieldError message={fieldErrors.start} />
             </div>
             <div>
               <label className={labelCls}>New End Date *</label>
               <input
-                className={inputCls}
+                ref={newEndDateRef}
+                className={`${inputCls} ${
+                  fieldErrors.end ? invalidFieldClass : ""
+                }`}
                 type="date"
                 value={newEndDate}
-                onChange={(event) => setNewEndDate(event.target.value)}
+                onChange={(event) => {
+                  setFieldErrors((current) => ({ ...current, end: undefined }));
+                  setNewEndDate(event.target.value);
+                }}
               />
+              <FieldError message={fieldErrors.end} />
             </div>
           </div>
         </div>
@@ -104,7 +123,7 @@ export function PostponeCycleModal({
           </button>
           <button
             onClick={confirmPostpone}
-            disabled={saving || !newStartDate || !newEndDate}
+            disabled={saving}
             className="px-4 py-2 rounded-lg bg-[#7CAE8E] text-white text-sm font-medium hover:bg-[#5A8A6A] disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save Postpone"}
@@ -114,4 +133,3 @@ export function PostponeCycleModal({
     </div>
   );
 }
-

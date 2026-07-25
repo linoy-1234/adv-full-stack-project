@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pencil, X, ChevronDown } from "lucide-react";
 import { updateDocumentMetadata } from "../../../../../services/documentService";
 import ErrorMessage from "../../../../common/ErrorMessage";
+import FieldError, {
+  invalidFieldClass,
+} from "../../../../common/FieldError";
+import { focusFirstField } from "../../../../../hooks/useErrorVisibility";
 import type { ClinicalDocumentRecord } from "../../../../../types/api";
 import {
   DOCUMENT_TYPE_VALUES,
@@ -25,15 +29,34 @@ export function EditModal({ doc, onClose, onSuccess }: EditModalProps) {
   const [description, setDescription] = useState(doc.description ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{
+    title?: string;
+    description?: string;
+  }>({});
+  const titleRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSave = async () => {
-    if (!title.trim()) {
-      setError("Title is required.");
+    const nextErrors: typeof fieldErrors = {};
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) nextErrors.title = "Title is required.";
+    else if (trimmedTitle.length > 120)
+      nextErrors.title = "Title cannot exceed 120 characters.";
+    if (description.trim().length > 1000)
+      nextErrors.description = "Description cannot exceed 1,000 characters.";
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      focusFirstField([
+        nextErrors.title ? titleRef : { current: null },
+        nextErrors.description ? descriptionRef : { current: null },
+      ]);
       return;
     }
 
     setSaving(true);
     setError("");
+    setFieldErrors({});
 
     try {
       await updateDocumentMetadata(doc._id, {
@@ -74,11 +97,16 @@ export function EditModal({ doc, onClose, onSuccess }: EditModalProps) {
           <div>
             <label className={labelCls}>Title *</label>
             <input
-              className={inputCls}
+              ref={titleRef}
+              className={`${inputCls} ${fieldErrors.title ? invalidFieldClass : ""}`}
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setFieldErrors((current) => ({ ...current, title: undefined }));
+                setTitle(e.target.value);
+              }}
               disabled={saving}
             />
+            <FieldError message={fieldErrors.title} />
           </div>
 
           <div>
@@ -108,12 +136,22 @@ export function EditModal({ doc, onClose, onSuccess }: EditModalProps) {
           <div>
             <label className={labelCls}>Description (optional)</label>
             <textarea
-              className={`${inputCls} resize-none`}
+              ref={descriptionRef}
+              className={`${inputCls} resize-none ${
+                fieldErrors.description ? invalidFieldClass : ""
+              }`}
               rows={2}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setFieldErrors((current) => ({
+                  ...current,
+                  description: undefined,
+                }));
+                setDescription(e.target.value);
+              }}
               disabled={saving}
             />
+            <FieldError message={fieldErrors.description} />
           </div>
         </div>
 
@@ -127,7 +165,7 @@ export function EditModal({ doc, onClose, onSuccess }: EditModalProps) {
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !title.trim()}
+            disabled={saving}
             className="px-4 py-2 rounded-lg bg-[#7CAE8E] text-white text-sm font-medium hover:bg-[#5A8A6A] disabled:opacity-60"
           >
             {saving ? "Saving…" : "Save Changes"}

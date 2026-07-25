@@ -1,16 +1,19 @@
 import { useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
 
+import ErrorMessage from "../../../components/common/ErrorMessage";
+import FieldError, {
+  invalidFieldClass,
+} from "../../../components/common/FieldError";
 import type { PatientPayload } from "../../../services/patientService";
-import {
-  focusFirstField,
-  useErrorVisibility,
-} from "../../../hooks/useErrorVisibility";
+import { focusFirstField } from "../../../hooks/useErrorVisibility";
 import {
   bloodTypes,
   inputCls,
   labelCls,
   normalizeBloodType,
+  type PatientFormField,
+  validatePatientForm,
 } from "../patient-detail/helpers";
 
 interface AddPatientModalProps {
@@ -31,37 +34,45 @@ export function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
     notes: "",
   });
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<PatientFormField, string>>
+  >({});
   const [saving, setSaving] = useState(false);
   const fullNameRef = useRef<HTMLInputElement | null>(null);
   const emailRef = useRef<HTMLInputElement | null>(null);
   const nationalIdRef = useRef<HTMLInputElement | null>(null);
   const dateOfBirthRef = useRef<HTMLInputElement | null>(null);
   const diagnosisRef = useRef<HTMLInputElement | null>(null);
-  const errorRef = useErrorVisibility<HTMLDivElement>(error);
+  const allergiesRef = useRef<HTMLInputElement | null>(null);
+  const notesRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const clearFieldError = (field: PatientFormField) => {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      const { [field]: _removed, ...rest } = current;
+      return rest;
+    });
+  };
 
   const handleSave = async () => {
-    if (
-      !form.fullName.trim() ||
-      !form.email.trim() ||
-      !form.nationalId.trim() ||
-      !form.dateOfBirth ||
-      !form.diagnosis.trim()
-    ) {
-      setError(
-        "Full name, email, national ID, date of birth, and diagnosis are required."
-      );
+    const nextErrors = validatePatientForm(form);
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
       focusFirstField([
-        !form.fullName.trim() ? fullNameRef : { current: null },
-        !form.email.trim() ? emailRef : { current: null },
-        !form.nationalId.trim() ? nationalIdRef : { current: null },
-        !form.dateOfBirth ? dateOfBirthRef : { current: null },
-        !form.diagnosis.trim() ? diagnosisRef : { current: null },
+        nextErrors.fullName ? fullNameRef : { current: null },
+        nextErrors.email ? emailRef : { current: null },
+        nextErrors.nationalId ? nationalIdRef : { current: null },
+        nextErrors.dateOfBirth ? dateOfBirthRef : { current: null },
+        nextErrors.diagnosis ? diagnosisRef : { current: null },
+        nextErrors.allergiesRaw ? allergiesRef : { current: null },
+        nextErrors.notes ? notesRef : { current: null },
       ]);
       return;
     }
 
     setSaving(true);
     setError("");
+    setFieldErrors({});
 
     const patientData: PatientPayload = {
       fullName: form.fullName.trim(),
@@ -111,74 +122,74 @@ export function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
         </div>
 
         <div className="px-6 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
-          {error && (
-            <div
-              ref={errorRef}
-              role="alert"
-              className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700"
-            >
-              {error}
-            </div>
-          )}
+          {error && <ErrorMessage message={error} />}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <label className={labelCls}>Full Name *</label>
               <input
                 ref={fullNameRef}
-                className={inputCls}
+                className={`${inputCls} ${fieldErrors.fullName ? invalidFieldClass : ""}`}
                 value={form.fullName}
-                onChange={(event) =>
+                onChange={(event) => {
+                  clearFieldError("fullName");
                   setForm((current) => ({
                     ...current,
                     fullName: event.target.value,
-                  }))
-                }
+                  }));
+                }}
               />
+              <FieldError message={fieldErrors.fullName} />
             </div>
             <div>
               <label className={labelCls}>Email *</label>
               <input
                 ref={emailRef}
-                className={inputCls}
+                className={`${inputCls} ${fieldErrors.email ? invalidFieldClass : ""}`}
                 type="email"
                 value={form.email}
-                onChange={(event) =>
+                onChange={(event) => {
+                  clearFieldError("email");
                   setForm((current) => ({
                     ...current,
                     email: event.target.value,
-                  }))
-                }
+                  }));
+                }}
               />
+              <FieldError message={fieldErrors.email} />
             </div>
             <div>
               <label className={labelCls}>National ID *</label>
               <input
                 ref={nationalIdRef}
-                className={inputCls}
+                className={`${inputCls} ${fieldErrors.nationalId ? invalidFieldClass : ""}`}
                 value={form.nationalId}
-                onChange={(event) =>
+                onChange={(event) => {
+                  clearFieldError("nationalId");
                   setForm((current) => ({
                     ...current,
                     nationalId: event.target.value,
-                  }))
-                }
+                  }));
+                }}
               />
+              <FieldError message={fieldErrors.nationalId} />
             </div>
             <div>
               <label className={labelCls}>Date of Birth *</label>
               <input
                 ref={dateOfBirthRef}
-                className={inputCls}
+                className={`${inputCls} ${fieldErrors.dateOfBirth ? invalidFieldClass : ""}`}
                 type="date"
                 value={form.dateOfBirth}
-                onChange={(event) =>
+                onChange={(event) => {
+                  clearFieldError("dateOfBirth");
                   setForm((current) => ({
                     ...current,
                     dateOfBirth: event.target.value,
-                  }))
-                }
+                  }));
+                }}
               />
+              <FieldError message={fieldErrors.dateOfBirth} />
             </div>
             <div>
               <label className={labelCls}>Blood Type</label>
@@ -203,42 +214,50 @@ export function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
               <label className={labelCls}>Diagnosis *</label>
               <input
                 ref={diagnosisRef}
-                className={inputCls}
+                className={`${inputCls} ${fieldErrors.diagnosis ? invalidFieldClass : ""}`}
                 value={form.diagnosis}
-                onChange={(event) =>
+                onChange={(event) => {
+                  clearFieldError("diagnosis");
                   setForm((current) => ({
                     ...current,
                     diagnosis: event.target.value,
-                  }))
-                }
+                  }));
+                }}
               />
+              <FieldError message={fieldErrors.diagnosis} />
             </div>
             <div className="col-span-2">
               <label className={labelCls}>Allergies (comma separated)</label>
               <input
-                className={inputCls}
+                ref={allergiesRef}
+                className={`${inputCls} ${fieldErrors.allergiesRaw ? invalidFieldClass : ""}`}
                 value={form.allergiesRaw}
-                onChange={(event) =>
+                onChange={(event) => {
+                  clearFieldError("allergiesRaw");
                   setForm((current) => ({
                     ...current,
                     allergiesRaw: event.target.value,
-                  }))
-                }
+                  }));
+                }}
               />
+              <FieldError message={fieldErrors.allergiesRaw} />
             </div>
             <div className="col-span-2">
               <label className={labelCls}>Notes</label>
               <textarea
-                className={`${inputCls} resize-none`}
+                ref={notesRef}
+                className={`${inputCls} resize-none ${fieldErrors.notes ? invalidFieldClass : ""}`}
                 rows={2}
                 value={form.notes}
-                onChange={(event) =>
+                onChange={(event) => {
+                  clearFieldError("notes");
                   setForm((current) => ({
                     ...current,
                     notes: event.target.value,
-                  }))
-                }
+                  }));
+                }}
               />
+              <FieldError message={fieldErrors.notes} />
             </div>
           </div>
         </div>

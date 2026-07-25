@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pill, X } from "lucide-react";
 
-import { useErrorVisibility } from "../../../../../hooks/useErrorVisibility";
+import ErrorMessage from "../../../../../components/common/ErrorMessage";
+import FieldError, {
+  invalidFieldClass,
+} from "../../../../../components/common/FieldError";
+import { focusFirstField } from "../../../../../hooks/useErrorVisibility";
 import type { WeekdayKey } from "../../../../../utils/treatmentDisplay";
 import type { MedicationCategory, MedicationFormRecord } from "../../types";
 import {
@@ -29,11 +33,11 @@ export function EditMedicationsModal({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const errorRef = useErrorVisibility<HTMLDivElement>(error);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const fieldRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const addMedication = () => {
-    const draft = prepareMedicationDraft(medForm);
-
+    const draft = validateDraft();
     if (!draft) return;
 
     setMedications((current) => [
@@ -42,6 +46,7 @@ export function EditMedicationsModal({
     ]);
     setMedForm(emptyMedicationForm());
     setError("");
+    setFieldErrors({});
   };
 
   const removeMedication = (id: string) =>
@@ -52,6 +57,15 @@ export function EditMedicationsModal({
     field: keyof MedicationFormRecord,
     value: string | boolean | WeekdayKey[]
   ) => {
+    if (
+      field === "name" ||
+      field === "dose" ||
+      field === "timing" ||
+      field === "notes" ||
+      field === "weekdays"
+    ) {
+      clearFieldError(`${id}-${field}`);
+    }
     setMedications((current) =>
       current.map((medication) =>
         medication.id === id ? { ...medication, [field]: value } : medication
@@ -59,20 +73,89 @@ export function EditMedicationsModal({
     );
   };
 
-  const saveMedications = async () => {
-    const draft = prepareMedicationDraft(medForm);
-    const medicationsToSave = draft ? [...medications, draft] : medications;
-    const missingWeekdays = medicationsToSave.some(
-      (medication) => !medication.asNeeded && medication.weekdays.length === 0
-    );
+  const clearFieldError = (key: string) => {
+    setFieldErrors((current) => {
+      if (!current[key]) return current;
+      const { [key]: _removed, ...rest } = current;
+      return rest;
+    });
+  };
 
-    if (missingWeekdays) {
-      setError("Select at least one weekday for each scheduled medication, or mark it as As needed.");
+  const hasDraftValues =
+    !!medForm.name.trim() ||
+    !!medForm.dose.trim() ||
+    !!medForm.timing.trim() ||
+    !!medForm.notes.trim() ||
+    medForm.weekdays.length > 0 ||
+    medForm.asNeeded ||
+    medForm.route !== "IV" ||
+    medForm.category !== "chemotherapy";
+
+  const validateMedication = (
+    medication: MedicationFormRecord,
+    keyPrefix: string,
+    nextErrors: Record<string, string>
+  ) => {
+    const name = medication.name.trim();
+    if (!name) nextErrors[`${keyPrefix}-name`] = "Medication name is required.";
+    else if (name.length < 2)
+      nextErrors[`${keyPrefix}-name`] =
+        "Medication name must be at least 2 characters.";
+    else if (name.length > 100)
+      nextErrors[`${keyPrefix}-name`] =
+        "Medication name cannot exceed 100 characters.";
+    if (medication.dose.trim().length > 80)
+      nextErrors[`${keyPrefix}-dose`] =
+        "Dose cannot exceed 80 characters.";
+    if (medication.timing.trim().length > 160)
+      nextErrors[`${keyPrefix}-timing`] =
+        "Timing cannot exceed 160 characters.";
+    if (!medication.asNeeded && medication.weekdays.length === 0) {
+      nextErrors[`${keyPrefix}-weekdays`] =
+        "Select at least one weekday or mark this medication as As needed.";
+    }
+    if (medication.notes.trim().length > 500)
+      nextErrors[`${keyPrefix}-notes`] =
+        "Notes cannot exceed 500 characters.";
+  };
+
+  const focusFirstMedicationError = (nextErrors: Record<string, string>) => {
+    const firstKey = Object.keys(nextErrors)[0];
+    focusFirstField([
+      { current: firstKey ? fieldRefs.current[firstKey] : null },
+    ]);
+  };
+
+  const validateDraft = () => {
+    const nextErrors: Record<string, string> = {};
+    validateMedication(medForm, "draft", nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors((current) => ({ ...current, ...nextErrors }));
+      focusFirstMedicationError(nextErrors);
+      return null;
+    }
+    return prepareMedicationDraft(medForm);
+  };
+
+  const saveMedications = async () => {
+    const nextErrors: Record<string, string> = {};
+    medications.forEach((medication) =>
+      validateMedication(medication, medication.id, nextErrors)
+    );
+    if (hasDraftValues) validateMedication(medForm, "draft", nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      focusFirstMedicationError(nextErrors);
       return;
     }
 
+    const draft = hasDraftValues ? prepareMedicationDraft(medForm) : null;
+    const medicationsToSave = draft ? [...medications, draft] : medications;
+
     setSaving(true);
     setError("");
+    setFieldErrors({});
 
     try {
       await onSave(medicationsToSave);
@@ -105,15 +188,7 @@ export function EditMedicationsModal({
         </div>
 
         <div className="px-6 py-4 max-h-[70vh] overflow-y-auto space-y-4">
-          {error && (
-            <div
-              ref={errorRef}
-              role="alert"
-              className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700"
-            >
-              {error}
-            </div>
-          )}
+          {error && <ErrorMessage message={error} />}
 
           {medications.map((medication) => (
             <div
@@ -136,22 +211,40 @@ export function EditMedicationsModal({
                 <div>
                   <label className={labelCls}>Name *</label>
                   <input
-                    className={inputCls}
+                    ref={(element) => {
+                      fieldRefs.current[`${medication.id}-name`] = element;
+                    }}
+                    className={`${inputCls} ${
+                      fieldErrors[`${medication.id}-name`]
+                        ? invalidFieldClass
+                        : ""
+                    }`}
                     value={medication.name}
                     onChange={(event) =>
                       updateMedication(medication.id, "name", event.target.value)
                     }
                   />
+                  <FieldError
+                    message={fieldErrors[`${medication.id}-name`]}
+                  />
                 </div>
                 <div>
                   <label className={labelCls}>Dose</label>
                   <input
-                    className={inputCls}
+                    ref={(element) => {
+                      fieldRefs.current[`${medication.id}-dose`] = element;
+                    }}
+                    className={`${inputCls} ${
+                      fieldErrors[`${medication.id}-dose`]
+                        ? invalidFieldClass
+                        : ""
+                    }`}
                     value={medication.dose}
                     onChange={(event) =>
                       updateMedication(medication.id, "dose", event.target.value)
                     }
                   />
+                  <FieldError message={fieldErrors[`${medication.id}-dose`]} />
                 </div>
                 <div>
                   <label className={labelCls}>Route</label>
@@ -187,19 +280,44 @@ export function EditMedicationsModal({
                 <div>
                   <label className={labelCls}>Timing</label>
                   <input
-                    className={inputCls}
+                    ref={(element) => {
+                      fieldRefs.current[`${medication.id}-timing`] = element;
+                    }}
+                    className={`${inputCls} ${
+                      fieldErrors[`${medication.id}-timing`]
+                        ? invalidFieldClass
+                        : ""
+                    }`}
                     value={medication.timing}
                     onChange={(event) =>
                       updateMedication(medication.id, "timing", event.target.value)
                     }
                   />
+                  <FieldError message={fieldErrors[`${medication.id}-timing`]} />
                 </div>
                 <div className="col-span-2 space-y-2">
                   <label className={labelCls}>Weekdays *</label>
-                  <WeekdaySelector
-                    selected={medication.weekdays}
-                    disabled={saving || medication.asNeeded}
-                    onChange={(days) => updateMedication(medication.id, "weekdays", days)}
+                  <div
+                    ref={(element) => {
+                      fieldRefs.current[`${medication.id}-weekdays`] = element;
+                    }}
+                    tabIndex={-1}
+                    className={`rounded-lg ${
+                      fieldErrors[`${medication.id}-weekdays`]
+                        ? "border border-red-400 p-2"
+                        : ""
+                    }`}
+                  >
+                    <WeekdaySelector
+                      selected={medication.weekdays}
+                      disabled={saving || medication.asNeeded}
+                      onChange={(days) =>
+                        updateMedication(medication.id, "weekdays", days)
+                      }
+                    />
+                  </div>
+                  <FieldError
+                    message={fieldErrors[`${medication.id}-weekdays`]}
                   />
                   <label className="inline-flex items-center gap-2 text-xs text-[#6B7280]">
                     <input
@@ -210,6 +328,7 @@ export function EditMedicationsModal({
                         updateMedication(medication.id, "asNeeded", event.target.checked);
                         if (event.target.checked) {
                           updateMedication(medication.id, "weekdays", []);
+                          clearFieldError(`${medication.id}-weekdays`);
                         }
                       }}
                     />
@@ -220,12 +339,20 @@ export function EditMedicationsModal({
                 <div className="col-span-2">
                   <label className={labelCls}>Notes</label>
                   <input
-                    className={inputCls}
+                    ref={(element) => {
+                      fieldRefs.current[`${medication.id}-notes`] = element;
+                    }}
+                    className={`${inputCls} ${
+                      fieldErrors[`${medication.id}-notes`]
+                        ? invalidFieldClass
+                        : ""
+                    }`}
                     value={medication.notes}
                     onChange={(event) =>
                       updateMedication(medication.id, "notes", event.target.value)
                     }
                   />
+                  <FieldError message={fieldErrors[`${medication.id}-notes`]} />
                 </div>
               </div>
             </div>
@@ -239,22 +366,36 @@ export function EditMedicationsModal({
               <div>
                 <label className={labelCls}>Name *</label>
                 <input
-                  className={inputCls}
+                  ref={(element) => {
+                    fieldRefs.current["draft-name"] = element;
+                  }}
+                  className={`${inputCls} ${
+                    fieldErrors["draft-name"] ? invalidFieldClass : ""
+                  }`}
                   value={medForm.name}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    clearFieldError("draft-name");
                     setMedForm((current) => ({ ...current, name: event.target.value }))
-                  }
+                  }}
                 />
+                <FieldError message={fieldErrors["draft-name"]} />
               </div>
               <div>
                 <label className={labelCls}>Dose</label>
                 <input
-                  className={inputCls}
+                  ref={(element) => {
+                    fieldRefs.current["draft-dose"] = element;
+                  }}
+                  className={`${inputCls} ${
+                    fieldErrors["draft-dose"] ? invalidFieldClass : ""
+                  }`}
                   value={medForm.dose}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    clearFieldError("draft-dose");
                     setMedForm((current) => ({ ...current, dose: event.target.value }))
-                  }
+                  }}
                 />
+                <FieldError message={fieldErrors["draft-dose"]} />
               </div>
               <div>
                 <label className={labelCls}>Route</label>
@@ -293,32 +434,56 @@ export function EditMedicationsModal({
               <div>
                 <label className={labelCls}>Timing</label>
                 <input
-                  className={inputCls}
+                  ref={(element) => {
+                    fieldRefs.current["draft-timing"] = element;
+                  }}
+                  className={`${inputCls} ${
+                    fieldErrors["draft-timing"] ? invalidFieldClass : ""
+                  }`}
                   value={medForm.timing}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    clearFieldError("draft-timing");
                     setMedForm((current) => ({ ...current, timing: event.target.value }))
-                  }
+                  }}
                 />
+                <FieldError message={fieldErrors["draft-timing"]} />
               </div>
               <div className="col-span-2 space-y-2">
                 <label className={labelCls}>Weekdays *</label>
-                <WeekdaySelector
-                  selected={medForm.weekdays}
-                  disabled={saving || medForm.asNeeded}
-                  onChange={(days) => setMedForm((current) => ({ ...current, weekdays: days }))}
-                />
+                <div
+                  ref={(element) => {
+                    fieldRefs.current["draft-weekdays"] = element;
+                  }}
+                  tabIndex={-1}
+                  className={`rounded-lg ${
+                    fieldErrors["draft-weekdays"]
+                      ? "border border-red-400 p-2"
+                      : ""
+                  }`}
+                >
+                  <WeekdaySelector
+                    selected={medForm.weekdays}
+                    disabled={saving || medForm.asNeeded}
+                    onChange={(days) => {
+                      clearFieldError("draft-weekdays");
+                      setMedForm((current) => ({ ...current, weekdays: days }));
+                    }}
+                  />
+                </div>
+                <FieldError message={fieldErrors["draft-weekdays"]} />
                 <label className="inline-flex items-center gap-2 text-xs text-[#6B7280]">
                   <input
                     type="checkbox"
                     checked={medForm.asNeeded}
                     disabled={saving}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      if (event.target.checked) clearFieldError("draft-weekdays");
                       setMedForm((current) => ({
                         ...current,
                         asNeeded: event.target.checked,
                         weekdays: event.target.checked ? [] : current.weekdays,
                       }))
-                    }
+                    }}
                   />
                   <span>As needed</span>
                   <span className="text-[#9CA3AF]">(not scheduled for specific days)</span>
@@ -327,12 +492,19 @@ export function EditMedicationsModal({
               <div className="col-span-2">
                 <label className={labelCls}>Notes</label>
                 <input
-                  className={inputCls}
+                  ref={(element) => {
+                    fieldRefs.current["draft-notes"] = element;
+                  }}
+                  className={`${inputCls} ${
+                    fieldErrors["draft-notes"] ? invalidFieldClass : ""
+                  }`}
                   value={medForm.notes}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    clearFieldError("draft-notes");
                     setMedForm((current) => ({ ...current, notes: event.target.value }))
-                  }
+                  }}
                 />
+                <FieldError message={fieldErrors["draft-notes"]} />
               </div>
             </div>
             <button
@@ -365,4 +537,3 @@ export function EditMedicationsModal({
     </div>
   );
 }
-

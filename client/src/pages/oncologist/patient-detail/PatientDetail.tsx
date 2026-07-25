@@ -373,7 +373,9 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
       await syncCyclesToProtocol(protocol._id, result, response.cycles || cycles);
       await refreshTreatment();
     } catch (error) {
-      setTreatmentError(getApiErrorMessage(error, "Failed to save protocol"));
+      const message = getApiErrorMessage(error, "Failed to save protocol");
+      setTreatmentError(message);
+      throw new Error(message);
     } finally {
       setSavingTreatment(false);
     }
@@ -636,4 +638,3 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
     </div>
   );
 }
-

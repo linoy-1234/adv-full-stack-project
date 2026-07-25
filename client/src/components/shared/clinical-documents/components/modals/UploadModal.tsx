@@ -2,6 +2,10 @@ import { useState, useRef } from "react";
 import { Upload, X, ChevronDown } from "lucide-react";
 import { uploadDocument } from "../../../../../services/documentService";
 import ErrorMessage from "../../../../common/ErrorMessage";
+import FieldError, {
+  invalidFieldClass,
+} from "../../../../common/FieldError";
+import { focusFirstField } from "../../../../../hooks/useErrorVisibility";
 import {
   DOCUMENT_TYPE_VALUES,
   DOCUMENT_TYPE_LABELS,
@@ -25,19 +29,40 @@ export function UploadModal({ patientId, onClose, onSuccess }: UploadModalProps)
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const fileButtonRef = useRef<HTMLButtonElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    title?: string;
+    file?: string;
+    description?: string;
+  }>({});
 
   const handleSubmit = async () => {
-    if (!title.trim()) {
-      setError("Title is required.");
-      return;
-    }
-    if (!file) {
-      setError("Please select a file.");
+    const nextErrors: typeof fieldErrors = {};
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) nextErrors.title = "Title is required.";
+    else if (trimmedTitle.length > 120)
+      nextErrors.title = "Title cannot exceed 120 characters.";
+    if (!file) nextErrors.file = "Select a file to upload.";
+    else if (file.size > 10 * 1024 * 1024)
+      nextErrors.file = "File size cannot exceed 10 MB.";
+    if (description.trim().length > 1000)
+      nextErrors.description = "Description cannot exceed 1,000 characters.";
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      focusFirstField([
+        nextErrors.title ? titleRef : { current: null },
+        nextErrors.description ? descriptionRef : { current: null },
+        nextErrors.file ? fileButtonRef : { current: null },
+      ]);
       return;
     }
 
     setUploading(true);
     setError("");
+    setFieldErrors({});
 
     try {
       const formData = new FormData();
@@ -80,12 +105,17 @@ export function UploadModal({ patientId, onClose, onSuccess }: UploadModalProps)
           <div>
             <label className={labelCls}>Title *</label>
             <input
-              className={inputCls}
+              ref={titleRef}
+              className={`${inputCls} ${fieldErrors.title ? invalidFieldClass : ""}`}
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setFieldErrors((current) => ({ ...current, title: undefined }));
+                setTitle(e.target.value);
+              }}
               placeholder="e.g. Visit Summary — June 2025"
               disabled={uploading}
             />
+            <FieldError message={fieldErrors.title} />
           </div>
 
           <div>
@@ -115,13 +145,23 @@ export function UploadModal({ patientId, onClose, onSuccess }: UploadModalProps)
           <div>
             <label className={labelCls}>Description (optional)</label>
             <textarea
-              className={`${inputCls} resize-none`}
+              ref={descriptionRef}
+              className={`${inputCls} resize-none ${
+                fieldErrors.description ? invalidFieldClass : ""
+              }`}
               rows={2}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setFieldErrors((current) => ({
+                  ...current,
+                  description: undefined,
+                }));
+                setDescription(e.target.value);
+              }}
               placeholder="Brief notes about this document…"
               disabled={uploading}
             />
+            <FieldError message={fieldErrors.description} />
           </div>
 
           <div>
@@ -131,14 +171,20 @@ export function UploadModal({ patientId, onClose, onSuccess }: UploadModalProps)
               type="file"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               className="hidden"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                setFieldErrors((current) => ({ ...current, file: undefined }));
+                setFile(e.target.files?.[0] ?? null);
+              }}
               disabled={uploading}
             />
             <button
+              ref={fileButtonRef}
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="w-full border border-dashed border-[#C8D9CC] rounded-lg px-4 py-3 text-sm text-left hover:bg-[#F0FAF4] transition-colors"
+              className={`w-full border border-dashed rounded-lg px-4 py-3 text-sm text-left hover:bg-[#F0FAF4] transition-colors ${
+                fieldErrors.file ? "border-red-400" : "border-[#C8D9CC]"
+              }`}
             >
               {file ? (
                 <span className="text-[#2C3E2D]">
@@ -153,6 +199,7 @@ export function UploadModal({ patientId, onClose, onSuccess }: UploadModalProps)
                 </span>
               )}
             </button>
+            <FieldError message={fieldErrors.file} />
           </div>
         </div>
 
@@ -166,7 +213,7 @@ export function UploadModal({ patientId, onClose, onSuccess }: UploadModalProps)
           </button>
           <button
             onClick={handleSubmit}
-            disabled={uploading || !title.trim() || !file}
+            disabled={uploading}
             className="px-4 py-2 rounded-lg bg-[#7CAE8E] text-white text-sm font-medium hover:bg-[#5A8A6A] disabled:opacity-60"
           >
             {uploading ? "Uploading…" : "Upload"}

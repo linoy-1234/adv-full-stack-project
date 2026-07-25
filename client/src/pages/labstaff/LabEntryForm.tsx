@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FlaskConical, X, Check } from "lucide-react";
 import { LAB_NORMS } from "../../utils/labUtils";
 import { formatDate, TODAY } from "../../utils/dateUtils";
 import ErrorMessage from "../../components/common/ErrorMessage";
+import FieldError, {
+  invalidFieldClass,
+} from "../../components/common/FieldError";
+import { focusFirstField } from "../../hooks/useErrorVisibility";
 import type { ApiLabResult, PatientProfile } from "../../types/api";
 import type { LabResultPayload } from "../../services/labService";
 
@@ -44,6 +48,22 @@ export function LabEntryForm({
   const [creatinine, setCreatinine] = useState(editingLab?.creatinine?.toString() ?? "");
   const [notes, setNotes] = useState(editingLab?.notes ?? "");
   const [error, setError] = useState("");
+  type LabField =
+    | "patient"
+    | "date"
+    | "wbc"
+    | "neutrophils"
+    | "hemoglobin"
+    | "platelets"
+    | "alt"
+    | "creatinine"
+    | "notes";
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<LabField, string>>
+  >({});
+  const fieldRefs = useRef<
+    Partial<Record<LabField, HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null>>
+  >({});
 
   const inputCls =
     "w-full border border-[#E5E2DC] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7CAE8E]";
@@ -57,11 +77,53 @@ export function LabEntryForm({
   const clearError = () => {
     if (error) setError("");
   };
+  const clearFieldError = (field: LabField) => {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      const { [field]: _removed, ...rest } = current;
+      return rest;
+    });
+  };
 
   const handleSave = async () => {
-    if (!patientId) { setError("Please select a patient."); return; }
-    if (!wbc || !neutrophils || !hemoglobin || !platelets || !alt || !creatinine) {
-      setError("All lab values are required."); return;
+    const nextErrors: Partial<Record<LabField, string>> = {};
+    if (!patientId) nextErrors.patient = "Select a patient.";
+    if (!date) nextErrors.date = "Test date is required.";
+    const values: Array<[LabField, string, string]> = [
+      ["wbc", wbc, "WBC"],
+      ["neutrophils", neutrophils, "Neutrophils"],
+      ["hemoglobin", hemoglobin, "Hemoglobin"],
+      ["platelets", platelets, "Platelets"],
+      ["alt", alt, "ALT"],
+      ["creatinine", creatinine, "Creatinine"],
+    ];
+    values.forEach(([field, value, label]) => {
+      if (!value.trim()) nextErrors[field] = `${label} is required.`;
+      else if (!Number.isFinite(Number(value)) || Number(value) < 0)
+        nextErrors[field] = `${label} must be zero or greater.`;
+    });
+    if (notes.trim().length > 1000)
+      nextErrors.notes = "Notes cannot exceed 1,000 characters.";
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      const order: LabField[] = [
+        "patient",
+        "date",
+        "wbc",
+        "neutrophils",
+        "hemoglobin",
+        "platelets",
+        "alt",
+        "creatinine",
+        "notes",
+      ];
+      focusFirstField(
+        order.map((field) => ({
+          current: nextErrors[field] ? fieldRefs.current[field] ?? null : null,
+        }))
+      );
+      return;
     }
 
     const payload: LabResultPayload = {
@@ -76,6 +138,7 @@ export function LabEntryForm({
     };
 
     setError("");
+    setFieldErrors({});
     await onSave(patientId, payload, editingLab?._id);
   };
 
@@ -102,11 +165,15 @@ export function LabEntryForm({
           <div>
             <label className={labelCls}>Patient *</label>
             <select
-              className={inputCls}
+              ref={(element) => {
+                fieldRefs.current.patient = element;
+              }}
+              className={`${inputCls} ${fieldErrors.patient ? invalidFieldClass : ""}`}
               value={patientId}
               disabled={!!editingLab}
               onChange={(e) => {
                 clearError();
+                clearFieldError("patient");
                 setPatientId(e.target.value);
                 onPatientChange(e.target.value);
               }}
@@ -118,19 +185,25 @@ export function LabEntryForm({
                 </option>
               ))}
             </select>
+            <FieldError message={fieldErrors.patient} />
           </div>
 
           <div>
             <label className={labelCls}>Date *</label>
             <input
-              className={inputCls}
+              ref={(element) => {
+                fieldRefs.current.date = element;
+              }}
+              className={`${inputCls} ${fieldErrors.date ? invalidFieldClass : ""}`}
               type="date"
               value={date}
               onChange={(e) => {
                 clearError();
+                clearFieldError("date");
                 setDate(e.target.value);
               }}
             />
+            <FieldError message={fieldErrors.date} />
           </div>
 
           <div className="border-t border-[#E5E2DC] pt-4">
@@ -140,32 +213,38 @@ export function LabEntryForm({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>WBC (×10⁹/L) *</label>
-                <input className={inputCls} type="number" step="0.1" placeholder="e.g. 5.2" value={wbc} onChange={(e) => { clearError(); setWbc(e.target.value); }} />
+                <input ref={(element) => { fieldRefs.current.wbc = element; }} className={`${inputCls} ${fieldErrors.wbc ? invalidFieldClass : ""}`} type="number" step="0.1" placeholder="e.g. 5.2" value={wbc} onChange={(e) => { clearError(); clearFieldError("wbc"); setWbc(e.target.value); }} />
+                <FieldError message={fieldErrors.wbc} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.wbc.min}–{LAB_NORMS.wbc.max}</p>
               </div>
               <div>
                 <label className={labelCls}>Neutrophils (×10⁹/L) *</label>
-                <input className={inputCls} type="number" step="0.1" placeholder="e.g. 2.8" value={neutrophils} onChange={(e) => { clearError(); setNeutrophils(e.target.value); }} />
+                <input ref={(element) => { fieldRefs.current.neutrophils = element; }} className={`${inputCls} ${fieldErrors.neutrophils ? invalidFieldClass : ""}`} type="number" step="0.1" placeholder="e.g. 2.8" value={neutrophils} onChange={(e) => { clearError(); clearFieldError("neutrophils"); setNeutrophils(e.target.value); }} />
+                <FieldError message={fieldErrors.neutrophils} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.neutrophils.min}–{LAB_NORMS.neutrophils.max}</p>
               </div>
               <div>
                 <label className={labelCls}>Hemoglobin (g/dL) *</label>
-                <input className={inputCls} type="number" step="0.1" placeholder="e.g. 12.0" value={hemoglobin} onChange={(e) => { clearError(); setHemoglobin(e.target.value); }} />
+                <input ref={(element) => { fieldRefs.current.hemoglobin = element; }} className={`${inputCls} ${fieldErrors.hemoglobin ? invalidFieldClass : ""}`} type="number" step="0.1" placeholder="e.g. 12.0" value={hemoglobin} onChange={(e) => { clearError(); clearFieldError("hemoglobin"); setHemoglobin(e.target.value); }} />
+                <FieldError message={fieldErrors.hemoglobin} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.hemoglobin.min}–{LAB_NORMS.hemoglobin.max}</p>
               </div>
               <div>
                 <label className={labelCls}>Platelets (×10⁹/L) *</label>
-                <input className={inputCls} type="number" step="1" placeholder="e.g. 200" value={platelets} onChange={(e) => { clearError(); setPlatelets(e.target.value); }} />
+                <input ref={(element) => { fieldRefs.current.platelets = element; }} className={`${inputCls} ${fieldErrors.platelets ? invalidFieldClass : ""}`} type="number" step="1" placeholder="e.g. 200" value={platelets} onChange={(e) => { clearError(); clearFieldError("platelets"); setPlatelets(e.target.value); }} />
+                <FieldError message={fieldErrors.platelets} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.platelets.min}–{LAB_NORMS.platelets.max}</p>
               </div>
               <div>
                 <label className={labelCls}>ALT (U/L) *</label>
-                <input className={inputCls} type="number" step="1" placeholder="e.g. 28" value={alt} onChange={(e) => { clearError(); setAlt(e.target.value); }} />
+                <input ref={(element) => { fieldRefs.current.alt = element; }} className={`${inputCls} ${fieldErrors.alt ? invalidFieldClass : ""}`} type="number" step="1" placeholder="e.g. 28" value={alt} onChange={(e) => { clearError(); clearFieldError("alt"); setAlt(e.target.value); }} />
+                <FieldError message={fieldErrors.alt} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.alt.min}–{LAB_NORMS.alt.max}</p>
               </div>
               <div>
                 <label className={labelCls}>Creatinine (mg/dL) *</label>
-                <input className={inputCls} type="number" step="0.01" placeholder="e.g. 0.85" value={creatinine} onChange={(e) => { clearError(); setCreatinine(e.target.value); }} />
+                <input ref={(element) => { fieldRefs.current.creatinine = element; }} className={`${inputCls} ${fieldErrors.creatinine ? invalidFieldClass : ""}`} type="number" step="0.01" placeholder="e.g. 0.85" value={creatinine} onChange={(e) => { clearError(); clearFieldError("creatinine"); setCreatinine(e.target.value); }} />
+                <FieldError message={fieldErrors.creatinine} />
                 <p className="text-xs text-[#9CA3AF] mt-0.5">Normal: {LAB_NORMS.creatinine.min}–{LAB_NORMS.creatinine.max}</p>
               </div>
             </div>
@@ -174,15 +253,20 @@ export function LabEntryForm({
           <div>
             <label className={labelCls}>Notes</label>
             <textarea
-              className={`${inputCls} resize-none`}
+              ref={(element) => {
+                fieldRefs.current.notes = element;
+              }}
+              className={`${inputCls} resize-none ${fieldErrors.notes ? invalidFieldClass : ""}`}
               rows={2}
               placeholder="Optional notes…"
               value={notes}
               onChange={(e) => {
                 clearError();
+                clearFieldError("notes");
                 setNotes(e.target.value);
               }}
             />
+            <FieldError message={fieldErrors.notes} />
           </div>
         </div>
 

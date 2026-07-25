@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
 
-import { useErrorVisibility } from "../../../../../hooks/useErrorVisibility";
+import ErrorMessage from "../../../../../components/common/ErrorMessage";
 import type { PatientProfile as ApiPatientProfile } from "../../../../../types/api";
 import { inputCls, labelCls } from "../../helpers";
 
@@ -19,7 +19,6 @@ export function DeactivatePatientModal({
   const [confirmation, setConfirmation] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const errorRef = useErrorVisibility<HTMLDivElement>(error);
   const canConfirm = confirmation.trim() === CONFIRMATION_TEXT;
 
   const handleDeactivate = async () => {
@@ -63,15 +62,7 @@ export function DeactivatePatientModal({
         </div>
 
         <div className="px-6 py-4 space-y-4">
-          {error && (
-            <div
-              ref={errorRef}
-              role="alert"
-              className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700"
-            >
-              {error}
-            </div>
-          )}
+          {error && <ErrorMessage message={error} />}
 
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 space-y-2">
             <p className="font-semibold">{profile.fullName} will be deactivated.</p>
