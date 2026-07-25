@@ -1,5 +1,6 @@
 import api from "./api";
-import type { ApiMessageResponse, TreatmentProtocolResponse, WeekdayKey } from "../types/api";
+import type { ApiMessageResponse } from "../types/common";
+import type { TreatmentProtocolResponse, WeekdayKey } from "../types/treatment";
 
 export interface TreatmentTypePayload {
   type: "chemotherapy" | "radiation" | "surgery" | "supportive";

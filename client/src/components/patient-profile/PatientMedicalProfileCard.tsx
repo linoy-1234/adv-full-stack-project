@@ -1,27 +1,38 @@
-import { Pencil } from "lucide-react";
+import type { ReactNode } from "react";
+import { AlertTriangle } from "lucide-react";
 
-import ErrorMessage from "../../../../../components/common/ErrorMessage";
-import { formatDate } from "../../../../../utils/dateUtils";
-import type { PatientProfile as ApiPatientProfile } from "../../../../../types/api";
-import { getOncologistName, getPatientMeta } from "../../helpers";
-import { MetaRow, SectionCard } from "../shared/PatientDetailShared";
+import ErrorMessage from "../common/ErrorMessage";
+import { formatDate } from "../../utils/dateUtils";
+import type { PatientProfile as ApiPatientProfile } from "../../types/patient";
+import { getOncologistName } from "../../utils/personUtils";
+import { MetaRow } from "../common/MetaRow";
+import { SectionCard } from "../common/SectionCard";
 
 interface PatientMedicalProfileCardProps {
   profile: ApiPatientProfile | null;
-  loading: boolean;
-  patientsError: string | null;
   allergies: string[];
-  onDismissError: () => void;
-  onEditClick: () => void;
+  meta?: string;
+  loading?: boolean;
+  patientsError?: string | null;
+  onDismissError?: () => void;
+  editButton?: ReactNode;
+  // Only the patient portal renders an allergy icon + an explicit
+  // "no known allergies" fallback; the oncologist card shows neither
+  // (this mirrors the two views' current, already-live behavior exactly).
+  allergiesIcon?: boolean;
+  emptyAllergiesLabel?: string;
 }
 
 export function PatientMedicalProfileCard({
   profile,
-  loading,
-  patientsError,
   allergies,
+  meta,
+  loading = false,
+  patientsError = null,
   onDismissError,
-  onEditClick,
+  editButton,
+  allergiesIcon = false,
+  emptyAllergiesLabel,
 }: PatientMedicalProfileCardProps) {
   if (!profile) {
     return (
@@ -45,15 +56,8 @@ export function PatientMedicalProfileCard({
     <SectionCard
       title="Patient Medical Profile"
       source="Created by oncologist"
-      meta={getPatientMeta(profile)}
-      editButton={
-        <button
-          onClick={onEditClick}
-          className="flex items-center gap-1.5 text-xs text-[#7CAE8E] hover:text-[#5A8A6A] font-medium border border-[#7CAE8E]/30 px-2.5 py-1 rounded-lg"
-        >
-          <Pencil size={12} /> Edit Profile
-        </button>
-      }
+      meta={meta}
+      editButton={editButton}
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
         <MetaRow label="Full Name" value={profile.fullName} />
@@ -75,10 +79,16 @@ export function PatientMedicalProfileCard({
         <div className="md:col-span-2">
           <MetaRow label="Diagnosis" value={profile.diagnosis} />
         </div>
-        {allergies.length > 0 && (
+        {allergies.length > 0 ? (
           <div className="md:col-span-2 flex gap-2 items-center min-w-0">
-            <span className="text-xs text-[#9CA3AF] w-28 shrink-0">
-              Allergies
+            <span
+              className={
+                allergiesIcon
+                  ? "text-xs text-[#9CA3AF] w-28 shrink-0 flex items-center gap-1"
+                  : "text-xs text-[#9CA3AF] w-28 shrink-0"
+              }
+            >
+              {allergiesIcon && <AlertTriangle size={11} className="text-red-500" />} Allergies
             </span>
             <div className="flex flex-wrap gap-1 min-w-0">
               {allergies.map((allergy) => (
@@ -91,7 +101,11 @@ export function PatientMedicalProfileCard({
               ))}
             </div>
           </div>
-        )}
+        ) : emptyAllergiesLabel ? (
+          <div className="md:col-span-2">
+            <span className="text-xs text-[#9CA3AF]">{emptyAllergiesLabel}</span>
+          </div>
+        ) : null}
         {profile.notes && (
           <div className="md:col-span-2">
             <MetaRow label="Notes" value={profile.notes} />
@@ -101,4 +115,3 @@ export function PatientMedicalProfileCard({
     </SectionCard>
   );
 }
-

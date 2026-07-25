@@ -1,13 +1,13 @@
 import { useRef, useState } from "react";
 import { X } from "lucide-react";
 
-import ErrorMessage from "../../../../../components/common/ErrorMessage";
+import ErrorMessage from "../../../../components/common/ErrorMessage";
 import FieldError, {
   invalidFieldClass,
-} from "../../../../../components/common/FieldError";
-import { focusFirstField } from "../../../../../hooks/useErrorVisibility";
-import type { TreatmentCycleRecord } from "../../../../../types/api";
-import { inputCls, labelCls } from "../../helpers";
+} from "../../../../components/common/FieldError";
+import { focusFirstField } from "../../../../hooks/useErrorVisibility";
+import type { TreatmentCycleRecord } from "../../../../types/treatment";
+import { inputCls, labelCls } from "../helpers";
 
 export function PostponeCycleModal({
   cycle,

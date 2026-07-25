@@ -17,7 +17,7 @@ import {
   editMessage,
   deleteMessage,
 } from "../../services/messageService";
-import type { MessageRecord } from "../../types/api";
+import type { MessageRecord } from "../../types/messages";
 import ErrorMessage from "../common/ErrorMessage";
 import FieldError from "../common/FieldError";
 

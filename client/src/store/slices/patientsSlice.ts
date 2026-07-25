@@ -9,7 +9,7 @@ import {
   type PatientPayload,
 } from "../../services/patientService";
 
-import type { PatientProfile } from "../../types/api";
+import type { PatientProfile } from "../../types/patient";
 import { getApiErrorMessage } from "../../utils/apiError";
 
 interface PatientsState {

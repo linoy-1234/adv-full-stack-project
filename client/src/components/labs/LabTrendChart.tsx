@@ -1,5 +1,5 @@
-import { formatDate } from "../../../../../utils/dateUtils";
-import type { ApiLabResult } from "../../../../../types/api";
+import { formatDate } from "../../utils/dateUtils";
+import type { ApiLabResult } from "../../types/labs";
 
 export function LabTrendChart({ labResults }: { labResults: ApiLabResult[] }) {
   const sorted = [...labResults].sort((a, b) =>

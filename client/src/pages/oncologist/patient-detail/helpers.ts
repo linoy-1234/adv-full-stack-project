@@ -3,23 +3,22 @@ import {
   normalizeWeekdays,
   toDateInputValue,
   todayIso,
-  type RadiationDisplayStatus,
-  type WeekdayKey,
 } from "../../../utils/treatmentDisplay";
+import type { PatientProfile as ApiPatientProfile } from "../../../types/patient";
 import type {
-  PatientAllergy,
-  PatientProfile as ApiPatientProfile,
   TreatmentCycleRecord,
   TreatmentProtocolRecord,
-} from "../../../types/api";
+} from "../../../types/treatment";
 import type { CyclePayload, MedicationPayload } from "../../../services/treatmentService";
 import type {
-  MedicationCategory,
   MedicationFormRecord,
   ProtocolFormResult,
-  TreatmentItemType,
 } from "./types";
 import { getMedicationPlan as getSharedMedicationPlan } from "../../../utils/medicationPlan";
+import { getAllergyNames, getPersonName } from "../../../utils/personUtils";
+import { getProtocolDrugs, getTreatmentCount, getTreatmentTypes } from "../../../utils/treatmentDisplay";
+
+export { getProtocolDrugs, getTreatmentCount, getTreatmentTypes };
 
 export const inputCls =
   "w-full border border-[#E5E2DC] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7CAE8E]";
@@ -89,24 +88,9 @@ export const validatePatientForm = (form: {
   return errors;
 };
 
-export const getAllergyNames = (allergies?: PatientAllergy[]) =>
-  (allergies ?? []).map((allergy) => allergy.name).filter(Boolean);
-
 export const normalizeBloodType = (value?: string) => {
   const normalized = (value || "unknown").trim();
   return bloodTypes.includes(normalized) ? normalized : "unknown";
-};
-
-export const getPersonName = (value?: string | { fullName?: string } | null) => {
-  if (typeof value === "object" && value?.fullName) return value.fullName;
-  return "";
-};
-
-export const getOncologistName = (profile: ApiPatientProfile) => {
-  if (typeof profile.oncologist === "object") {
-    return profile.oncologist.fullName;
-  }
-  return "Assigned oncologist";
 };
 
 export const getPatientMeta = (profile: ApiPatientProfile) => {
@@ -124,62 +108,6 @@ export const getProtocolMeta = (protocol: TreatmentProtocolRecord) => {
   return updatedAt
     ? `Last updated by ${updatedBy} - ${formatDate(updatedAt)}`
     : `Last updated by ${updatedBy}`;
-};
-
-export const getTreatmentCount = (
-  protocol: TreatmentProtocolRecord | null,
-  type: TreatmentItemType
-) =>
-  protocol?.treatmentTypes.find((entry) => entry.type === type)?.plannedCount ?? 0;
-
-export const getTreatmentTypes = (protocol: TreatmentProtocolRecord | null) =>
-  protocol?.treatmentTypes.map((entry) => entry.type) ?? [];
-
-export const categoryColor: Record<MedicationCategory, string> = {
-  chemotherapy: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  supportive: "bg-blue-50 text-blue-700 border-blue-200",
-  chronic: "bg-amber-50 text-amber-700 border-amber-200",
-  other: "bg-slate-50 text-slate-700 border-slate-200",
-};
-
-export const categoryLabel: Record<MedicationCategory, string> = {
-  chemotherapy: "Chemotherapy",
-  supportive: "Supportive",
-  chronic: "Chronic / Background",
-  other: "Other",
-};
-
-export const typeLabel: Record<TreatmentItemType, string> = {
-  chemotherapy: "Chemotherapy",
-  radiation: "Radiation",
-  surgery: "Surgery",
-  supportive: "Supportive",
-};
-
-export const radiationStatusConfig: Record<RadiationDisplayStatus, { label: string; cls: string }> = {
-  completed: { label: "Completed", cls: "bg-gray-100 text-gray-600" },
-  active: { label: "Active", cls: "bg-amber-500 text-white" },
-  upcoming: { label: "Upcoming", cls: "bg-blue-100 text-blue-700" },
-};
-
-export const weekdayLabels: Record<WeekdayKey, string> = {
-  sun: "Sun",
-  mon: "Mon",
-  tue: "Tue",
-  wed: "Wed",
-  thu: "Thu",
-  fri: "Fri",
-  sat: "Sat",
-};
-
-export const getProtocolDrugs = (protocol: TreatmentProtocolRecord | null) => {
-  if (!protocol) return [];
-  if (protocol.drugs?.length) return protocol.drugs;
-
-  return protocol.medications
-    .filter((medication) => medication.category === "chemotherapy")
-    .map((medication) => medication.name)
-    .filter(Boolean);
 };
 
 // Medication normalization and plan-building now live in the shared
@@ -209,6 +137,7 @@ export const emptyMedicationForm = (): MedicationFormRecord => ({
   name: "",
   dose: "",
   route: "IV",
+  frequency: "",
   timing: "",
   weekdays: [],
   asNeeded: false,

@@ -1,33 +1,25 @@
+import type { PatientProfile as ApiPatientProfile } from "../../../types/patient";
+import type { TreatmentCycleRecord, TreatmentProtocolRecord } from "../../../types/treatment";
+import { formatDate } from "../../../utils/dateUtils";
+import { Calendar, Syringe, Zap, Scissors, Info } from "lucide-react";
 import {
-  PatientProfile,
-  TreatmentProtocol,
-  ChemoCycle,
-  RadiationCourse,
-  SurgeryCheckpoint,
-} from "../../types/patientPortalTypes";
-import { formatDate } from "../../utils/dateUtils";
-import { Calendar, CheckCircle2, Clock, Syringe, Zap, Scissors, Info } from "lucide-react";
-import { todayIso } from "../../utils/treatmentDisplay";
+  getChemoDisplayStatus,
+  getEffectiveCycleDates,
+  getRadiationDisplayStatus,
+  getRoadmapItemTitle,
+  getSurgeryDisplayStatus,
+  getTreatmentCount,
+  toDateInputValue,
+  todayIso,
+  weekdayLabels,
+} from "../../../utils/treatmentDisplay";
+import { getPersonName } from "../../../utils/personUtils";
+import { PatientCycleStatusBadge } from "../../../components/treatment/TreatmentStatusBadge";
 
 interface TreatmentCyclesProps {
-  profile: PatientProfile;
-  protocol?: TreatmentProtocol;
-}
-
-function CycleStatusBadge({ status }: { status: string }) {
-  const cfg: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-    completed:    { label: "Completed",      color: "bg-gray-100 text-gray-600",        icon: <CheckCircle2 size={11} /> },
-    active:       { label: "Active",         color: "bg-emerald-100 text-emerald-700",  icon: <CheckCircle2 size={11} /> },
-    waiting_for_review: { label: "Waiting for Review", color: "bg-violet-100 text-violet-700", icon: <Clock size={11} /> },
-    upcoming:     { label: "Upcoming",       color: "bg-blue-100 text-blue-700",        icon: <Clock size={11} /> },
-    today:        { label: "Today",          color: "bg-blue-500 text-white",           icon: <Calendar size={11} /> },
-  };
-  const { label, color, icon } = cfg[status] ?? { label: status, color: "bg-gray-100 text-gray-600", icon: null };
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>
-      {icon}{label}
-    </span>
-  );
+  profile: ApiPatientProfile;
+  protocol: TreatmentProtocolRecord | null;
+  cycles: TreatmentCycleRecord[];
 }
 
 function TypeBadge({ type }: { type: string }) {
@@ -45,17 +37,7 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
-const weekdayLabel: Record<string, string> = {
-  sun: "Sun",
-  mon: "Mon",
-  tue: "Tue",
-  wed: "Wed",
-  thu: "Thu",
-  fri: "Fri",
-  sat: "Sat",
-};
-
-export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
+export function TreatmentCycles({ profile, protocol, cycles }: TreatmentCyclesProps) {
   const todayValue = todayIso();
 
   if (!protocol) {
@@ -73,24 +55,27 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
     );
   }
 
-  const items = protocol.items;
-  const chemoItems = items.filter((i) => i.type === "chemotherapy") as ChemoCycle[];
-  const radItems = items.filter((i) => i.type === "radiation") as RadiationCourse[];
-  const surgItems = items.filter((i) => i.type === "surgery") as SurgeryCheckpoint[];
+  const chemoItems = cycles.filter((cycle) => cycle.treatmentType === "chemotherapy");
+  const radItems = cycles.filter((cycle) => cycle.treatmentType === "radiation");
+  const surgItems = cycles.filter((cycle) => cycle.treatmentType === "surgery");
 
-  const completedChemo = chemoItems.filter((c) => c.status === "completed").length;
-  const totalChemo = protocol.numberOfChemoCycles ?? chemoItems.length;
+  const completedChemo = chemoItems.filter((cycle) => getChemoDisplayStatus(cycle) === "completed").length;
+  const totalChemo = getTreatmentCount(protocol, "chemotherapy");
 
-  // Find "You Are Here"
-  const currentItem = items.find((item) => {
-    if (item.type === "chemotherapy") {
-      const c = item as ChemoCycle;
-      if ((c.status as string) !== "active") return false;
-      return c.startDate <= todayValue && c.endDate >= todayValue;
+  // "You are here" marker - computed but not currently referenced anywhere in
+  // the rendered JSX below. This was already true before this migration
+  // (pre-existing dead computation in the original TreatmentCycles.tsx);
+  // preserved as-is rather than silently dropped.
+  const currentItem = cycles.find((cycle) => {
+    if (cycle.treatmentType === "chemotherapy") {
+      if (getChemoDisplayStatus(cycle) !== "active") return false;
+      const { startDate, endDate } = getEffectiveCycleDates(cycle);
+      return startDate <= todayValue && endDate >= todayValue;
     }
-    if (item.type === "radiation") return (item as RadiationCourse).status === "active";
+    if (cycle.treatmentType === "radiation") return getRadiationDisplayStatus(cycle) === "active";
     return false;
   });
+  void currentItem;
 
   return (
     <div className="flex flex-col gap-5">
@@ -110,7 +95,7 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
       {/* Protocol type badges */}
       {protocol.treatmentTypes.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {protocol.treatmentTypes.map((t) => <TypeBadge key={t} type={t} />)}
+          {protocol.treatmentTypes.map((t) => <TypeBadge key={t.type} type={t.type} />)}
         </div>
       )}
 
@@ -136,24 +121,27 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
           </div>
           <div className="divide-y divide-[#F5F2EE]">
             {chemoItems.map((cycle) => {
-              const status = cycle.status as string;
-              const isActive = status === "active" && cycle.startDate <= todayValue && cycle.endDate >= todayValue;
+              const status = getChemoDisplayStatus(cycle);
+              const { startDate, endDate } = getEffectiveCycleDates(cycle);
+              const isActive = status === "active" && startDate <= todayValue && endDate >= todayValue;
+              const approvedBy = getPersonName(cycle.decision?.decidedBy, "oncologist");
+              const approvedDate = toDateInputValue(cycle.decision?.decidedAt);
               return (
-                <div key={cycle.id} className={`px-4 py-3 ${isActive ? "bg-emerald-50" : ""}`}>
+                <div key={cycle._id} className={`px-4 py-3 ${isActive ? "bg-emerald-50" : ""}`}>
                   <div className="flex items-center justify-between flex-wrap gap-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       {isActive && (
                         <span className="text-xs bg-[#7CAE8E] text-white px-2 py-0.5 rounded-full font-medium">Active</span>
                       )}
-                      <span className="text-sm font-medium text-[#2C3E2D]">{cycle.title}</span>
-                      <CycleStatusBadge status={cycle.status} />
+                      <span className="text-sm font-medium text-[#2C3E2D]">{getRoadmapItemTitle(cycle)}</span>
+                      <PatientCycleStatusBadge status={status} />
                     </div>
                     <span className="text-xs text-[#9CA3AF]">
-                      {formatDate(cycle.startDate)} – {formatDate(cycle.endDate)}
+                      {formatDate(startDate)} – {formatDate(endDate)}
                     </span>
                   </div>
-                  {["active", "completed"].includes(status) && cycle.approvedBy && (
-                    <p className="text-xs text-emerald-600 mt-0.5">Approved by {cycle.approvedBy} · {formatDate(cycle.approvedDate || "")}</p>
+                  {["active", "completed"].includes(status) && approvedBy && (
+                    <p className="text-xs text-emerald-600 mt-0.5">Approved by {approvedBy} · {formatDate(approvedDate || "")}</p>
                   )}
                   {status === "waiting_for_review" && (
                     <p className="text-xs text-violet-600 mt-0.5">Waiting for oncologist review.</p>
@@ -174,25 +162,27 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
             <h3 className="text-sm font-semibold text-[#92400E]">Radiation Course</h3>
           </div>
           <div className="divide-y divide-[#F5F2EE]">
-            {radItems.map((rad) => {
-              const isActive = rad.status === "active";
+            {radItems.map((cycle) => {
+              const status = getRadiationDisplayStatus(cycle);
+              const { startDate, endDate } = getEffectiveCycleDates(cycle);
+              const isActive = status === "active";
               return (
-                <div key={rad.id} className={`px-4 py-3 ${isActive ? "bg-amber-50" : ""}`}>
+                <div key={cycle._id} className={`px-4 py-3 ${isActive ? "bg-amber-50" : ""}`}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       {isActive && <span className="text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-medium">Active</span>}
-                      <span className="text-sm font-medium text-[#2C3E2D]">{rad.title}</span>
+                      <span className="text-sm font-medium text-[#2C3E2D]">{getRoadmapItemTitle(cycle)}</span>
                     </div>
-                    <CycleStatusBadge status={rad.status} />
+                    <PatientCycleStatusBadge status={status} />
                   </div>
-                  <p className="text-xs text-[#9CA3AF]">{formatDate(rad.startDate)} → {formatDate(rad.endDate)}</p>
-                  <p className="text-xs text-[#6B7280] mt-2">Sessions planned: {rad.totalSessions}</p>
-                  {rad.weekdays?.length ? (
+                  <p className="text-xs text-[#9CA3AF]">{formatDate(startDate)} → {formatDate(endDate)}</p>
+                  <p className="text-xs text-[#6B7280] mt-2">Sessions planned: {cycle.totalSessions || 0}</p>
+                  {(cycle.weekdays?.length ?? 0) > 0 ? (
                     <p className="text-xs text-[#6B7280] mt-1">
-                      Weekdays: {rad.weekdays.map((day) => weekdayLabel[day]).join(", ")}
+                      Weekdays: {(cycle.weekdays || []).map((day) => weekdayLabels[day]).join(", ")}
                     </p>
                   ) : null}
-                  {rad.notes && <p className="text-xs text-[#9CA3AF] mt-1">{rad.notes}</p>}
+                  {cycle.notes && <p className="text-xs text-[#9CA3AF] mt-1">{cycle.notes}</p>}
                 </div>
               );
             })}
@@ -208,18 +198,22 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
             <h3 className="text-sm font-semibold text-[#1E40AF]">Surgery Checkpoints</h3>
           </div>
           <div className="divide-y divide-[#F5F2EE]">
-            {surgItems.map((surg) => (
-              <div key={surg.id} className={`px-4 py-3 ${surg.status === "today" ? "bg-blue-50" : surg.status === "completed" ? "bg-gray-50" : ""}`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium text-[#2C3E2D]">{surg.title}</span>
-                    <CycleStatusBadge status={surg.status} />
+            {surgItems.map((cycle) => {
+              const status = getSurgeryDisplayStatus(cycle);
+              const plannedDate = toDateInputValue(cycle.plannedDate || cycle.startDate);
+              return (
+                <div key={cycle._id} className={`px-4 py-3 ${status === "today" ? "bg-blue-50" : status === "completed" ? "bg-gray-50" : ""}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-[#2C3E2D]">{getRoadmapItemTitle(cycle)}</span>
+                      <PatientCycleStatusBadge status={status} />
+                    </div>
+                    <span className="text-xs text-[#9CA3AF]">{formatDate(plannedDate)}</span>
                   </div>
-                  <span className="text-xs text-[#9CA3AF]">{formatDate(surg.plannedDate)}</span>
+                  {cycle.notes && <p className="text-xs text-[#9CA3AF] mt-0.5">{cycle.notes}</p>}
                 </div>
-                {surg.notes && <p className="text-xs text-[#9CA3AF] mt-0.5">{surg.notes}</p>}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -234,4 +228,3 @@ export function TreatmentCycles({ profile, protocol }: TreatmentCyclesProps) {
     </div>
   );
 }
-

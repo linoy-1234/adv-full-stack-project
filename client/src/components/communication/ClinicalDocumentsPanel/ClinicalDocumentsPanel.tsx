@@ -5,15 +5,15 @@ import {
   deleteDocument,
 } from "../../../services/documentService";
 import ErrorMessage from "../../common/ErrorMessage";
-import type { ClinicalDocumentRecord } from "../../../types/api";
+import type { ClinicalDocumentRecord } from "../../../types/documents";
 import {
   DOCUMENT_TYPE_VALUES,
   DOCUMENT_TYPE_LABELS,
   type DocumentType,
 } from "../../../constants/documentTypes";
-import { DocumentCard } from "./components/DocumentCard";
-import { UploadModal } from "./components/modals/UploadModal";
-import { EditModal } from "./components/modals/EditModal";
+import { DocumentCard } from "./DocumentCard";
+import { UploadModal } from "./UploadModal";
+import { EditModal } from "./EditModal";
 
 interface ClinicalDocumentsPanelProps {
   patientId: string;

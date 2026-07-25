@@ -15,7 +15,7 @@ import {
   register as registerRequest,
 } from "../services/authService";
 
-import type { AuthResponse, User } from "../types/api";
+import type { AuthResponse, User } from "../types/auth";
 
 interface AuthContextValue {
   user: User | null;

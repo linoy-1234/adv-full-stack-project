@@ -1,20 +1,20 @@
 import { useRef, useState } from "react";
 import { Pill, X } from "lucide-react";
 
-import ErrorMessage from "../../../../../components/common/ErrorMessage";
+import ErrorMessage from "../../../../components/common/ErrorMessage";
 import FieldError, {
   invalidFieldClass,
-} from "../../../../../components/common/FieldError";
-import { focusFirstField } from "../../../../../hooks/useErrorVisibility";
-import type { WeekdayKey } from "../../../../../utils/treatmentDisplay";
-import type { MedicationCategory, MedicationFormRecord } from "../../types";
+} from "../../../../components/common/FieldError";
+import { focusFirstField } from "../../../../hooks/useErrorVisibility";
+import type { WeekdayKey } from "../../../../utils/treatmentDisplay";
+import type { MedicationCategory, MedicationFormRecord } from "../types";
 import {
   emptyMedicationForm,
   inputCls,
   labelCls,
   prepareMedicationDraft,
-} from "../../helpers";
-import { WeekdaySelector } from "../shared/PatientDetailShared";
+} from "../helpers";
+import { WeekdaySelector } from "../../../../components/treatment/WeekdaySelector";
 
 export function EditMedicationsModal({
   medications: initialMedications,

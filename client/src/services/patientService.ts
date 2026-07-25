@@ -1,10 +1,10 @@
 import api from "./api";
+import type { ApiMessageResponse } from "../types/common";
 import type {
-  ApiMessageResponse,
   PatientAllergy,
   PatientListResponse,
   PatientResponse,
-} from "../types/api";
+} from "../types/patient";
 
 export interface PatientPayload {
   fullName: string;

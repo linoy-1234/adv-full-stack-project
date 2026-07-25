@@ -2,7 +2,7 @@ import { useState, useEffect, memo } from "react";
 import { Activity, Info } from "lucide-react";
 import { getPatientSymptoms } from "../../services/symptomService";
 import ErrorMessage from "../common/ErrorMessage";
-import type { SymptomLog, SymptomItem } from "../../types/api";
+import type { SymptomLog, SymptomItem } from "../../types/symptoms";
 import { intensityColor, intensityLabel } from "../../utils/symptomDisplay";
 
 interface SymptomJournalPanelProps {

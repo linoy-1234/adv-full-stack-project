@@ -1,12 +1,12 @@
 import { memo } from "react";
 import { FileText, Pencil, Trash2, ExternalLink } from "lucide-react";
-import type { ClinicalDocumentRecord } from "../../../../types/api";
+import type { ClinicalDocumentRecord } from "../../../types/documents";
 import {
   DOCUMENT_TYPE_LABELS,
   DOCUMENT_TYPE_BADGE_COLORS,
-} from "../../../../constants/documentTypes";
-import { formatDate } from "../../../../utils/dateUtils";
-import { formatBytes, getUploaderName } from "../helpers";
+} from "../../../constants/documentTypes";
+import { formatDate } from "../../../utils/dateUtils";
+import { formatBytes, getUploaderName } from "./helpers";
 
 interface DocumentCardProps {
   doc: ClinicalDocumentRecord;

@@ -1,55 +1,46 @@
-import { Pencil, Pill } from "lucide-react";
+import type { ReactNode } from "react";
 
-import type { TreatmentProtocolRecord } from "../../../../../types/api";
-import type { MedicationCategory, MedicationFormRecord } from "../../types";
-import { categoryColor, categoryLabel, getProtocolMeta, weekdayLabels } from "../../helpers";
-import { PhasePlaceholder, SectionCard } from "../shared/PatientDetailShared";
+import type { TreatmentProtocolRecord, MedicationDisplayRecord, TreatmentMedicationCategory } from "../../types/treatment";
+import { categoryColor, categoryLabel, weekdayLabels } from "../../utils/treatmentDisplay";
+import { SectionCard } from "../common/SectionCard";
 
 interface MedicationPlanCardProps {
   protocol: TreatmentProtocolRecord | null;
-  treatmentLoading: boolean;
-  medicationPlan: MedicationFormRecord[];
-  savingTreatment: boolean;
-  onEditClick: () => void;
+  medicationPlan: MedicationDisplayRecord[];
+  source: string;
+  meta?: string;
+  treatmentLoading?: boolean;
+  // Oncologist-only states; the patient portal has no distinct loading or
+  // "no protocol yet" messaging here and simply falls through to
+  // `emptyContent` in both cases, matching its current behavior exactly.
+  loadingContent?: ReactNode;
+  noProtocolContent?: ReactNode;
+  emptyContent: ReactNode;
+  editButton?: ReactNode;
 }
 
 export function MedicationPlanCard({
   protocol,
-  treatmentLoading,
   medicationPlan,
-  savingTreatment,
-  onEditClick,
+  source,
+  meta,
+  treatmentLoading = false,
+  loadingContent,
+  noProtocolContent,
+  emptyContent,
+  editButton,
 }: MedicationPlanCardProps) {
   return (
-    <SectionCard
-      title="Medication Plan"
-      source="Medication list created by oncologist"
-      meta={protocol ? getProtocolMeta(protocol) : undefined}
-      editButton={
-        protocol && (
-          <button
-            onClick={onEditClick}
-            disabled={savingTreatment}
-            className="flex items-center gap-1.5 text-xs text-[#7CAE8E] hover:text-[#5A8A6A] font-medium border border-[#7CAE8E]/30 px-2.5 py-1 rounded-lg disabled:opacity-60"
-          >
-            <Pencil size={12} /> Edit Medications
-          </button>
-        )
-      }
-    >
-      {treatmentLoading ? (
-        <PhasePlaceholder icon={<Pill size={16} />}>
-          Loading medication plan...
-        </PhasePlaceholder>
-      ) : !protocol ? (
-        <PhasePlaceholder icon={<Pill size={16} />}>
-          Create a treatment protocol to manage medications.
-        </PhasePlaceholder>
+    <SectionCard title="Medication Plan" source={source} meta={meta} editButton={editButton}>
+      {treatmentLoading && loadingContent ? (
+        loadingContent
+      ) : !protocol && noProtocolContent ? (
+        noProtocolContent
       ) : medicationPlan.length === 0 ? (
-        <p className="text-sm text-[#9CA3AF]">No medications added yet.</p>
+        emptyContent
       ) : (
         <div className="space-y-2">
-          {(["chemotherapy", "supportive", "chronic", "other"] as MedicationCategory[]).map(
+          {(["chemotherapy", "supportive", "chronic", "other"] as TreatmentMedicationCategory[]).map(
             (category) => {
               const medications = medicationPlan.filter(
                 (medication) => medication.category === category
@@ -104,4 +95,3 @@ export function MedicationPlanCard({
     </SectionCard>
   );
 }
-

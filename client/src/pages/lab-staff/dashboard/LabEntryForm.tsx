@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { FlaskConical, X, Check } from "lucide-react";
-import { LAB_NORMS } from "../../utils/labUtils";
-import { formatDate, TODAY } from "../../utils/dateUtils";
-import ErrorMessage from "../../components/common/ErrorMessage";
+import { LAB_NORMS } from "../../../utils/labUtils";
+import { formatDate, TODAY } from "../../../utils/dateUtils";
+import ErrorMessage from "../../../components/common/ErrorMessage";
 import FieldError, {
   invalidFieldClass,
-} from "../../components/common/FieldError";
-import { focusFirstField } from "../../hooks/useErrorVisibility";
-import type { ApiLabResult, PatientProfile } from "../../types/api";
-import type { LabResultPayload } from "../../services/labService";
+} from "../../../components/common/FieldError";
+import { focusFirstField } from "../../../hooks/useErrorVisibility";
+import type { ApiLabResult } from "../../../types/labs";
+import type { PatientProfile } from "../../../types/patient";
+import type { LabResultPayload } from "../../../services/labService";
 
 function labDate(lab: ApiLabResult): string {
   return (lab.testDate ?? "").split("T")[0];

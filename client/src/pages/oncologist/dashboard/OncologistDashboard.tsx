@@ -1,19 +1,18 @@
 import { useEffect, useState } from "react";
-import { AccountStatus } from "../../types/patientPortalTypes";
-import { formatDate, TODAY } from "../../utils/dateUtils";
-import { AddPatientModal } from "./dashboard/AddPatientModal";
-import { useAuth } from "../../context/AuthContext";
-import { getOncologistUnreadCounts } from "../../services/messageService";
-import { RibbonBackground } from "../../components/shared/RibbonBackground";
-import ErrorMessage from "../../components/common/ErrorMessage";
-import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { formatDate, TODAY } from "../../../utils/dateUtils";
+import { AddPatientModal } from "./AddPatientModal";
+import { useAuth } from "../../../context/AuthContext";
+import { getOncologistUnreadCounts } from "../../../services/messageService";
+import { RibbonBackground } from "../../../components/common/RibbonBackground";
+import ErrorMessage from "../../../components/common/ErrorMessage";
+import { useAppDispatch, useAppSelector } from "../../../store/hooks";
 import {
   addPatient,
   clearPatientsError,
   fetchPatients,
-} from "../../store/slices/patientsSlice";
-import type { PatientProfile as ApiPatientProfile, PendingAction } from "../../types/api";
-import type { PatientPayload } from "../../services/patientService";
+} from "../../../store/slices/patientsSlice";
+import type { PatientProfile as ApiPatientProfile, PendingAction } from "../../../types/patient";
+import type { PatientPayload } from "../../../services/patientService";
 import {
   Users,
   Plus,
@@ -61,10 +60,7 @@ function PendingBadges({ actions }: { actions: PendingAction[] }) {
   );
 }
 
-type AccountStatusLike =
-  | AccountStatus
-  | ApiPatientProfile["accountStatus"]
-  | undefined;
+type AccountStatusLike = ApiPatientProfile["accountStatus"] | undefined;
 
 function AccountBadge({ status }: { status: AccountStatusLike }) {
   if (status === "linked") {

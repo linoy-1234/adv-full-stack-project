@@ -1,21 +1,21 @@
 import { useRef, useState } from "react";
 import { Calendar, Scissors, Syringe, X, Zap } from "lucide-react";
 
-import ErrorMessage from "../../../../../components/common/ErrorMessage";
+import ErrorMessage from "../../../../components/common/ErrorMessage";
 import FieldError, {
   invalidFieldClass,
-} from "../../../../../components/common/FieldError";
-import { focusFirstField } from "../../../../../hooks/useErrorVisibility";
-import { shiftDate } from "../../../../../utils/dateUtils";
+} from "../../../../components/common/FieldError";
+import { focusFirstField } from "../../../../hooks/useErrorVisibility";
+import { shiftDate } from "../../../../utils/dateUtils";
 import {
   getRoadmapItemTitle,
   normalizeWeekdays,
   toDateInputValue,
   type WeekdayKey,
-} from "../../../../../utils/treatmentDisplay";
-import type { TreatmentCycleRecord } from "../../../../../types/api";
-import { inputCls, labelCls } from "../../helpers";
-import { WeekdaySelector } from "../shared/PatientDetailShared";
+} from "../../../../utils/treatmentDisplay";
+import type { TreatmentCycleRecord } from "../../../../types/treatment";
+import { inputCls, labelCls } from "../helpers";
+import { WeekdaySelector } from "../../../../components/treatment/WeekdaySelector";
 
 export function EditTreatmentDatesModal({
   cycles,

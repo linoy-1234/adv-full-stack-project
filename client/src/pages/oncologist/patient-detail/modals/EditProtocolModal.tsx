@@ -1,23 +1,23 @@
 import { useRef, useState } from "react";
 import { Stethoscope, X } from "lucide-react";
 
-import ErrorMessage from "../../../../../components/common/ErrorMessage";
+import ErrorMessage from "../../../../components/common/ErrorMessage";
 import FieldError, {
   invalidFieldClass,
-} from "../../../../../components/common/FieldError";
-import { focusFirstField } from "../../../../../hooks/useErrorVisibility";
+} from "../../../../components/common/FieldError";
+import { focusFirstField } from "../../../../hooks/useErrorVisibility";
 import type {
   TreatmentProtocolRecord,
   TreatmentTypeRecord,
-} from "../../../../../types/api";
-import type { ProtocolFormResult } from "../../types";
+} from "../../../../types/treatment";
+import type { ProtocolFormResult } from "../types";
 import {
   getProtocolDrugs,
   getTreatmentCount,
   getTreatmentTypes,
   inputCls,
   labelCls,
-} from "../../helpers";
+} from "../helpers";
 
 export function EditProtocolModal({
   protocol,

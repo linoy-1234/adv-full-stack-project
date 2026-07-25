@@ -1,25 +1,20 @@
 import { useState } from "react";
-import {
-  PatientProfile,
-  LabResult,
-} from "../../types/patientPortalTypes";
-import { formatDate } from "../../utils/dateUtils";
-import { getLabStatus, LAB_NORMS, type LabFieldKey } from "../../utils/labUtils";
+import type { PatientProfile as ApiPatientProfile } from "../../../types/patient";
+import type { ApiLabResult } from "../../../types/labs";
+import { formatDate } from "../../../utils/dateUtils";
+import { toDateInputValue } from "../../../utils/treatmentDisplay";
+import { fieldLabels, getLabStatus, LAB_NORMS, type LabFieldKey } from "../../../utils/labUtils";
 import { ChevronDown, ChevronUp, FlaskConical, Info } from "lucide-react";
 
 interface BloodWorkProps {
-  profile: PatientProfile;
-  labResults: LabResult[];
+  profile: ApiPatientProfile;
+  labResults: ApiLabResult[];
 }
 
 function LabValueRow({ field, value }: { field: LabFieldKey; value: number }) {
   const status = getLabStatus(field, value);
   const norm = LAB_NORMS[field];
   const color = status === "normal" ? { bg: "#D1FAE5", text: "#166534" } : status === "low" ? { bg: "#FEF3C7", text: "#92400E" } : { bg: "#FEE2E2", text: "#991B1B" };
-  const fieldLabels: Record<string, string> = {
-    wbc: "WBC", neutrophils: "Neutrophils", hemoglobin: "Hemoglobin",
-    platelets: "Platelets", alt: "ALT", creatinine: "Creatinine",
-  };
   return (
     <div className="flex items-center justify-between py-2.5 border-b border-[#F5F2EE] last:border-0">
       <div>
@@ -44,7 +39,7 @@ function LabValueRow({ field, value }: { field: LabFieldKey; value: number }) {
 
 export function BloodWork({ profile, labResults }: BloodWorkProps) {
   const [historyExpanded, setHistoryExpanded] = useState(false);
-  const sortedLabs = [...labResults].sort((a, b) => b.date.localeCompare(a.date));
+  const sortedLabs = [...labResults].sort((a, b) => (b.testDate ?? "").localeCompare(a.testDate ?? ""));
   const latest = sortedLabs[0];
 
   return (
@@ -74,8 +69,8 @@ export function BloodWork({ profile, labResults }: BloodWorkProps) {
             <div className="bg-white border border-[#E5E2DC] rounded-2xl overflow-hidden">
               <div className="px-5 py-3 bg-[#F5F2EE] border-b border-[#E5E2DC] flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-[#2C3E2D]">Latest Results — {formatDate(latest.date)}</p>
-                  <p className="text-xs text-[#9CA3AF]">Entered by {latest.enteredBy} · {formatDate(latest.enteredAt)}</p>
+                  <p className="text-sm font-semibold text-[#2C3E2D]">Latest Results — {formatDate(toDateInputValue(latest.testDate))}</p>
+                  <p className="text-xs text-[#9CA3AF]">Entered by {latest.enteredBy?.fullName || "Lab Staff"} · {formatDate(latest.createdAt)}</p>
                 </div>
               </div>
               <div className="px-5 divide-y divide-[#F5F2EE]">
@@ -106,10 +101,10 @@ export function BloodWork({ profile, labResults }: BloodWorkProps) {
                   : <ChevronDown size={14} className="text-[#9CA3AF]" />}
               </button>
               {historyExpanded && sortedLabs.slice(1).map((lab) => (
-                <div key={lab.id} className="px-5 py-3 border-b border-[#F5F2EE] last:border-0">
+                <div key={lab._id} className="px-5 py-3 border-b border-[#F5F2EE] last:border-0">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-medium text-[#2C3E2D]">{formatDate(lab.date)}</p>
-                    <p className="text-xs text-[#9CA3AF]">by {lab.enteredBy}</p>
+                    <p className="text-sm font-medium text-[#2C3E2D]">{formatDate(toDateInputValue(lab.testDate))}</p>
+                    <p className="text-xs text-[#9CA3AF]">by {lab.enteredBy?.fullName || "Lab Staff"}</p>
                   </div>
                   <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
                     {(["wbc","neutrophils","hemoglobin","platelets","alt","creatinine"] as LabFieldKey[]).map((field) => {
@@ -132,4 +127,3 @@ export function BloodWork({ profile, labResults }: BloodWorkProps) {
     </div>
   );
 }
-

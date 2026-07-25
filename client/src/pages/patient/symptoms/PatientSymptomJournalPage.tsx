@@ -1,18 +1,18 @@
 import { useState, useEffect, useRef } from "react";
 import { CheckCircle, Edit2, Trash2, X } from "lucide-react";
-import ErrorMessage from "../../components/common/ErrorMessage";
-import FieldError from "../../components/common/FieldError";
-import { focusFirstField } from "../../hooks/useErrorVisibility";
-import { todayIso } from "../../utils/treatmentDisplay";
+import ErrorMessage from "../../../components/common/ErrorMessage";
+import FieldError from "../../../components/common/FieldError";
+import { focusFirstField } from "../../../hooks/useErrorVisibility";
+import { todayIso } from "../../../utils/treatmentDisplay";
 import {
   getMySymptoms,
   createSymptomLog,
   updateSymptomLog,
   deleteSymptomLog,
-} from "../../services/symptomService";
-import type { SymptomType, SymptomItemPayload } from "../../services/symptomService";
-import type { SymptomLog } from "../../types/api";
-import { intensityColor, intensityLabel } from "../../utils/symptomDisplay";
+} from "../../../services/symptomService";
+import type { SymptomType, SymptomItemPayload } from "../../../services/symptomService";
+import type { SymptomLog } from "../../../types/symptoms";
+import { intensityColor, intensityLabel } from "../../../utils/symptomDisplay";
 
 const SYMPTOMS = [
   { key: "nausea",      label: "Nausea",        emoji: "🤢", type: "nausea"        as SymptomType },

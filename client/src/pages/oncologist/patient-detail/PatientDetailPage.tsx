@@ -19,11 +19,11 @@ import {
   Zap,
 } from "lucide-react";
 import ErrorMessage from "../../../components/common/ErrorMessage";
-import { MessagesPanel } from "../../../components/shared/MessagesPanel";
-import { ClinicalDocumentsPanel } from "../../../components/shared/clinical-documents/ClinicalDocumentsPanel";
-import { SymptomJournalPanel } from "../../../components/shared/SymptomJournalPanel";
+import { MessagesPanel } from "../../../components/communication/MessagesPanel";
+import { ClinicalDocumentsPanel } from "../../../components/communication/ClinicalDocumentsPanel/ClinicalDocumentsPanel";
+import { SymptomJournalPanel } from "../../../components/symptoms/SymptomJournalPanel";
 
-import { RibbonBackground } from "../../../components/shared/RibbonBackground";
+import { RibbonBackground } from "../../../components/common/RibbonBackground";
 import { useErrorVisibility } from "../../../hooks/useErrorVisibility";
 import { shiftDate } from "../../../utils/dateUtils";
 import {
@@ -62,10 +62,9 @@ import {
   type ProtocolPayload,
 } from "../../../services/treatmentService";
 import type { PatientPayload } from "../../../services/patientService";
+import type { ApiLabResult } from "../../../types/labs";
+import type { PatientAllergy, PatientProfile as ApiPatientProfile } from "../../../types/patient";
 import type {
-  ApiLabResult,
-  PatientAllergy,
-  PatientProfile as ApiPatientProfile,
   TreatmentCycleRecord,
   TreatmentCycleStatus,
   TreatmentKind,
@@ -74,7 +73,7 @@ import type {
   TreatmentProtocolRecord,
   TreatmentProtocolResponse,
   TreatmentTypeRecord,
-} from "../../../types/api";
+} from "../../../types/treatment";
 import type {
   ModalName,
   MedicationFormRecord,
@@ -82,26 +81,28 @@ import type {
 } from "./types";
 import {
   buildInitialCycles,
-  getAllergyNames,
   getMedicationPlan,
-  getOncologistName,
+  getPatientMeta,
+  getProtocolMeta,
   makeGeneratedCycle,
   medicationToPayload,
   sortCycles,
   toCyclePayload,
 } from "./helpers";
+import { getAllergyNames, getOncologistName } from "../../../utils/personUtils";
 import { getApiErrorMessage } from "../../../utils/apiError";
-import { PatientMedicalProfileCard } from "./components/cards/PatientMedicalProfileCard";
-import { MedicationPlanCard } from "./components/cards/MedicationPlanCard";
-import { TreatmentProtocolCard } from "./components/cards/TreatmentProtocolCard";
-import { TreatmentRoadmapCard } from "./components/cards/TreatmentRoadmapCard";
-import { LabResultsCard } from "./components/cards/LabResultsCard";
-import { EditProfileModal } from "./components/modals/EditProfileModal";
-import { EditMedicationsModal } from "./components/modals/EditMedicationsModal";
-import { EditProtocolModal } from "./components/modals/EditProtocolModal";
-import { EditTreatmentDatesModal } from "./components/modals/EditTreatmentDatesModal";
-import { PostponeCycleModal } from "./components/modals/PostponeCycleModal";
-import { DeactivatePatientModal } from "./components/modals/DeactivatePatientModal";
+import { PatientMedicalProfileCard } from "../../../components/patient-profile/PatientMedicalProfileCard";
+import { MedicationPlanCard } from "../../../components/patient-profile/MedicationPlanCard";
+import { TreatmentProtocolCard } from "../../../components/patient-profile/TreatmentProtocolCard";
+import { TreatmentRoadmapCard } from "../../../components/treatment/TreatmentRoadmapCard";
+import { LabResultsCard } from "../../../components/labs/LabResultsCard";
+import { PhasePlaceholder } from "../../../components/common/PhasePlaceholder";
+import { EditProfileModal } from "./modals/EditProfileModal";
+import { EditMedicationsModal } from "./modals/EditMedicationsModal";
+import { EditProtocolModal } from "./modals/EditProtocolModal";
+import { EditTreatmentDatesModal } from "./modals/EditTreatmentDatesModal";
+import { PostponeCycleModal } from "./modals/PostponeCycleModal";
+import { DeactivatePatientModal } from "./modals/DeactivatePatientModal";
 
 interface PatientDetailProps {
   patientId: string;
@@ -516,7 +517,6 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
             patientsError={patientsError}
             allergies={allergies}
             onDismissError={() => dispatch(clearPatientsError())}
-            onEditClick={() => setModal("profile")}
           />
         )}
 
@@ -544,22 +544,70 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
               patientsError={patientsError}
               allergies={allergies}
               onDismissError={() => dispatch(clearPatientsError())}
-              onEditClick={() => setModal("profile")}
+              meta={getPatientMeta(profile)}
+              editButton={
+                <button
+                  onClick={() => setModal("profile")}
+                  className="flex items-center gap-1.5 text-xs text-[#7CAE8E] hover:text-[#5A8A6A] font-medium border border-[#7CAE8E]/30 px-2.5 py-1 rounded-lg"
+                >
+                  <Pencil size={12} /> Edit Profile
+                </button>
+              }
             />
 
             <MedicationPlanCard
               protocol={protocol}
-              treatmentLoading={treatmentLoading}
               medicationPlan={medicationPlan}
-              savingTreatment={savingTreatment}
-              onEditClick={() => setModal("medications")}
+              source="Medication list created by oncologist"
+              meta={protocol ? getProtocolMeta(protocol) : undefined}
+              treatmentLoading={treatmentLoading}
+              loadingContent={
+                <PhasePlaceholder icon={<Pill size={16} />}>
+                  Loading medication plan...
+                </PhasePlaceholder>
+              }
+              noProtocolContent={
+                <PhasePlaceholder icon={<Pill size={16} />}>
+                  Create a treatment protocol to manage medications.
+                </PhasePlaceholder>
+              }
+              emptyContent={<p className="text-sm text-[#9CA3AF]">No medications added yet.</p>}
+              editButton={
+                protocol && (
+                  <button
+                    onClick={() => setModal("medications")}
+                    disabled={savingTreatment}
+                    className="flex items-center gap-1.5 text-xs text-[#7CAE8E] hover:text-[#5A8A6A] font-medium border border-[#7CAE8E]/30 px-2.5 py-1 rounded-lg disabled:opacity-60"
+                  >
+                    <Pencil size={12} /> Edit Medications
+                  </button>
+                )
+              }
             />
 
             <TreatmentProtocolCard
               protocol={protocol}
+              meta={protocol ? getProtocolMeta(protocol) : undefined}
               treatmentLoading={treatmentLoading}
-              savingTreatment={savingTreatment}
-              onEditClick={() => setModal("protocol")}
+              loadingContent={
+                <PhasePlaceholder icon={<Stethoscope size={16} />}>
+                  Loading treatment protocol...
+                </PhasePlaceholder>
+              }
+              noProtocolContent={
+                <PhasePlaceholder icon={<Stethoscope size={16} />}>
+                  No treatment protocol has been created yet.
+                </PhasePlaceholder>
+              }
+              editButton={
+                <button
+                  onClick={() => setModal("protocol")}
+                  disabled={savingTreatment}
+                  className="flex items-center gap-1.5 text-xs text-[#7CAE8E] hover:text-[#5A8A6A] font-medium border border-[#7CAE8E]/30 px-2.5 py-1 rounded-lg disabled:opacity-60"
+                >
+                  <Pencil size={12} /> {protocol ? "Edit Protocol" : "Create Protocol"}
+                </button>
+              }
             />
 
             <TreatmentRoadmapCard

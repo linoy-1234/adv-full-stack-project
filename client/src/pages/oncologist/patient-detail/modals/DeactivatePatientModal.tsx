@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
 
-import ErrorMessage from "../../../../../components/common/ErrorMessage";
-import type { PatientProfile as ApiPatientProfile } from "../../../../../types/api";
-import { inputCls, labelCls } from "../../helpers";
+import ErrorMessage from "../../../../components/common/ErrorMessage";
+import type { PatientProfile as ApiPatientProfile } from "../../../../types/patient";
+import { inputCls, labelCls } from "../helpers";
 
 const CONFIRMATION_TEXT = "DEACTIVATE";
 

@@ -1,10 +1,10 @@
 import { ChevronDown, ChevronUp, FlaskConical } from "lucide-react";
 
-import { formatDate } from "../../../../../utils/dateUtils";
-import { getLabStatus, LAB_NORMS, type LabFieldKey } from "../../../../../utils/labUtils";
-import type { ApiLabResult } from "../../../../../types/api";
-import { LabTrendChart } from "../shared/LabTrendChart";
-import { SectionCard } from "../shared/PatientDetailShared";
+import { formatDate } from "../../utils/dateUtils";
+import { fieldLabels, getLabStatus, LAB_NORMS, type LabFieldKey } from "../../utils/labUtils";
+import type { ApiLabResult } from "../../types/labs";
+import { LabTrendChart } from "./LabTrendChart";
+import { SectionCard } from "../common/SectionCard";
 
 interface LabResultsCardProps {
   labsLoading: boolean;
@@ -37,10 +37,6 @@ export function LabResultsCard({
         );
         const latest = sorted[0];
         const older = sorted.slice(1);
-        const fieldLabels: Record<string, string> = {
-          wbc: "WBC", neutrophils: "Neutrophils", hemoglobin: "Hemoglobin",
-          platelets: "Platelets", alt: "ALT", creatinine: "Creatinine",
-        };
         return (
           <div className="space-y-4">
             {/* Latest Results */}

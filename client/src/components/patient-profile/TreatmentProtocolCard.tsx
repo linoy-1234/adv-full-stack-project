@@ -1,51 +1,46 @@
-import { Pencil, Stethoscope } from "lucide-react";
+import type { ReactNode } from "react";
 
-import type { TreatmentProtocolRecord } from "../../../../../types/api";
+import type { TreatmentProtocolRecord } from "../../types/treatment";
 import {
   getProtocolDrugs,
-  getProtocolMeta,
   getTreatmentCount,
   getTreatmentTypes,
   typeLabel,
-} from "../../helpers";
-import { MetaRow, PhasePlaceholder, SectionCard, TypeIcon } from "../shared/PatientDetailShared";
+} from "../../utils/treatmentDisplay";
+import { MetaRow } from "../common/MetaRow";
+import { SectionCard } from "../common/SectionCard";
+import { TypeIcon } from "../common/TypeIcon";
 
 interface TreatmentProtocolCardProps {
   protocol: TreatmentProtocolRecord | null;
-  treatmentLoading: boolean;
-  savingTreatment: boolean;
-  onEditClick: () => void;
+  meta?: string;
+  treatmentLoading?: boolean;
+  // Oncologist-only loading state; the patient portal has no separate
+  // loading phase at this level and goes straight to noProtocolContent.
+  loadingContent?: ReactNode;
+  noProtocolContent: ReactNode;
+  editButton?: ReactNode;
 }
 
 export function TreatmentProtocolCard({
   protocol,
-  treatmentLoading,
-  savingTreatment,
-  onEditClick,
+  meta,
+  treatmentLoading = false,
+  loadingContent,
+  noProtocolContent,
+  editButton,
 }: TreatmentProtocolCardProps) {
   return (
     <SectionCard
       title="Treatment Protocol"
       source="Treatment protocol managed by oncologist"
-      meta={protocol ? getProtocolMeta(protocol) : undefined}
-      editButton={
-        <button
-          onClick={onEditClick}
-          disabled={savingTreatment}
-          className="flex items-center gap-1.5 text-xs text-[#7CAE8E] hover:text-[#5A8A6A] font-medium border border-[#7CAE8E]/30 px-2.5 py-1 rounded-lg disabled:opacity-60"
-        >
-          <Pencil size={12} /> {protocol ? "Edit Protocol" : "Create Protocol"}
-        </button>
-      }
+      meta={meta}
+      editButton={editButton}
     >
-      {treatmentLoading ? (
-        <PhasePlaceholder icon={<Stethoscope size={16} />}>
-          Loading treatment protocol...
-        </PhasePlaceholder>
+      {treatmentLoading && loadingContent ? (
+        loadingContent
       ) : !protocol ? (
-        <PhasePlaceholder icon={<Stethoscope size={16} />}>
-          No treatment protocol has been created yet.
-        </PhasePlaceholder>
+        noProtocolContent
       ) : (
         <div className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
@@ -117,4 +112,3 @@ export function TreatmentProtocolCard({
     </SectionCard>
   );
 }
-

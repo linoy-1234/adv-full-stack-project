@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent } from "react";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
-import { RibbonBackground } from "../../components/shared/RibbonBackground";
-import { GoogleAuthButton } from "../../components/auth/GoogleAuthButton";
+import { RibbonBackground } from "../../components/common/RibbonBackground";
+import { GoogleAuthButton } from "./components/GoogleAuthButton";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import FieldError from "../../components/common/FieldError";
 import { focusFirstField } from "../../hooks/useErrorVisibility";

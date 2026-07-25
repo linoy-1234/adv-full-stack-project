@@ -1,9 +1,9 @@
 import api from "./api";
+import type { ApiMessageResponse } from "../types/common";
 import type {
-  ApiMessageResponse,
   SymptomLogsResponse,
   SymptomLogResponse,
-} from "../types/api";
+} from "../types/symptoms";
 
 export type SymptomType =
   | "nausea"

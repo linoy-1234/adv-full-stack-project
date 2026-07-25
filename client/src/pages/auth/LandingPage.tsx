@@ -1,5 +1,5 @@
 import { LogIn, UserPlus, Calendar, FlaskConical, MessageCircle, BookOpen } from 'lucide-react';
-import { RibbonBackground } from '../../components/shared/RibbonBackground';
+import { RibbonBackground } from '../../components/common/RibbonBackground';
 
 interface LandingPageProps {
   onGoToLogin: () => void;

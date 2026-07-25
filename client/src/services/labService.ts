@@ -1,5 +1,6 @@
 import api from "./api";
-import type { ApiMessageResponse, LabResultsResponse, LabResultResponse } from "../types/api";
+import type { ApiMessageResponse } from "../types/common";
+import type { LabResultsResponse, LabResultResponse } from "../types/labs";
 
 export interface LabResultPayload {
   testDate: string;

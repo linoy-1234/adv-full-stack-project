@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import {
   getLabStatus,
   type LabFieldKey,
-} from "../../utils/labUtils";
-import { formatDate } from "../../utils/dateUtils";
-import { RibbonBackground } from "../../components/shared/RibbonBackground";
-import ErrorMessage from "../../components/common/ErrorMessage";
+} from "../../../utils/labUtils";
+import { formatDate } from "../../../utils/dateUtils";
+import { RibbonBackground } from "../../../components/common/RibbonBackground";
+import ErrorMessage from "../../../components/common/ErrorMessage";
 import { LabEntryForm } from "./LabEntryForm";
 import {
   FlaskConical,
@@ -16,20 +16,18 @@ import {
   Trash2,
   Pencil,
 } from "lucide-react";
-import { useAuth } from "../../context/AuthContext";
-import { getPatients } from "../../services/patientService";
+import { useAuth } from "../../../context/AuthContext";
+import { getPatients } from "../../../services/patientService";
 import {
   getPatientLabs,
   createLabResult,
   updateLabResult,
   deleteLabResult,
   type LabResultPayload,
-} from "../../services/labService";
-import type {
-  PatientProfile,
-  ApiLabResult,
-} from "../../types/api";
-import { getApiErrorMessage } from "../../utils/apiError";
+} from "../../../services/labService";
+import type { PatientProfile } from "../../../types/patient";
+import type { ApiLabResult } from "../../../types/labs";
+import { getApiErrorMessage } from "../../../utils/apiError";
 
 // ─── Pure display helpers (no mock data dependency) ───────────────────────────
 

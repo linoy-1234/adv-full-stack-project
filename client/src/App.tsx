@@ -6,15 +6,15 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
-import { LoadingSpinner } from "./components/shared/LoadingSpinner";
+import { LoadingSpinner } from "./components/common/LoadingSpinner";
 import { useAuth } from "./context/AuthContext";
 import PrivateRoute from "./components/common/PrivateRoute";
 import Unauthorized from "./components/common/Unauthorized";
-import { getUserPatientProfileId } from "./utils/patientPortalAdapters";
+import { getUserPatientProfileId } from "./utils/userUtils";
 import { getApiErrorMessage, getApiStatus } from "./utils/apiError";
 import { useAppDispatch } from "./store/hooks";
 import { resetPatients } from "./store/slices/patientsSlice";
-import type { UserRole } from "./types/api";
+import type { UserRole } from "./types/auth";
 
 const LandingPage = lazy(() =>
   import("./pages/auth/LandingPage").then((m) => ({ default: m.LandingPage }))
@@ -31,17 +31,17 @@ const PatientPortalPage = lazy(() =>
   }))
 );
 const OncologistDashboard = lazy(() =>
-  import("./pages/oncologist/OncologistDashboard").then((m) => ({
+  import("./pages/oncologist/dashboard/OncologistDashboard").then((m) => ({
     default: m.OncologistDashboard,
   }))
 );
 const PatientDetail = lazy(() =>
-  import("./pages/oncologist/patient-detail/PatientDetail").then((m) => ({
+  import("./pages/oncologist/patient-detail/PatientDetailPage").then((m) => ({
     default: m.PatientDetail,
   }))
 );
 const LabStaffDashboard = lazy(() =>
-  import("./pages/labstaff/LabStaffDashboard").then((m) => ({
+  import("./pages/lab-staff/dashboard/LabStaffDashboard").then((m) => ({
     default: m.LabStaffDashboard,
   }))
 );

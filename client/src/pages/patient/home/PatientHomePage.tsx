@@ -1,27 +1,29 @@
 import { useState } from "react";
-import {
-  PatientProfile,
-  TreatmentProtocol,
-  LabResult,
-  ChemoCycle,
-  RadiationCourse,
-  SurgeryCheckpoint,
-  Medication,
-} from "../../types/patientPortalTypes";
-import { formatDate } from "../../utils/dateUtils";
-import { PatientNavPage } from "./PatientPortalPage";
+import type { ApiLabResult } from "../../../types/labs";
+import type { TreatmentCycleRecord, MedicationDisplayRecord } from "../../../types/treatment";
+import { formatDate } from "../../../utils/dateUtils";
+import { PatientNavPage } from "../PatientPortalPage";
 import { Calendar, Pill, MessageCircle, FlaskConical, Clock, CheckSquare, Square, Info } from "lucide-react";
-import { getTodayWeekdayKey, todayIso } from "../../utils/treatmentDisplay";
+import {
+  getChemoDisplayStatus,
+  getEffectiveCycleDates,
+  getRadiationDisplayStatus,
+  getRoadmapItemTitle,
+  getSurgeryDisplayStatus,
+  getTodayWeekdayKey,
+  toDateInputValue,
+  todayIso,
+} from "../../../utils/treatmentDisplay";
 
 interface PatientDashboardProps {
-  profile: PatientProfile;
-  protocol?: TreatmentProtocol;
-  latestLab?: LabResult;
+  cycles: TreatmentCycleRecord[];
+  medicationPlan: MedicationDisplayRecord[];
+  latestLab?: ApiLabResult;
   unreadMessagesCount: number;
   onNavigate: (page: PatientNavPage) => void;
 }
 
-function MedCheckRow({ med }: { med: Medication }) {
+function MedCheckRow({ med }: { med: MedicationDisplayRecord }) {
   const [done, setDone] = useState(false);
   const catColor: Record<string, string> = {
     chemotherapy: "rgba(237,233,254,0.6)",
@@ -62,8 +64,8 @@ function MedCheckRow({ med }: { med: Medication }) {
 }
 
 export function PatientDashboard({
-  profile,
-  protocol,
+  cycles,
+  medicationPlan,
   latestLab,
   unreadMessagesCount,
   onNavigate,
@@ -77,64 +79,60 @@ export function PatientDashboard({
     month: "long",
   });
 
-  const chemoReviewToday = protocol?.items.find((item) => {
-    if (item.type !== "chemotherapy") return false;
-    const cycle = item as ChemoCycle;
-    return cycle.status === "waiting_for_review" && cycle.startDate === todayValue;
-  }) as ChemoCycle | undefined;
+  const chemoCycles = cycles.filter((cycle) => cycle.treatmentType === "chemotherapy");
+  const radiationCycles = cycles.filter((cycle) => cycle.treatmentType === "radiation");
+  const surgeryCycles = cycles.filter((cycle) => cycle.treatmentType === "surgery");
 
-  const activeChemo = protocol?.items.find((item) => {
-    if (item.type !== "chemotherapy") return false;
-    const cycle = item as ChemoCycle;
-    return cycle.status === "active" && cycle.startDate <= todayValue && cycle.endDate >= todayValue;
-  }) as ChemoCycle | undefined;
+  const chemoReviewToday = chemoCycles.find((cycle) => {
+    const { startDate } = getEffectiveCycleDates(cycle);
+    return getChemoDisplayStatus(cycle) === "waiting_for_review" && startDate === todayValue;
+  });
 
-  const radiationToday = protocol?.items.find((item) => {
-    if (item.type !== "radiation") return false;
-    const radiation = item as RadiationCourse;
+  const activeChemo = chemoCycles.find((cycle) => {
+    const { startDate, endDate } = getEffectiveCycleDates(cycle);
+    return getChemoDisplayStatus(cycle) === "active" && startDate <= todayValue && endDate >= todayValue;
+  });
+
+  const radiationToday = radiationCycles.find((cycle) => {
+    const { startDate, endDate } = getEffectiveCycleDates(cycle);
     return (
-      radiation.status === "active" &&
-      radiation.startDate <= todayValue &&
-      radiation.endDate >= todayValue &&
-      (radiation.weekdays || []).includes(todayWeekday)
+      getRadiationDisplayStatus(cycle) === "active" &&
+      startDate <= todayValue &&
+      endDate >= todayValue &&
+      (cycle.weekdays || []).includes(todayWeekday)
     );
-  }) as RadiationCourse | undefined;
+  });
 
-  const surgeryToday = protocol?.items.find((item) => {
-    if (item.type !== "surgery") return false;
-    const surgery = item as SurgeryCheckpoint;
-    return surgery.plannedDate === todayValue && surgery.status !== "completed";
-  }) as SurgeryCheckpoint | undefined;
+  const surgeryToday = surgeryCycles.find((cycle) => {
+    const plannedDate = toDateInputValue(cycle.plannedDate || cycle.startDate);
+    return plannedDate === todayValue && getSurgeryDisplayStatus(cycle) !== "completed";
+  });
 
   const todayItem = chemoReviewToday || activeChemo || radiationToday || surgeryToday;
   const hasActiveChemoToday = Boolean(activeChemo);
-  const todaysMeds = profile.medications.filter((med) => {
+  const todaysMeds = medicationPlan.filter((med) => {
     if (med.asNeeded) return false;
-    if (!(med.weekdays || []).includes(todayWeekday)) return false;
+    if (!med.weekdays.includes(todayWeekday)) return false;
     if (med.category === "chemotherapy") return hasActiveChemoToday;
     return true;
   });
 
   const nextItem =
     !todayItem &&
-    protocol?.items.find((item) => {
-      if (item.type === "chemotherapy") {
-        const status = (item as ChemoCycle).status as string;
-        return ["upcoming", "waiting_for_review", "active"].includes(status);
-      }
-      if (item.type === "radiation") return (item as RadiationCourse).status === "active";
-      if (item.type === "surgery") return (item as SurgeryCheckpoint).status === "upcoming";
-      return false;
-    });
+    (chemoCycles.find((cycle) =>
+      ["upcoming", "waiting_for_review", "active"].includes(getChemoDisplayStatus(cycle))
+    ) ||
+      radiationCycles.find((cycle) => getRadiationDisplayStatus(cycle) === "active") ||
+      surgeryCycles.find((cycle) => getSurgeryDisplayStatus(cycle) === "upcoming"));
 
   const todayTitle = chemoReviewToday
     ? "Expected treatment start today"
     : activeChemo
-    ? `Chemotherapy - ${activeChemo.title}`
+    ? `Chemotherapy - ${getRoadmapItemTitle(activeChemo)}`
     : radiationToday
     ? "Radiation today"
     : surgeryToday
-    ? `Surgery: ${surgeryToday.title}`
+    ? `Surgery: ${getRoadmapItemTitle(surgeryToday)}`
     : "";
 
   const todayDescription = chemoReviewToday
@@ -258,7 +256,7 @@ export function PatientDashboard({
               Blood Work
             </p>
             <p className="text-xs" style={{ color: "#9CA3AF" }}>
-              {latestLab ? `Latest: ${formatDate(latestLab.date)}` : "No results yet"}
+              {latestLab ? `Latest: ${formatDate(toDateInputValue(latestLab.testDate))}` : "No results yet"}
             </p>
           </div>
         </button>
@@ -299,4 +297,3 @@ export function PatientDashboard({
     </div>
   );
 }
-

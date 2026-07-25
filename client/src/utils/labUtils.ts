@@ -9,6 +9,15 @@ export const LAB_NORMS = {
 
 export type LabFieldKey = keyof typeof LAB_NORMS;
 
+export const fieldLabels: Record<LabFieldKey, string> = {
+  wbc: "WBC",
+  neutrophils: "Neutrophils",
+  hemoglobin: "Hemoglobin",
+  platelets: "Platelets",
+  alt: "ALT",
+  creatinine: "Creatinine",
+};
+
 export function getLabStatus(
   field: LabFieldKey,
   value: number

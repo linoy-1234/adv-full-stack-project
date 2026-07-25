@@ -1,19 +1,19 @@
 import { useRef, useState } from "react";
 import { Pencil, X, ChevronDown } from "lucide-react";
-import { updateDocumentMetadata } from "../../../../../services/documentService";
-import ErrorMessage from "../../../../common/ErrorMessage";
+import { updateDocumentMetadata } from "../../../services/documentService";
+import ErrorMessage from "../../common/ErrorMessage";
 import FieldError, {
   invalidFieldClass,
-} from "../../../../common/FieldError";
-import { focusFirstField } from "../../../../../hooks/useErrorVisibility";
-import type { ClinicalDocumentRecord } from "../../../../../types/api";
+} from "../../common/FieldError";
+import { focusFirstField } from "../../../hooks/useErrorVisibility";
+import type { ClinicalDocumentRecord } from "../../../types/documents";
 import {
   DOCUMENT_TYPE_VALUES,
   DOCUMENT_TYPE_LABELS,
   type DocumentType,
-} from "../../../../../constants/documentTypes";
-import { getApiErrorMessage } from "../../../../../utils/apiError";
-import { inputCls, labelCls } from "../../helpers";
+} from "../../../constants/documentTypes";
+import { getApiErrorMessage } from "../../../utils/apiError";
+import { inputCls, labelCls } from "./helpers";
 
 interface EditModalProps {
   doc: ClinicalDocumentRecord;

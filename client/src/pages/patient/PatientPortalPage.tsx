@@ -1,45 +1,42 @@
 import { lazy, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  PatientProfile,
-  TreatmentProtocol,
-  LabResult,
-} from "../../types/patientPortalTypes";
-import { LoadingSpinner } from "../../components/shared/LoadingSpinner";
+import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { useAuth } from "../../context/AuthContext";
 import { getMyLabs } from "../../services/labService";
 import { getPatientById } from "../../services/patientService";
 import { getMyProtocol } from "../../services/treatmentService";
 import { getMyUnreadCount } from "../../services/messageService";
-import {
-  adaptLabResult,
-  adaptPatientProfile,
-  adaptTreatmentProtocol,
-  getUserPatientProfileId,
-} from "../../utils/patientPortalAdapters";
+import { getUserPatientProfileId } from "../../utils/userUtils";
+import { getMedicationPlan } from "../../utils/medicationPlan";
 import { getApiErrorMessage, getApiStatus } from "../../utils/apiError";
-import type { TreatmentProtocolResponse } from "../../types/api";
+import type {
+  TreatmentCycleRecord,
+  TreatmentProtocolRecord,
+  TreatmentProtocolResponse,
+} from "../../types/treatment";
+import type { PatientProfile as ApiPatientProfile } from "../../types/patient";
+import type { ApiLabResult } from "../../types/labs";
 
 const PatientLayout = lazy(() =>
   import("./PatientLayout").then((m) => ({ default: m.PatientLayout }))
 );
 const PatientDashboard = lazy(() =>
-  import("./PatientDashboard").then((m) => ({ default: m.PatientDashboard }))
+  import("./home/PatientHomePage").then((m) => ({ default: m.PatientDashboard }))
 );
 const TreatmentCycles = lazy(() =>
-  import("./TreatmentCycles").then((m) => ({ default: m.TreatmentCycles }))
+  import("./treatment-roadmap/PatientTreatmentRoadmapPage").then((m) => ({ default: m.TreatmentCycles }))
 );
 const BloodWork = lazy(() =>
-  import("./BloodWork").then((m) => ({ default: m.BloodWork }))
+  import("./blood-work/PatientBloodWorkPage").then((m) => ({ default: m.BloodWork }))
 );
 const SymptomJournal = lazy(() =>
-  import("./SymptomJournal").then((m) => ({ default: m.SymptomJournal }))
+  import("./symptoms/PatientSymptomJournalPage").then((m) => ({ default: m.SymptomJournal }))
 );
 const PatientMessages = lazy(() =>
-  import("./PatientMessages").then((m) => ({ default: m.PatientMessages }))
+  import("./messages/PatientMessagesPage").then((m) => ({ default: m.PatientMessages }))
 );
 const PatientProfilePage = lazy(() =>
-  import("./PatientProfile").then((m) => ({ default: m.PatientProfile }))
+  import("./profile/PatientProfilePage").then((m) => ({ default: m.PatientProfile }))
 );
 
 export type PatientNavPage =
@@ -73,21 +70,20 @@ export function PatientPortalPage({
   const activeProfileId =
     user?.role === "patient" ? getUserPatientProfileId(user) : null;
 
-  const [patientPortalProfile, setPatientPortalProfile] =
-    useState<PatientProfile | null>(null);
-  const [patientPortalProtocol, setPatientPortalProtocol] = useState<
-    TreatmentProtocol | undefined
-  >(undefined);
-  const [patientPortalLabs, setPatientPortalLabs] = useState<LabResult[]>([]);
+  const [profile, setProfile] = useState<ApiPatientProfile | null>(null);
+  const [protocol, setProtocol] = useState<TreatmentProtocolRecord | null>(null);
+  const [cycles, setCycles] = useState<TreatmentCycleRecord[]>([]);
+  const [labs, setLabs] = useState<ApiLabResult[]>([]);
   const [patientPortalLoading, setPatientPortalLoading] = useState(false);
   const [patientPortalError, setPatientPortalError] = useState("");
   const [patientUnreadCount, setPatientUnreadCount] = useState(0);
 
   useEffect(() => {
     if (!activeProfileId) {
-      setPatientPortalProfile(null);
-      setPatientPortalProtocol(undefined);
-      setPatientPortalLabs([]);
+      setProfile(null);
+      setProtocol(null);
+      setCycles([]);
+      setLabs([]);
       setPatientPortalError("");
       setPatientPortalLoading(false);
       setPatientUnreadCount(0);
@@ -124,31 +120,16 @@ export function PatientPortalPage({
         if (cancelled) return;
 
         setPatientUnreadCount(unreadResponse.count ?? 0);
-
-        const apiLabs = labsResponse.labResults || [];
-        const apiProtocol = protocolResponse.protocol || null;
-        const adaptedLabs = apiLabs
-          .map(adaptLabResult)
-          .sort((a, b) => b.date.localeCompare(a.date));
-
-        setPatientPortalLabs(adaptedLabs);
-        setPatientPortalProtocol(
-          apiProtocol
-            ? adaptTreatmentProtocol(
-                apiProtocol,
-                protocolResponse.cycles || [],
-                apiLabs
-              )
-            : undefined
-        );
-        setPatientPortalProfile(
-          adaptPatientProfile(profileResponse.patient, apiProtocol)
-        );
+        setProfile(profileResponse.patient);
+        setProtocol(protocolResponse.protocol || null);
+        setCycles(protocolResponse.cycles || []);
+        setLabs(labsResponse.labResults || []);
       } catch (error) {
         if (cancelled) return;
-        setPatientPortalProfile(null);
-        setPatientPortalProtocol(undefined);
-        setPatientPortalLabs([]);
+        setProfile(null);
+        setProtocol(null);
+        setCycles([]);
+        setLabs([]);
         setPatientPortalError(
           getApiErrorMessage(error, "Failed to load patient portal data.")
         );
@@ -172,7 +153,7 @@ export function PatientPortalPage({
     );
   }
 
-  if (patientPortalLoading || !patientPortalProfile) {
+  if (patientPortalLoading || !profile) {
     return (
       <LoadingSpinner
         message={patientPortalError || "Loading patient portal..."}
@@ -180,9 +161,8 @@ export function PatientPortalPage({
     );
   }
 
-  const profile = patientPortalProfile;
-  const protocol = patientPortalProtocol;
-  const patientLabs = patientPortalLabs;
+  const medicationPlan = getMedicationPlan(protocol);
+  const latestLab = [...labs].sort((a, b) => (b.testDate ?? "").localeCompare(a.testDate ?? ""))[0];
 
   const handlePatientNavigation = (navPage: PatientNavPage) => {
     navigate(PATIENT_PATHS[navPage]);
@@ -191,7 +171,7 @@ export function PatientPortalPage({
   return (
     <PatientLayout
       patientName={profile.fullName}
-      patientId={profile.id}
+      patientId={profile._id}
       currentPage={page}
       onNavigate={handlePatientNavigation}
       onLogout={onLogout}
@@ -204,18 +184,18 @@ export function PatientPortalPage({
     >
       {page === "patient-dashboard" && (
         <PatientDashboard
-          profile={profile}
-          protocol={protocol}
-          latestLab={patientLabs[0]}
+          cycles={cycles}
+          medicationPlan={medicationPlan}
+          latestLab={latestLab}
           unreadMessagesCount={patientUnreadCount}
           onNavigate={handlePatientNavigation}
         />
       )}
       {page === "patient-cycles" && (
-        <TreatmentCycles profile={profile} protocol={protocol} />
+        <TreatmentCycles profile={profile} protocol={protocol} cycles={cycles} />
       )}
       {page === "patient-bloodwork" && (
-        <BloodWork profile={profile} labResults={patientLabs} />
+        <BloodWork profile={profile} labResults={labs} />
       )}
       {page === "patient-journal" && <SymptomJournal />}
       {page === "patient-messages" && (

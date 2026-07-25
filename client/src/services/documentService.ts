@@ -3,8 +3,8 @@ import type {
   DocumentsResponse,
   DocumentResponse,
   DocumentUrlResponse,
-  ApiMessageResponse,
-} from "../types/api";
+} from "../types/documents";
+import type { ApiMessageResponse } from "../types/common";
 
 export const getPatientDocuments = async (
   patientId: string,

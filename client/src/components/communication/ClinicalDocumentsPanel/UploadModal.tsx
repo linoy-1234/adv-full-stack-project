@@ -1,18 +1,18 @@
 import { useState, useRef } from "react";
 import { Upload, X, ChevronDown } from "lucide-react";
-import { uploadDocument } from "../../../../../services/documentService";
-import ErrorMessage from "../../../../common/ErrorMessage";
+import { uploadDocument } from "../../../services/documentService";
+import ErrorMessage from "../../common/ErrorMessage";
 import FieldError, {
   invalidFieldClass,
-} from "../../../../common/FieldError";
-import { focusFirstField } from "../../../../../hooks/useErrorVisibility";
+} from "../../common/FieldError";
+import { focusFirstField } from "../../../hooks/useErrorVisibility";
 import {
   DOCUMENT_TYPE_VALUES,
   DOCUMENT_TYPE_LABELS,
   type DocumentType,
-} from "../../../../../constants/documentTypes";
-import { getApiErrorMessage } from "../../../../../utils/apiError";
-import { formatBytes, inputCls, labelCls } from "../../helpers";
+} from "../../../constants/documentTypes";
+import { getApiErrorMessage } from "../../../utils/apiError";
+import { formatBytes, inputCls, labelCls } from "./helpers";
 
 interface UploadModalProps {
   patientId: string;

@@ -1,11 +1,11 @@
 import api from "./api";
+import type { ApiMessageResponse } from "../types/common";
 import type {
-  ApiMessageResponse,
   MessageRecordResponse,
   MessagesResponse,
   UnreadCountResponse,
   UnreadCountsResponse,
-} from "../types/api";
+} from "../types/messages";
 
 export const getPatientMessages = async (
   patientId: string

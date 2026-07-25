@@ -1,4 +1,49 @@
-import type { TreatmentCycleRecord } from "../types/api";
+import type {
+  TreatmentCycleRecord,
+  TreatmentKind,
+  TreatmentMedicationCategory,
+  TreatmentProtocolRecord,
+} from "../types/treatment";
+
+export const categoryColor: Record<TreatmentMedicationCategory, string> = {
+  chemotherapy: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  supportive: "bg-blue-50 text-blue-700 border-blue-200",
+  chronic: "bg-amber-50 text-amber-700 border-amber-200",
+  other: "bg-slate-50 text-slate-700 border-slate-200",
+};
+
+export const categoryLabel: Record<TreatmentMedicationCategory, string> = {
+  chemotherapy: "Chemotherapy",
+  supportive: "Supportive",
+  chronic: "Chronic / Background",
+  other: "Other",
+};
+
+export const typeLabel: Record<TreatmentKind, string> = {
+  chemotherapy: "Chemotherapy",
+  radiation: "Radiation",
+  surgery: "Surgery",
+  supportive: "Supportive",
+};
+
+export const getTreatmentCount = (
+  protocol: TreatmentProtocolRecord | null,
+  type: TreatmentKind
+) =>
+  protocol?.treatmentTypes.find((entry) => entry.type === type)?.plannedCount ?? 0;
+
+export const getTreatmentTypes = (protocol: TreatmentProtocolRecord | null) =>
+  protocol?.treatmentTypes.map((entry) => entry.type) ?? [];
+
+export const getProtocolDrugs = (protocol: TreatmentProtocolRecord | null) => {
+  if (!protocol) return [];
+  if (protocol.drugs?.length) return protocol.drugs;
+
+  return protocol.medications
+    .filter((medication) => medication.category === "chemotherapy")
+    .map((medication) => medication.name)
+    .filter(Boolean);
+};
 
 export type ChemoDisplayStatus =
   | "upcoming"
@@ -13,6 +58,16 @@ export const toDateInputValue = (date?: string | null) =>
 
 export const weekdayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 export type WeekdayKey = (typeof weekdayKeys)[number];
+
+export const weekdayLabels: Record<WeekdayKey, string> = {
+  sun: "Sun",
+  mon: "Mon",
+  tue: "Tue",
+  wed: "Wed",
+  thu: "Thu",
+  fri: "Fri",
+  sat: "Sat",
+};
 
 export const getTodayWeekdayKey = (): WeekdayKey =>
   weekdayKeys[new Date(todayIso()).getDay()];

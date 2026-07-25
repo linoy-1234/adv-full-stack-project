@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import type { UserRole } from "../../types/api";
-import { LoadingSpinner } from "../shared/LoadingSpinner";
+import type { UserRole } from "../../types/auth";
+import { LoadingSpinner } from "./LoadingSpinner";
 
 interface PrivateRouteProps {
   children: React.ReactNode;

@@ -1,20 +1,9 @@
-import type { TreatmentMedicationRecord, TreatmentProtocolRecord } from "../types/api";
-import { normalizeWeekdays, type WeekdayKey } from "./treatmentDisplay";
-
-export type MedicationCategory = "chemotherapy" | "supportive" | "chronic" | "other";
-
-export interface CanonicalMedication {
-  id: string;
-  name: string;
-  dose: string;
-  route: string;
-  frequency: string;
-  timing: string;
-  weekdays: WeekdayKey[];
-  asNeeded: boolean;
-  category: MedicationCategory;
-  notes: string;
-}
+import type {
+  MedicationDisplayRecord,
+  TreatmentMedicationRecord,
+  TreatmentProtocolRecord,
+} from "../types/treatment";
+import { normalizeWeekdays } from "./treatmentDisplay";
 
 // Canonical medication normalization shared by the oncologist and patient
 // views. Category is preserved as-is (defaulting only a missing value to
@@ -24,7 +13,7 @@ export interface CanonicalMedication {
 // "IV" or "oral", since the schema imposes no such default.
 export const normalizeMedication = (
   medication: TreatmentMedicationRecord
-): CanonicalMedication => ({
+): MedicationDisplayRecord => ({
   id: medication.id || medication._id || `med-${medication.name}`,
   name: medication.name || "",
   dose: medication.dose || "",
@@ -45,7 +34,7 @@ export const normalizeMedication = (
 // chemotherapy drug list.
 export const getMedicationPlan = (
   protocol?: TreatmentProtocolRecord | null
-): CanonicalMedication[] => {
+): MedicationDisplayRecord[] => {
   if (!protocol) return [];
 
   const medications = (protocol.medications || []).map(normalizeMedication);
