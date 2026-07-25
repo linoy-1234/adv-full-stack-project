@@ -29,6 +29,7 @@ import type {
   PatientProfile,
   ApiLabResult,
 } from "../../types/api";
+import { getApiErrorMessage } from "../../utils/apiError";
 
 // ─── Pure display helpers (no mock data dependency) ───────────────────────────
 
@@ -56,16 +57,6 @@ function labDate(lab: ApiLabResult): string {
 function labEnteredBy(lab: ApiLabResult): string {
   return lab.enteredBy?.fullName ?? "Unknown";
 }
-
-const getApiErrorMessage = (error: unknown, fallback: string): string => {
-  if (typeof error === "object" && error !== null && "response" in error) {
-    const axiosError = error as { response?: { data?: { message?: string } } };
-    return axiosError.response?.data?.message || fallback;
-  }
-
-  if (error instanceof Error) return error.message;
-  return fallback;
-};
 
 // ─── Lab Entry Form ───────────────────────────────────────────────────────────
 

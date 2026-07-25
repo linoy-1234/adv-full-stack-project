@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { LogOut, Home, BookOpen, Calendar, MessageCircle, UserCircle, Menu, X, ArrowLeft, FlaskConical } from "lucide-react";
-import { PatientNavPage } from "../../App";
+import { PatientNavPage } from "./PatientPortalPage";
 import { RibbonBackground } from "../../components/shared/RibbonBackground";
 
 interface NavItem {

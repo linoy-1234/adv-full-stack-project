@@ -9,6 +9,7 @@ import {
 } from "../../services/symptomService";
 import type { SymptomType, SymptomItemPayload } from "../../services/symptomService";
 import type { SymptomLog } from "../../types/api";
+import { intensityColor, intensityLabel } from "../../utils/symptomDisplay";
 
 const SYMPTOMS = [
   { key: "nausea",      label: "Nausea",        emoji: "🤢", type: "nausea"        as SymptomType },
@@ -33,20 +34,6 @@ const TYPE_TO_KEY: Partial<Record<string, SymptomKey>> = {
 
 const DEFAULT_INTENSITIES: Record<SymptomKey, number> = {
   nausea: 5, fatigue: 5, pain: 5, vomiting: 5, appetiteLoss: 5, mouthSores: 5,
-};
-
-const intensityLabel = (v: number) => {
-  if (v <= 2) return "Mild";
-  if (v <= 5) return "Moderate";
-  if (v <= 8) return "Severe";
-  return "Very Severe";
-};
-
-const intensityColor = (v: number) => {
-  if (v <= 2) return "#166534";
-  if (v <= 5) return "#92400E";
-  if (v <= 8) return "#C2410C";
-  return "#991B1B";
 };
 
 function formatLogDate(isoString: string) {

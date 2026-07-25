@@ -8,41 +8,13 @@ const {
   syncDerivedTreatmentStatus,
 } = require("../utils/treatmentStatus");
 const isValidId = require("../utils/isValidId");
+const {
+  authorizePatientIncludingLabStaff: getAuthorizedPatient,
+} = require("../utils/authorizePatient");
 
 const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const CHEMO_OVERLAP_MESSAGE =
   "This chemotherapy cycle overlaps with another chemotherapy cycle. Please choose different dates.";
-
-const getAuthorizedPatient = async (req, patientId) => {
-  if (!isValidId(patientId)) {
-    return null;
-  }
-
-  if (req.user.role === "oncologist") {
-    return PatientProfile.findOne({
-      _id: patientId,
-      oncologist: req.user._id,
-      isActive: true,
-    });
-  }
-
-  if (req.user.role === "patient") {
-    return PatientProfile.findOne({
-      _id: patientId,
-      user: req.user._id,
-      isActive: true,
-    });
-  }
-
-  if (req.user.role === "lab_staff") {
-    return PatientProfile.findOne({
-      _id: patientId,
-      isActive: true,
-    });
-  }
-
-  return null;
-};
 
 const getAuthorizedProtocol = async (req, protocolId) => {
   if (!isValidId(protocolId)) {

@@ -6,6 +6,7 @@ import {
   focusFirstField,
   useErrorVisibility,
 } from "../../hooks/useErrorVisibility";
+import { getApiErrorMessage } from "../../utils/apiError";
 
 interface LoginPageProps {
   // Returns null on success, error string on failure
@@ -36,14 +37,6 @@ export function LoginPage({
   const passwordRef = useRef<HTMLInputElement | null>(null);
   const errorRef = useErrorVisibility<HTMLParagraphElement>(error);
 
-  const getErrorMessage = (error: unknown): string => {
-    if (error instanceof Error) {
-      return error.message;
-    }
-
-    return "Login failed. Please try again.";
-  };
-
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -72,7 +65,7 @@ export function LoginPage({
         setError(err);
       }
     } catch (error) {
-      setError(getErrorMessage(error));
+      setError(getApiErrorMessage(error, "Login failed. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -89,7 +82,7 @@ export function LoginPage({
         setError(err);
       }
     } catch (error) {
-      setError(getErrorMessage(error));
+      setError(getApiErrorMessage(error, "Login failed. Please try again."));
     } finally {
       setLoading(false);
     }

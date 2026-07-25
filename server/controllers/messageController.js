@@ -1,30 +1,11 @@
 const PatientProfile = require("../models/PatientProfile");
 const Message = require("../models/Message");
 const isValidId = require("../utils/isValidId");
+const {
+  authorizePatientOwnerOnly: getAuthorizedPatient,
+} = require("../utils/authorizePatient");
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
-
-const getAuthorizedPatient = async (req, patientId) => {
-  if (!isValidId(patientId)) return null;
-
-  if (req.user.role === "oncologist") {
-    return PatientProfile.findOne({
-      _id: patientId,
-      oncologist: req.user._id,
-      isActive: true,
-    });
-  }
-
-  if (req.user.role === "patient") {
-    return PatientProfile.findOne({
-      _id: patientId,
-      user: req.user._id,
-      isActive: true,
-    });
-  }
-
-  return null;
-};
 
 const getAuthorizedMessage = async (req, messageId) => {
   if (!isValidId(messageId)) return null;

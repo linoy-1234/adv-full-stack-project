@@ -10,6 +10,7 @@ import {
 } from "../../services/patientService";
 
 import type { PatientProfile } from "../../types/api";
+import { getApiErrorMessage } from "../../utils/apiError";
 
 interface PatientsState {
   list: PatientProfile[];
@@ -17,30 +18,6 @@ interface PatientsState {
   loading: boolean;
   error: string | null;
 }
-
-const getErrorMessage = (error: unknown, fallback: string): string => {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "response" in error
-  ) {
-    const axiosError = error as {
-      response?: {
-        data?: {
-          message?: string;
-        };
-      };
-    };
-
-    return axiosError.response?.data?.message || fallback;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return fallback;
-};
 
 export const fetchPatients = createAsyncThunk<
   PatientProfile[],
@@ -52,7 +29,7 @@ export const fetchPatients = createAsyncThunk<
     return data.patients || [];
   } catch (error) {
     return rejectWithValue(
-      getErrorMessage(error, "Failed to load patients")
+      getApiErrorMessage(error, "Failed to load patients")
     );
   }
 });
@@ -67,7 +44,7 @@ export const fetchPatientById = createAsyncThunk<
     return data.patient;
   } catch (error) {
     return rejectWithValue(
-      getErrorMessage(error, "Failed to load patient")
+      getApiErrorMessage(error, "Failed to load patient")
     );
   }
 });
@@ -82,7 +59,7 @@ export const addPatient = createAsyncThunk<
     return data.patient;
   } catch (error) {
     return rejectWithValue(
-      getErrorMessage(error, "Failed to create patient")
+      getApiErrorMessage(error, "Failed to create patient")
     );
   }
 });
@@ -99,7 +76,7 @@ export const editPatient = createAsyncThunk<
       return data.patient;
     } catch (error) {
       return rejectWithValue(
-        getErrorMessage(error, "Failed to update patient")
+        getApiErrorMessage(error, "Failed to update patient")
       );
     }
   }
@@ -115,7 +92,7 @@ export const removePatient = createAsyncThunk<
     return patientId;
   } catch (error) {
     return rejectWithValue(
-      getErrorMessage(error, "Failed to delete patient")
+      getApiErrorMessage(error, "Failed to delete patient")
     );
   }
 });

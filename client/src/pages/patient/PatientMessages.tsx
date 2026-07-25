@@ -1,5 +1,5 @@
 import { MessagesPanel } from "../../components/shared/MessagesPanel";
-import { ClinicalDocumentsPanel } from "../../components/shared/ClinicalDocumentsPanel";
+import { ClinicalDocumentsPanel } from "../../components/shared/clinical-documents/ClinicalDocumentsPanel";
 
 interface PatientMessagesProps {
   patientId: string;

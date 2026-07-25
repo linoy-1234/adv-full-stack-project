@@ -9,7 +9,7 @@ import {
   Medication,
 } from "../../types/patientPortalTypes";
 import { formatDate } from "../../utils/dateUtils";
-import { PatientNavPage } from "../../App";
+import { PatientNavPage } from "./PatientPortalPage";
 import { Calendar, Pill, MessageCircle, FlaskConical, Clock, CheckSquare, Square, Info } from "lucide-react";
 import { getTodayWeekdayKey, todayIso } from "../../utils/treatmentDisplay";
 

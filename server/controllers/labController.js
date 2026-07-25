@@ -1,37 +1,9 @@
 const PatientProfile = require("../models/PatientProfile");
 const LabResult = require("../models/LabResult");
 const isValidId = require("../utils/isValidId");
-
-const getAuthorizedPatient = async (req, patientId) => {
-  if (!isValidId(patientId)) {
-    return null;
-  }
-
-  if (req.user.role === "lab_staff") {
-    return PatientProfile.findOne({
-      _id: patientId,
-      isActive: true,
-    });
-  }
-
-  if (req.user.role === "oncologist") {
-    return PatientProfile.findOne({
-      _id: patientId,
-      oncologist: req.user._id,
-      isActive: true,
-    });
-  }
-
-  if (req.user.role === "patient") {
-    return PatientProfile.findOne({
-      _id: patientId,
-      user: req.user._id,
-      isActive: true,
-    });
-  }
-
-  return null;
-};
+const {
+  authorizePatientIncludingLabStaff: getAuthorizedPatient,
+} = require("../utils/authorizePatient");
 
 const getAuthorizedLabResult = async (req, labResultId) => {
   if (!isValidId(labResultId)) {

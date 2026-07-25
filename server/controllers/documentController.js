@@ -1,29 +1,9 @@
 const cloudinary = require("../config/cloudinary");
 const ClinicalDocument = require("../models/ClinicalDocument");
-const PatientProfile = require("../models/PatientProfile");
 const isValidId = require("../utils/isValidId");
-
-const getAuthorizedPatient = async (req, patientId) => {
-  if (!isValidId(patientId)) return null;
-
-  if (req.user.role === "oncologist") {
-    return PatientProfile.findOne({
-      _id: patientId,
-      oncologist: req.user._id,
-      isActive: true,
-    });
-  }
-
-  if (req.user.role === "patient") {
-    return PatientProfile.findOne({
-      _id: patientId,
-      user: req.user._id,
-      isActive: true,
-    });
-  }
-
-  return null;
-};
+const {
+  authorizePatientOwnerOnly: getAuthorizedPatient,
+} = require("../utils/authorizePatient");
 
 const uploadToCloudinary = (buffer, options) =>
   new Promise((resolve, reject) => {

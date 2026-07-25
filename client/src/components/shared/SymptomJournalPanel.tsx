@@ -3,6 +3,7 @@ import { Activity, Info } from "lucide-react";
 import { getPatientSymptoms } from "../../services/symptomService";
 import ErrorMessage from "../common/ErrorMessage";
 import type { SymptomLog, SymptomItem } from "../../types/api";
+import { intensityColor, intensityLabel } from "../../utils/symptomDisplay";
 
 interface SymptomJournalPanelProps {
   patientId: string;
@@ -16,20 +17,6 @@ const SYMPTOM_META: Record<string, { label: string; emoji: string }> = {
   appetite_loss: { label: "Appetite Loss",emoji: "🍽️" },
   mouth_sores:   { label: "Mouth Sores",  emoji: "👄" },
   other:         { label: "Other",        emoji: "✏️" },
-};
-
-const intensityColor = (v: number) => {
-  if (v <= 2) return "#166534";
-  if (v <= 5) return "#92400E";
-  if (v <= 8) return "#C2410C";
-  return "#991B1B";
-};
-
-const intensityLabel = (v: number) => {
-  if (v <= 2) return "Mild";
-  if (v <= 5) return "Moderate";
-  if (v <= 8) return "Severe";
-  return "Very Severe";
 };
 
 function formatLogDate(isoString: string) {

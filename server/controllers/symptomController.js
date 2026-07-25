@@ -1,36 +1,15 @@
 const PatientProfile = require("../models/PatientProfile");
 const SymptomLog = require("../models/SymptomLog");
 const isValidId = require("../utils/isValidId");
+const {
+  authorizePatientOwnerOnly: getAuthorizedPatient,
+} = require("../utils/authorizePatient");
 
 const getPatientProfileForCurrentUser = async (req) => {
   return PatientProfile.findOne({
     user: req.user._id,
     isActive: true,
   });
-};
-
-const getAuthorizedPatient = async (req, patientId) => {
-  if (!isValidId(patientId)) {
-    return null;
-  }
-
-  if (req.user.role === "oncologist") {
-    return PatientProfile.findOne({
-      _id: patientId,
-      oncologist: req.user._id,
-      isActive: true,
-    });
-  }
-
-  if (req.user.role === "patient") {
-    return PatientProfile.findOne({
-      _id: patientId,
-      user: req.user._id,
-      isActive: true,
-    });
-  }
-
-  return null;
 };
 
 const getAuthorizedSymptomLog = async (req, symptomLogId) => {

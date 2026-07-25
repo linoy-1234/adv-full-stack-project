@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import ErrorMessage from "../../../components/common/ErrorMessage";
 import { MessagesPanel } from "../../../components/shared/MessagesPanel";
-import { ClinicalDocumentsPanel } from "../../../components/shared/ClinicalDocumentsPanel";
+import { ClinicalDocumentsPanel } from "../../../components/shared/clinical-documents/ClinicalDocumentsPanel";
 import { SymptomJournalPanel } from "../../../components/shared/SymptomJournalPanel";
 
 import { RibbonBackground } from "../../../components/shared/RibbonBackground";
@@ -83,7 +83,6 @@ import type {
 import {
   buildInitialCycles,
   getAllergyNames,
-  getApiErrorMessage,
   getMedicationPlan,
   getOncologistName,
   makeGeneratedCycle,
@@ -91,6 +90,7 @@ import {
   sortCycles,
   toCyclePayload,
 } from "./helpers";
+import { getApiErrorMessage } from "../../../utils/apiError";
 import { PatientMedicalProfileCard } from "./components/cards/PatientMedicalProfileCard";
 import { MedicationPlanCard } from "./components/cards/MedicationPlanCard";
 import { TreatmentProtocolCard } from "./components/cards/TreatmentProtocolCard";
