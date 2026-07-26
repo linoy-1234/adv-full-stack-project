@@ -176,11 +176,6 @@ export function RegisterPage({ onRegister, onBack, onBackToHome }: RegisterPageP
           </button>
         </form>
 
-        <div className="mt-5 p-4 rounded-2xl text-xs space-y-1.5" style={{ backgroundColor: '#F0FAF4', border: '1.5px solid #A7F3D0' }}>
-          <p className="font-semibold text-[#2D4739] mb-2">Demo — pre-registered patients</p>
-          <p style={{ color: '#4B7A5E' }}>🌸 <strong>sarah.cohen@email.com</strong> (account already active)</p>
-          <p style={{ color: '#4B7A5E' }}>🌿 <strong>miriam.levi@email.com</strong> — profile exists, not yet registered</p>
-        </div>
       </div>
     </div>
   );
