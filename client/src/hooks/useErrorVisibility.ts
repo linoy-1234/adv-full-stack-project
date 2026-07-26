@@ -1,6 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react";
 
-type FocusableField = HTMLElement;
+type FocusableField = HTMLElement & { disabled?: boolean };
 
 export function useErrorVisibility<T extends HTMLElement = HTMLElement>(error: string) {
   const errorRef = useRef<T | null>(null);

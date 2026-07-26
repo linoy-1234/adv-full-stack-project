@@ -60,6 +60,8 @@ export function UploadModal({ patientId, onClose, onSuccess }: UploadModalProps)
       return;
     }
 
+    if (!file) return;
+
     setUploading(true);
     setError("");
     setFieldErrors({});

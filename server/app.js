@@ -2,7 +2,6 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
-const path = require("path");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 
@@ -56,8 +55,6 @@ const authLimiter = rateLimit({
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 app.use("/api/auth/google", authLimiter);
-
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);

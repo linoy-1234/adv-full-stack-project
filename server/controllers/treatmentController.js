@@ -719,6 +719,13 @@ const approveCycle = async (req, res, next) => {
   try {
     const { cycleId } = req.params;
 
+    if (!isValidId(cycleId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid cycle id",
+      });
+    }
+
     const cycle = await TreatmentCycle.findOne({
       _id: cycleId,
       isActive: true,
@@ -772,6 +779,13 @@ const approveCycle = async (req, res, next) => {
 const delayCycle = async (req, res, next) => {
   try {
     const { cycleId } = req.params;
+
+    if (!isValidId(cycleId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid cycle id",
+      });
+    }
 
     const cycle = await TreatmentCycle.findOne({
       _id: cycleId,

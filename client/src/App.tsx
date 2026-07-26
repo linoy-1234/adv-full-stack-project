@@ -65,7 +65,7 @@ function OncologistPatientDetail() {
   const { patientId } = useParams<{ patientId: string }>();
 
   if (!patientId) {
-    return <NotFound onGoHome={() => navigate("/")} />;
+    return <NotFound onGoHome={() => navigate("/oncologist/dashboard")} />;
   }
 
   return (
@@ -321,7 +321,16 @@ export default function App() {
             />
           }
         />
-        <Route path="*" element={<NotFound onGoHome={() => navigate("/")} />} />
+        <Route
+          path="*"
+          element={
+            <NotFound
+              onGoHome={() =>
+                navigate(user ? getRoleDashboardPath(user.role) : "/")
+              }
+            />
+          }
+        />
       </Routes>
     </Suspense>
   );

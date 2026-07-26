@@ -6,6 +6,7 @@ const Message = require("../models/Message");
 const { syncDerivedTreatmentStatus } = require("../utils/treatmentStatus");
 const normalizeEmail = require("../utils/normalizeEmail");
 const cascadeDeactivatePatient = require("../utils/cascadeDeactivatePatient");
+const isValidId = require("../utils/isValidId");
 
 const buildPatientResponse = (patient) => {
   return {
@@ -184,6 +185,13 @@ const getPatients = async (req, res, next) => {
 
 const getPatientById = async (req, res, next) => {
   try {
+    if (!isValidId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid patient id",
+      });
+    }
+
     const patient = await PatientProfile.findById(req.params.id)
       .populate("oncologist", "fullName email role")
       .populate("user", "fullName email role isActive")
@@ -229,6 +237,13 @@ const getPatientById = async (req, res, next) => {
 
 const updatePatient = async (req, res, next) => {
   try {
+    if (!isValidId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid patient id",
+      });
+    }
+
     const patient = await PatientProfile.findById(req.params.id);
 
     if (!patient || !patient.isActive) {
@@ -334,6 +349,13 @@ const updatePatient = async (req, res, next) => {
 
 const deletePatient = async (req, res, next) => {
   try {
+    if (!isValidId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid patient id",
+      });
+    }
+
     const patient = await PatientProfile.findById(req.params.id);
 
     if (!patient || !patient.isActive) {

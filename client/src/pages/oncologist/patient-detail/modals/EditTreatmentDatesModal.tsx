@@ -142,7 +142,9 @@ export function EditTreatmentDatesModal({
       }
       if (
         item.treatmentType === "radiation" &&
-        (!Number.isInteger(item.totalSessions) || item.totalSessions < 0)
+        (item.totalSessions == null ||
+          !Number.isInteger(item.totalSessions) ||
+          item.totalSessions < 0)
       ) {
         nextErrors[`${item._id}-sessions`] =
           "Total sessions must be a whole number of zero or more.";

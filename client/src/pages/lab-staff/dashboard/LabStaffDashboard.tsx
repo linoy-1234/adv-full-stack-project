@@ -86,27 +86,51 @@ export function LabStaffDashboard({ onLogout }: LabStaffDashboardProps) {
 
   // Load all patients on mount
   useEffect(() => {
+    let cancelled = false;
     setPatientsLoading(true);
     setPatientsError("");
     getPatients()
-      .then((res) => setPatients(res.patients))
-      .catch(() => setPatientsError("Could not load patients."))
-      .finally(() => setPatientsLoading(false));
+      .then((res) => {
+        if (!cancelled) setPatients(res.patients);
+      })
+      .catch(() => {
+        if (!cancelled) setPatientsError("Could not load patients.");
+      })
+      .finally(() => {
+        if (!cancelled) setPatientsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Load lab results when a patient is selected
   useEffect(() => {
+    let cancelled = false;
+
     if (!selectedPatientId) {
       setLabResults([]);
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
     setLabsLoading(true);
     setLabsError("");
     getPatientLabs(selectedPatientId)
-      .then((res) => setLabResults(res.labResults))
-      .catch(() => setLabsError("Could not load lab results."))
-      .finally(() => setLabsLoading(false));
+      .then((res) => {
+        if (!cancelled) setLabResults(res.labResults);
+      })
+      .catch(() => {
+        if (!cancelled) setLabsError("Could not load lab results.");
+      })
+      .finally(() => {
+        if (!cancelled) setLabsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedPatientId]);
 
   const filteredPatients = patients.filter(

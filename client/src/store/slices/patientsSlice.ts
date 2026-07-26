@@ -10,13 +10,14 @@ import {
 } from "../../services/patientService";
 
 import type { PatientProfile } from "../../types/patient";
-import { getApiErrorMessage } from "../../utils/apiError";
+import { getApiErrorMessage, getApiStatus } from "../../utils/apiError";
 
 interface PatientsState {
   list: PatientProfile[];
   selectedPatient: PatientProfile | null;
   loading: boolean;
   error: string | null;
+  selectedPatientErrorStatus: number | null;
 }
 
 export const fetchPatients = createAsyncThunk<
@@ -37,14 +38,15 @@ export const fetchPatients = createAsyncThunk<
 export const fetchPatientById = createAsyncThunk<
   PatientProfile,
   string,
-  { rejectValue: string }
+  { rejectValue: string; rejectedMeta: { status: number | null } }
 >("patients/fetchPatientById", async (patientId, { rejectWithValue }) => {
   try {
     const data = await getPatientById(patientId);
     return data.patient;
   } catch (error) {
     return rejectWithValue(
-      getApiErrorMessage(error, "Failed to load patient")
+      getApiErrorMessage(error, "Failed to load patient"),
+      { status: getApiStatus(error) ?? null }
     );
   }
 });
@@ -102,6 +104,7 @@ const initialState: PatientsState = {
   selectedPatient: null,
   loading: false,
   error: null,
+  selectedPatientErrorStatus: null,
 };
 
 const patientsSlice = createSlice({
@@ -134,14 +137,17 @@ const patientsSlice = createSlice({
       .addCase(fetchPatientById.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.selectedPatientErrorStatus = null;
       })
       .addCase(fetchPatientById.fulfilled, (state, action) => {
         state.loading = false;
         state.selectedPatient = action.payload;
+        state.selectedPatientErrorStatus = null;
       })
       .addCase(fetchPatientById.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || "Failed to load patient";
+        state.selectedPatientErrorStatus = action.meta.status ?? null;
       })
 
       .addCase(addPatient.pending, (state) => {

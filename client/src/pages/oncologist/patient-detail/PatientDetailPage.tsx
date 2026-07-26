@@ -118,6 +118,7 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
     selectedPatient,
     loading,
     error: patientsError,
+    selectedPatientErrorStatus,
   } = useAppSelector((state) => state.patients);
   const cachedPatient = patients.find((p) => p._id === patientId) ?? null;
   const [modal, setModal] = useState<ModalName>(null);
@@ -204,6 +205,11 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
       ? selectedPatient
       : null) ?? cachedPatient;
   const allergies = getAllergyNames(profile?.allergies);
+
+  const showInvalidOrNotFound =
+    !profile &&
+    !loading &&
+    (selectedPatientErrorStatus === 400 || selectedPatientErrorStatus === 404);
 
   const medicationPlan = useMemo(() => getMedicationPlan(protocol), [protocol]);
   const chemoCycles = cycles.filter((cycle) => cycle.treatmentType === "chemotherapy");
@@ -510,7 +516,33 @@ export function PatientDetail({ patientId, onBack, onHome }: PatientDetailProps)
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-6 space-y-5 relative z-10">
-        {!profile && (
+        {!profile && showInvalidOrNotFound && (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 shadow-md text-white bg-[#7CAE8E]">
+              <UserX className="w-8 h-8" aria-hidden="true" />
+            </div>
+            <h2 className="text-2xl mb-2 text-[#2D4739]">
+              {selectedPatientErrorStatus === 400
+                ? "Invalid Patient Link"
+                : "Patient Not Found"}
+            </h2>
+            <p className="text-sm max-w-sm mb-6 text-[#6B7280]">
+              {selectedPatientErrorStatus === 400
+                ? "This patient link is not valid. Please return to the dashboard and select a patient again."
+                : "We couldn't find a patient profile for this link. It may have been removed."}
+            </p>
+            <button
+              type="button"
+              onClick={onHome}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-white text-sm bg-[#7CAE8E] hover:opacity-90 transition-opacity"
+            >
+              <Home size={16} aria-hidden="true" />
+              Back to Dashboard
+            </button>
+          </div>
+        )}
+
+        {!profile && !showInvalidOrNotFound && (
           <PatientMedicalProfileCard
             profile={profile}
             loading={loading}
