@@ -2,6 +2,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import type { UserRole } from "../../types/auth";
 import { LoadingSpinner } from "./LoadingSpinner";
+import { ServerUnavailable } from "./ServerUnavailable";
 
 interface PrivateRouteProps {
   children: React.ReactNode;
@@ -9,11 +10,15 @@ interface PrivateRouteProps {
 }
 
 const PrivateRoute = ({ children, allowedRoles }: PrivateRouteProps) => {
-  const { user, loading } = useAuth();
+  const { user, loading, sessionError, logout } = useAuth();
   const location = useLocation();
 
   if (loading) {
     return <LoadingSpinner message="Checking access..." />;
+  }
+
+  if (sessionError) {
+    return <ServerUnavailable message={sessionError} onLogout={logout} />;
   }
 
   if (!user) {

@@ -14,12 +14,14 @@ import {
   logout as logoutRequest,
   register as registerRequest,
 } from "../services/authService";
+import { getApiErrorMessage, getApiStatus } from "../utils/apiError";
 
 import type { AuthResponse, User } from "../types/auth";
 
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
+  sessionError: string | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<AuthResponse>;
   loginWithGoogle: (credential: string) => Promise<AuthResponse>;
@@ -41,6 +43,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(getCurrentUser());
   const [loading, setLoading] = useState<boolean>(true);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   useEffect(() => {
     const restoreSession = async () => {
@@ -58,10 +61,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setUser(data.user);
           localStorage.setItem("user", JSON.stringify(data.user));
         }
-      } catch {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setUser(null);
+        setSessionError(null);
+      } catch (error) {
+        if (getApiStatus(error) === 401) {
+          // Token is genuinely invalid/expired — this is the only case that logs the user out.
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          setUser(null);
+          setSessionError(null);
+        } else {
+          // Network error, unreachable server, or 5xx — keep the token/user and
+          // surface a server error instead of treating the user as logged out.
+          setSessionError(
+            getApiErrorMessage(
+              error,
+              "Unable to reach the server. Please check your connection."
+            )
+          );
+        }
       } finally {
         setLoading(false);
       }
@@ -103,13 +120,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const logout = () => {
+    // Purely local — clears the token/user even if the server is unreachable.
     logoutRequest();
     setUser(null);
+    setSessionError(null);
   };
 
   const value: AuthContextValue = {
     user,
     loading,
+    sessionError,
     isAuthenticated: Boolean(user),
     login,
     loginWithGoogle,

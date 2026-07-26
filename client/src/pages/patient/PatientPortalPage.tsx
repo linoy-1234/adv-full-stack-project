@@ -1,6 +1,8 @@
 import { lazy, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
+import { RibbonBackground } from "../../components/common/RibbonBackground";
+import ErrorMessage from "../../components/common/ErrorMessage";
 import { useAuth } from "../../context/AuthContext";
 import { getMyLabs } from "../../services/labService";
 import { getPatientById } from "../../services/patientService";
@@ -153,11 +155,23 @@ export function PatientPortalPage({
     );
   }
 
-  if (patientPortalLoading || !profile) {
+  if (patientPortalLoading) {
+    return <LoadingSpinner message="Loading patient portal..." />;
+  }
+
+  if (patientPortalError || !profile) {
     return (
-      <LoadingSpinner
-        message={patientPortalError || "Loading patient portal..."}
-      />
+      <div
+        className="min-h-screen flex flex-col items-center justify-center gap-4 px-6"
+        style={{ backgroundColor: "#FAF8F5", position: "relative" }}
+      >
+        <RibbonBackground />
+        <div className="relative z-10 w-full max-w-md">
+          <ErrorMessage
+            message={patientPortalError || "Failed to load patient portal."}
+          />
+        </div>
+      </div>
     );
   }
 
