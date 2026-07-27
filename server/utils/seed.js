@@ -85,5 +85,4 @@ const seedData = async () => {
 
 seedData();
 
-//seed for the oncologist and the lab staff (so unauthorized people wont register as an oncologist\lab)
-// and sarah so she will be able to register (*might delete later)
+

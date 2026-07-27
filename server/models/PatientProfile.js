@@ -99,7 +99,7 @@ const patientProfileSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-//for "deleting" the profile safetly (not really deleting just adding that the patient is not active, meaning "deleting the user")
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -118,5 +118,3 @@ const patientProfileSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("PatientProfile", patientProfileSchema);
-
-//the profile is first created by the oncologyst. after that the user registers with the same email

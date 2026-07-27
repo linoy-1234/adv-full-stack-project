@@ -75,4 +75,4 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 
 module.exports = mongoose.model("User", userSchema);
 
-//the user is according to the role (patient, oncologist, lab staff)
+

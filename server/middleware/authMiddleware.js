@@ -43,6 +43,3 @@ const protect = async (req, res, next) => {
 
 module.exports = { protect };
 
-//checks if the user is connected
-//this middleware checks if there is token (all the user information),
-//he decodes the token, fined the username in the database, and put the user in req.user, and then in the controller we will see who logged in.

@@ -82,4 +82,3 @@ labResultSchema.index({ patient: 1, testDate: -1 });
 
 module.exports = mongoose.model("LabResult", labResultSchema);
 
-//saves the lab results

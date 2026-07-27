@@ -168,4 +168,4 @@ treatmentProtocolSchema.index({ patient: 1, isActive: 1 });
 
 module.exports = mongoose.model("TreatmentProtocol", treatmentProtocolSchema);
 
-//the whole protocol of the patient will be here
+

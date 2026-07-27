@@ -52,4 +52,3 @@ messageSchema.index({ sender: 1 });
 
 module.exports = mongoose.model("Message", messageSchema);
 
-//saves the messages between the patient and the oncologist

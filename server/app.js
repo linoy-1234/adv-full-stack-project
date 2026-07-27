@@ -34,7 +34,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 300,
   message: {
     success: false,
     message: "Too many requests, please try again later",
@@ -70,4 +70,4 @@ app.use(errorHandler);
 
 module.exports = app;
 
-//app.js tells the server to get req from the client, reading json req, use routes, taking care of errors.
+

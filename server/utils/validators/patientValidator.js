@@ -105,5 +105,3 @@ module.exports = {
   updatePatientSchema,
 };
 
-
-//making sure the information the oncologist sent the database(for the user data) is validated, meaning if something is missing or not good 400 will appear

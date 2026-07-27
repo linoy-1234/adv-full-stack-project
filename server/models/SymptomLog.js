@@ -86,5 +86,3 @@ symptomLogSchema.index({ recordedBy: 1 });
 
 module.exports = mongoose.model("SymptomLog", symptomLogSchema);
 
-//saves the symptom log of the pateint
-//it doesnt say fever! reminder to delete it in the client side!

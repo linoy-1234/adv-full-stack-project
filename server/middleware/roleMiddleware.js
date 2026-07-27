@@ -20,4 +20,3 @@ const authorizeRoles = (...allowedRoles) => {
 
 module.exports = { authorizeRoles };
 
-// checks if the user has the right role(if he is a patient he cant do oncologist role editing)

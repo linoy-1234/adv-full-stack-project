@@ -20,4 +20,3 @@ const validate = (schema) => {
 
 module.exports = validate;
 
-//checks if there is missing data while registering

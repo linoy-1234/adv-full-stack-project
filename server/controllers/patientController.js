@@ -396,4 +396,4 @@ module.exports = {
   deletePatient,
 };
 
-//the oncologist is creating the patient profile, returns patients list, returns one patient, only the oncologist can updates a patient profile, and he can "delete" the profile patient by making him isActive = false
+

@@ -11,4 +11,3 @@ router.get("/", (req, res) => {
 
 module.exports = router;
 
-//to get a response if the server is working

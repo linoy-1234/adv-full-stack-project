@@ -7,4 +7,3 @@ const notFound = (req, res, next) => {
 
 module.exports = notFound;
 
-//if someone enters a URL that doesnt exist
