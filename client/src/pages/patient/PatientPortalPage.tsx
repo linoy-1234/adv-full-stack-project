@@ -198,6 +198,7 @@ export function PatientPortalPage({
     >
       {page === "patient-dashboard" && (
         <PatientDashboard
+          patientId={activeProfileId ?? ""}
           cycles={cycles}
           medicationPlan={medicationPlan}
           latestLab={latestLab}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ApiLabResult } from "../../../types/labs";
 import type { TreatmentCycleRecord, MedicationDisplayRecord } from "../../../types/treatment";
 import { formatDate } from "../../../utils/dateUtils";
@@ -17,6 +17,7 @@ import {
 } from "../../../utils/treatmentDisplay";
 
 interface PatientDashboardProps {
+  patientId: string;
   cycles: TreatmentCycleRecord[];
   medicationPlan: MedicationDisplayRecord[];
   latestLab?: ApiLabResult;
@@ -24,17 +25,78 @@ interface PatientDashboardProps {
   onNavigate: (page: PatientNavPage) => void;
 }
 
-function MedCheckRow({ med }: { med: MedicationDisplayRecord }) {
-  const [done, setDone] = useState(false);
+const MED_CHECK_STORAGE_PREFIX = "onco-log:med-check";
+
+function getMedCheckStorageKey(patientId: string, dateIso: string) {
+  return `${MED_CHECK_STORAGE_PREFIX}:${patientId}:${dateIso}`;
+}
+
+function loadMedCheckMap(patientId: string, dateIso: string): Record<string, boolean> {
+  if (!patientId) return {};
+  try {
+    const raw = localStorage.getItem(getMedCheckStorageKey(patientId, dateIso));
+    return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveMedCheckMap(patientId: string, dateIso: string, map: Record<string, boolean>) {
+  if (!patientId) return;
+  try {
+    localStorage.setItem(getMedCheckStorageKey(patientId, dateIso), JSON.stringify(map));
+  } catch {
+    // localStorage unavailable (private browsing, quota) - checkbox just won't persist.
+  }
+}
+
+/** Drops med-check entries from other days/patients so localStorage doesn't accumulate history. */
+function clearStaleMedCheckKeys(patientId: string, dateIso: string) {
+  if (!patientId) return;
+  try {
+    const keepKey = getMedCheckStorageKey(patientId, dateIso);
+    const staleKeys: string[] = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(`${MED_CHECK_STORAGE_PREFIX}:`) && key !== keepKey) {
+        staleKeys.push(key);
+      }
+    }
+    staleKeys.forEach((key) => localStorage.removeItem(key));
+  } catch {
+    // localStorage unavailable - nothing to clean up.
+  }
+}
+
+function MedCheckRow({
+  med,
+  patientId,
+  dateIso,
+}: {
+  med: MedicationDisplayRecord;
+  patientId: string;
+  dateIso: string;
+}) {
+  const [done, setDone] = useState(() => loadMedCheckMap(patientId, dateIso)[med.id] ?? false);
   const catColor: Record<string, string> = {
     chemotherapy: "rgba(237,233,254,0.6)",
     supportive: "rgba(240,249,244,0.8)",
     chronic: "rgba(254,252,232,0.8)",
   };
 
+  const toggleDone = () => {
+    setDone((previous) => {
+      const next = !previous;
+      const map = loadMedCheckMap(patientId, dateIso);
+      map[med.id] = next;
+      saveMedCheckMap(patientId, dateIso, map);
+      return next;
+    });
+  };
+
   return (
     <button
-      onClick={() => setDone((p) => !p)}
+      onClick={toggleDone}
       className="flex items-center gap-3 p-3 rounded-2xl text-left w-full transition-all"
       style={{
         backgroundColor: done ? "#D1FAE5" : catColor[med.category] ?? "#F9FAFB",
@@ -65,6 +127,7 @@ function MedCheckRow({ med }: { med: MedicationDisplayRecord }) {
 }
 
 export function PatientDashboard({
+  patientId,
   cycles,
   medicationPlan,
   latestLab,
@@ -73,6 +136,10 @@ export function PatientDashboard({
 }: PatientDashboardProps) {
   const todayValue = todayIso();
   const todayWeekday = getTodayWeekdayKey();
+
+  useEffect(() => {
+    clearStaleMedCheckKeys(patientId, todayValue);
+  }, [patientId, todayValue]);
   const today = new Date(todayValue);
   const todayLabel = today.toLocaleDateString("en-GB", {
     weekday: "long",
@@ -192,7 +259,7 @@ export function PatientDashboard({
                 </p>
                 <div className="flex flex-col gap-2">
                   {todaysMeds.map((med) => (
-                    <MedCheckRow key={med.id} med={med} />
+                    <MedCheckRow key={med.id} med={med} patientId={patientId} dateIso={todayValue} />
                   ))}
                 </div>
               </>
@@ -216,7 +283,7 @@ export function PatientDashboard({
                 </p>
                 <div className="flex flex-col gap-2">
                   {todaysMeds.map((med) => (
-                    <MedCheckRow key={med.id} med={med} />
+                    <MedCheckRow key={med.id} med={med} patientId={patientId} dateIso={todayValue} />
                   ))}
                 </div>
               </>
