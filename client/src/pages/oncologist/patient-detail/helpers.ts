@@ -65,10 +65,8 @@ export const validatePatientForm = (form: {
     errors.email = "Enter a valid email address.";
 
   if (!nationalId) errors.nationalId = "National ID is required.";
-  else if (nationalId.length < 5)
-    errors.nationalId = "National ID must be at least 5 characters.";
-  else if (nationalId.length > 20)
-    errors.nationalId = "National ID cannot exceed 20 characters.";
+  else if (!/^\d+$/.test(nationalId))
+    errors.nationalId = "National ID must contain digits only.";
 
   if (!form.dateOfBirth) errors.dateOfBirth = "Date of birth is required.";
 

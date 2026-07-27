@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -32,6 +33,7 @@ interface AuthContextValue {
     confirmPassword: string
   ) => Promise<AuthResponse>;
   logout: () => void;
+  retrySessionCheck: () => Promise<void>;
 }
 
 interface AuthProviderProps {
@@ -45,47 +47,48 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [sessionError, setSessionError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const restoreSession = async () => {
-      const token = localStorage.getItem("token");
+  const restoreSession = useCallback(async () => {
+    setLoading(true);
+    const token = localStorage.getItem("token");
 
-      if (!token) {
-        setLoading(false);
-        return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const data = await getMe();
+
+      if (data.user) {
+        setUser(data.user);
+        localStorage.setItem("user", JSON.stringify(data.user));
       }
-
-      try {
-        const data = await getMe();
-
-        if (data.user) {
-          setUser(data.user);
-          localStorage.setItem("user", JSON.stringify(data.user));
-        }
+      setSessionError(null);
+    } catch (error) {
+      if (getApiStatus(error) === 401) {
+        // Token is genuinely invalid/expired — this is the only case that logs the user out.
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setUser(null);
         setSessionError(null);
-      } catch (error) {
-        if (getApiStatus(error) === 401) {
-          // Token is genuinely invalid/expired — this is the only case that logs the user out.
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
-          setUser(null);
-          setSessionError(null);
-        } else {
-          // Network error, unreachable server, or 5xx — keep the token/user and
-          // surface a server error instead of treating the user as logged out.
-          setSessionError(
-            getApiErrorMessage(
-              error,
-              "Unable to reach the server. Please check your connection."
-            )
-          );
-        }
-      } finally {
-        setLoading(false);
+      } else {
+        // Network error, unreachable server, or 5xx — keep the token/user and
+        // surface a server error instead of treating the user as logged out.
+        setSessionError(
+          getApiErrorMessage(
+            error,
+            "Unable to reach the server. Please check your connection."
+          )
+        );
       }
-    };
-
-    restoreSession();
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    restoreSession();
+  }, [restoreSession]);
 
   const login = async (
     email: string,
@@ -135,6 +138,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     loginWithGoogle,
     register,
     logout,
+    retrySessionCheck: restoreSession,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

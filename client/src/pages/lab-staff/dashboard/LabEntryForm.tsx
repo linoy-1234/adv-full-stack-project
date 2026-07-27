@@ -90,6 +90,7 @@ export function LabEntryForm({
     const nextErrors: Partial<Record<LabField, string>> = {};
     if (!patientId) nextErrors.patient = "Select a patient.";
     if (!date) nextErrors.date = "Test date is required.";
+    else if (date > TODAY) nextErrors.date = "Test date cannot be in the future.";
     const values: Array<[LabField, string, string]> = [
       ["wbc", wbc, "WBC"],
       ["neutrophils", neutrophils, "Neutrophils"],
@@ -198,6 +199,7 @@ export function LabEntryForm({
               className={`${inputCls} ${fieldErrors.date ? invalidFieldClass : ""}`}
               type="date"
               value={date}
+              max={TODAY}
               onChange={(e) => {
                 clearError();
                 clearFieldError("date");

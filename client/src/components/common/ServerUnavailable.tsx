@@ -1,16 +1,29 @@
-import { LogOut, WifiOff } from "lucide-react";
+import { LogOut, RefreshCw, WifiOff } from "lucide-react";
 
 interface ServerUnavailableProps {
   message: string;
+  onRetry: () => void;
   onLogout: () => void;
 }
 
-export function ServerUnavailable({ message, onLogout }: ServerUnavailableProps) {
+export function ServerUnavailable({
+  message,
+  onRetry,
+  onLogout,
+}: ServerUnavailableProps) {
   return (
     <main
-      className="min-h-screen flex flex-col items-center justify-center px-4 text-center"
+      className="min-h-screen relative flex flex-col items-center justify-center px-4 text-center"
       style={{ backgroundColor: "#FAF8F5", fontFamily: "Nunito, sans-serif" }}
     >
+      <button
+        type="button"
+        onClick={onLogout}
+        className="absolute top-6 right-6 flex items-center gap-1.5 text-sm text-[#9CA3AF] hover:text-[#6B7280] transition-colors"
+      >
+        <LogOut size={14} /> Log Out
+      </button>
+
       <div
         className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-md text-white"
         style={{ backgroundColor: "#7CAE8E" }}
@@ -31,12 +44,12 @@ export function ServerUnavailable({ message, onLogout }: ServerUnavailableProps)
 
       <button
         type="button"
-        onClick={onLogout}
+        onClick={onRetry}
         className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-white text-sm transition-opacity hover:opacity-90"
         style={{ backgroundColor: "#7CAE8E" }}
       >
-        <LogOut className="w-4 h-4" aria-hidden="true" />
-        Log Out
+        <RefreshCw className="w-4 h-4" aria-hidden="true" />
+        Try Again
       </button>
     </main>
   );

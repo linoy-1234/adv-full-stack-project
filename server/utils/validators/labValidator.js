@@ -2,7 +2,11 @@ const Joi = require("joi");
 
 const createLabResultSchema = Joi.object({
   testDate: Joi.date()
-    .required(),
+    .max("now")
+    .required()
+    .messages({
+      "date.max": "Test date cannot be in the future",
+    }),
 
   wbc: Joi.number()
     .min(0)
@@ -35,7 +39,9 @@ const createLabResultSchema = Joi.object({
 });
 
 const updateLabResultSchema = Joi.object({
-  testDate: Joi.date(),
+  testDate: Joi.date().max("now").messages({
+    "date.max": "Test date cannot be in the future",
+  }),
 
   wbc: Joi.number()
     .min(0),

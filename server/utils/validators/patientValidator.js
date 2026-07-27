@@ -34,12 +34,15 @@ const createPatientSchema = Joi.object({
       "any.required": "Patient email is required",
     }),
 
-  nationalId: Joi.string().trim().min(5).max(20).required().messages({
-    "string.empty": "National ID is required",
-    "string.min": "National ID must be at least 5 characters",
-    "string.max": "National ID cannot exceed 20 characters",
-    "any.required": "National ID is required",
-  }),
+  nationalId: Joi.string()
+    .trim()
+    .pattern(/^\d+$/)
+    .required()
+    .messages({
+      "string.empty": "National ID is required",
+      "string.pattern.base": "National ID must contain digits only",
+      "any.required": "National ID is required",
+    }),
 
   dateOfBirth: Joi.date().required().messages({
     "date.base": "Date of birth must be a valid date",
@@ -70,7 +73,9 @@ const updatePatientSchema = Joi.object({
     .lowercase()
     .email({ tlds: { allow: false } }),
 
-  nationalId: Joi.string().trim().min(5).max(20),
+  nationalId: Joi.string().trim().pattern(/^\d+$/).messages({
+    "string.pattern.base": "National ID must contain digits only",
+  }),
 
   dateOfBirth: Joi.date(),
 

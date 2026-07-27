@@ -164,11 +164,14 @@ export function AddPatientModal({ onClose, onSave }: AddPatientModalProps) {
                 ref={nationalIdRef}
                 className={`${inputCls} ${fieldErrors.nationalId ? invalidFieldClass : ""}`}
                 value={form.nationalId}
+                inputMode="numeric"
+                pattern="[0-9]*"
                 onChange={(event) => {
                   clearFieldError("nationalId");
+                  const digitsOnly = event.target.value.replace(/\D/g, "");
                   setForm((current) => ({
                     ...current,
-                    nationalId: event.target.value,
+                    nationalId: digitsOnly,
                   }));
                 }}
               />

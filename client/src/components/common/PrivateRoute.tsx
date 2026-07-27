@@ -10,7 +10,7 @@ interface PrivateRouteProps {
 }
 
 const PrivateRoute = ({ children, allowedRoles }: PrivateRouteProps) => {
-  const { user, loading, sessionError, logout } = useAuth();
+  const { user, loading, sessionError, logout, retrySessionCheck } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -18,7 +18,13 @@ const PrivateRoute = ({ children, allowedRoles }: PrivateRouteProps) => {
   }
 
   if (sessionError) {
-    return <ServerUnavailable message={sessionError} onLogout={logout} />;
+    return (
+      <ServerUnavailable
+        message={sessionError}
+        onRetry={retrySessionCheck}
+        onLogout={logout}
+      />
+    );
   }
 
   if (!user) {

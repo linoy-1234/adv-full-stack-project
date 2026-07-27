@@ -5,6 +5,7 @@ import { formatDate } from "../../../utils/dateUtils";
 import { PatientNavPage } from "../PatientPortalPage";
 import { Calendar, Pill, MessageCircle, FlaskConical, Clock, CheckSquare, Square, Info } from "lucide-react";
 import {
+  categoryLabel,
   getChemoDisplayStatus,
   getEffectiveCycleDates,
   getRadiationDisplayStatus,
@@ -56,7 +57,7 @@ function MedCheckRow({ med }: { med: MedicationDisplayRecord }) {
           {med.name} - {med.dose}
         </span>
         <span className="text-xs" style={{ color: "#9CA3AF" }}>
-          {[med.route, med.timing].filter(Boolean).join(" - ")}
+          {[med.route, med.timing, categoryLabel[med.category]].filter(Boolean).join(" - ")}
         </span>
       </div>
     </button>
