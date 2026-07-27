@@ -51,7 +51,6 @@ Onco+Log uses a client–server architecture. The React single-page application 
 │   │   ├── components/       # Shared UI and feature components
 │   │   ├── constants/        # Shared client constants
 │   │   ├── context/          # Authentication context
-│   │   ├── hooks/            # Reusable React hooks
 │   │   ├── pages/            # Auth, patient, oncologist, and lab-staff pages
 │   │   ├── services/         # Axios client and API service modules
 │   │   ├── store/            # Redux store and patient state
@@ -70,8 +69,7 @@ Onco+Log uses a client–server architecture. The React single-page application 
 │   ├── routes/               # Express REST routes
 │   ├── utils/                # Validators, authorization, seed, and helpers
 │   ├── app.js                # Express middleware and route registration
-│   ├── server.js             # Database connection and HTTP server startup
-│   └── Procfile              # Render process command
+│   └── server.js             # Database connection and HTTP server startup
 └── README.md
 ```
 
