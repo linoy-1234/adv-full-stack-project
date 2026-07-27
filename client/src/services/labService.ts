@@ -69,4 +69,4 @@ export const deleteLabResult = async (
   return data;
 };
 
-//CRUD blood tests
+

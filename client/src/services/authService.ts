@@ -73,8 +73,4 @@ export const getCurrentUser = (): User | null => {
   }
 };
 
-//sends to the server the email+password
-//sends the register
-//checks the user that is connected by the token
-//delete the user and token
-//sees the current user from localstorage
+

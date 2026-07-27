@@ -84,4 +84,3 @@ export const deleteSymptomLog = async (
   return data;
 };
 
-//symptom journal CRUD patient create oncologoist sees

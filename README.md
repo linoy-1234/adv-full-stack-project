@@ -75,6 +75,54 @@ Onco+Log uses a client–server architecture. The React single-page application 
 └── README.md
 ```
 
+## MongoDB Schema and Collection Relationships
+
+
+```mermaid
+flowchart LR
+    U[User]
+    P[PatientProfile]
+    TP[TreatmentProtocol]
+    TC[TreatmentCycle]
+    L[LabResult]
+    S[SymptomLog]
+    M[Message]
+    D[ClinicalDocument]
+
+    U -->|patientProfile| P
+    P -->|user, oncologist, createdBy, updatedBy| U
+    TP -->|patient| P
+    TP -->|oncologist, createdBy, updatedBy| U
+    TC -->|protocol| TP
+    TC -->|patient| P
+    TC -->|oncologist, decision.decidedBy, cancelledBy| U
+    L -->|patient| P
+    L -->|enteredBy, updatedBy| U
+    S -->|patient| P
+    S -->|recordedBy| U
+    M -->|patient| P
+    M -->|sender| U
+    D -->|patient| P
+    D -->|uploadedBy, deletedBy| U
+```
+
+| Model | Default collection | References and embedded data |
+| --- | --- | --- |
+| `User` | `users` | Optionally references the user's `PatientProfile`. Stores the authentication method, role (`patient`, `oncologist`, or `lab_staff`), and active state. Passwords are hashed by a pre-save hook and excluded from queries by default. |
+| `PatientProfile` | `patientprofiles` | Optionally links back to the registered patient `User`; requires an assigned oncologist and creator `User`, and can record an updater. Embeds allergy records. Email and national ID are unique. |
+| `TreatmentProtocol` | `treatmentprotocols` | Belongs to a `PatientProfile` and an oncologist `User`, with creator and optional updater references. Embeds treatment-type plans and detailed medication records. |
+| `TreatmentCycle` | `treatmentcycles` | Belongs to a `TreatmentProtocol`, `PatientProfile`, and oncologist `User`. Embeds its approval decision, whose optional `decidedBy` field references a `User`; `cancelledBy` also optionally references a user. |
+| `LabResult` | `labresults` | Belongs to a `PatientProfile`; `enteredBy` requires a lab-staff `User`, while `updatedBy` is optional. Stores the dated blood-work measurements and notes. |
+| `SymptomLog` | `symptomlogs` | Belongs to a `PatientProfile` and requires the recording `User`. Embeds one or more symptom items with a type, severity from 1–10, and optional custom label. |
+| `Message` | `messages` | Belongs to a `PatientProfile` conversation and references its sender `User`. Stores the sender role, text, and separate patient/oncologist read flags. |
+| `ClinicalDocument` | `clinicaldocuments` | Belongs to a `PatientProfile`; references the uploading `User` and, when deleted, an optional deleting `User`. MongoDB stores file metadata and the Cloudinary identifiers/URL rather than the file itself. |
+
+The patient-account link is bidirectional: `User.patientProfile` points to the clinical profile, and `PatientProfile.user` is populated after invitation-based registration. Both fields are optional at schema level so an oncologist can create a profile in the `waiting_for_registration` state before a patient account exists.
+
+Most patient-owned collections use `isActive` for application-level soft deletion. `ClinicalDocument` additionally records `deletedAt` and `deletedBy`; treatment cycles retain cancellation metadata. Every model enables Mongoose timestamps, adding `createdAt` and `updatedAt`.
+
+Indexes support the main access patterns: protocols by patient and active state; cycles by patient/date and protocol/cycle number; labs by patient/test date; symptoms by patient/log date and recorder; messages by patient/date and sender; and documents by patient/date and uploader.
+
 ## Local Setup
 
 ### Prerequisites

@@ -274,7 +274,7 @@ export function LoginPage({
 
           <p style={{ color: "#4B7A5E" }}>
             🌸 Patient: <strong>sarah.cohen@email.com</strong> /{" "}
-            <strong>patient1</strong>
+            <strong>123456</strong>
           </p>
 
           <p style={{ color: "#2D4739" }}>

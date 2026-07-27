@@ -212,5 +212,4 @@ export const { clearSelectedPatient, clearPatientsError, resetPatients } =
 
 export default patientsSlice.reducer;
 
-//saves the patient list in Redux
-//loads patients from the server, CRUD, saves laoding/error
+

@@ -58,4 +58,4 @@ export const deletePatient = async (
   return data;
 };
 
-//all the stuff related to the patients (patient list, id patient, CRUD...)
+
