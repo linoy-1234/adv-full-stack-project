@@ -6,7 +6,7 @@ import ErrorMessage from "../../../components/common/ErrorMessage";
 import FieldError, {
   invalidFieldClass,
 } from "../../../components/common/FieldError";
-import { focusFirstField } from "../../../hooks/useErrorVisibility";
+import { focusFirstField } from "../../../utils/focusFirstField";
 import type { ApiLabResult } from "../../../types/labs";
 import type { PatientProfile } from "../../../types/patient";
 import type { LabResultPayload } from "../../../services/labService";

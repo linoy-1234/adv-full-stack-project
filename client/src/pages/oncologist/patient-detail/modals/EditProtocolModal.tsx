@@ -5,7 +5,7 @@ import ErrorMessage from "../../../../components/common/ErrorMessage";
 import FieldError, {
   invalidFieldClass,
 } from "../../../../components/common/FieldError";
-import { focusFirstField } from "../../../../hooks/useErrorVisibility";
+import { focusFirstField } from "../../../../utils/focusFirstField";
 import type {
   TreatmentProtocolRecord,
   TreatmentTypeRecord,

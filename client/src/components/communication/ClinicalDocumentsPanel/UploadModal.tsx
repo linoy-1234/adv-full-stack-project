@@ -5,7 +5,7 @@ import ErrorMessage from "../../common/ErrorMessage";
 import FieldError, {
   invalidFieldClass,
 } from "../../common/FieldError";
-import { focusFirstField } from "../../../hooks/useErrorVisibility";
+import { focusFirstField } from "../../../utils/focusFirstField";
 import {
   DOCUMENT_TYPE_VALUES,
   DOCUMENT_TYPE_LABELS,

@@ -3,7 +3,7 @@ import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { RibbonBackground } from '../../components/common/RibbonBackground';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import FieldError from '../../components/common/FieldError';
-import { focusFirstField } from '../../hooks/useErrorVisibility';
+import { focusFirstField } from '../../utils/focusFirstField';
 
 interface RegisterPageProps {
   onRegister: (

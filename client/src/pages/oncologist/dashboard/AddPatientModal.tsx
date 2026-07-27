@@ -6,7 +6,7 @@ import FieldError, {
   invalidFieldClass,
 } from "../../../components/common/FieldError";
 import type { PatientPayload } from "../../../services/patientService";
-import { focusFirstField } from "../../../hooks/useErrorVisibility";
+import { focusFirstField } from "../../../utils/focusFirstField";
 import {
   bloodTypes,
   inputCls,

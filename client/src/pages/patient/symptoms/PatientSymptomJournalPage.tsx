@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { CheckCircle, Edit2, Trash2, X } from "lucide-react";
 import ErrorMessage from "../../../components/common/ErrorMessage";
 import FieldError from "../../../components/common/FieldError";
-import { focusFirstField } from "../../../hooks/useErrorVisibility";
+import { focusFirstField } from "../../../utils/focusFirstField";
 import { todayIso } from "../../../utils/treatmentDisplay";
 import {
   getMySymptoms,
