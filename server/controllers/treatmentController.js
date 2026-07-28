@@ -178,6 +178,41 @@ const calculatePlannedCount = (type, cycles) => {
   return cycles.filter((cycle) => cycle.treatmentType === type).length;
 };
 
+const buildAutoCycleTitle = (treatmentType, cycleNumber) => {
+  if (treatmentType === "chemotherapy") return `Cycle ${cycleNumber}`;
+  if (treatmentType === "radiation") {
+    return cycleNumber > 1 ? `Radiation Course ${cycleNumber}` : "Radiation Course";
+  }
+  if (treatmentType === "surgery") return `Surgery Checkpoint ${cycleNumber}`;
+  return null;
+};
+
+// Cycles are soft-deleted (isActive: false) and cycleNumber is a real
+// ordering field (used for sort tiebreaks and for the date-shift logic in
+// EditTreatmentDatesModal), so after a removal the survivors must be
+// renumbered contiguously rather than left with gaps or, after a later
+// count increase, colliding duplicate numbers.
+const renumberActiveCycles = async (protocolId, treatmentType) => {
+  const cycles = await TreatmentCycle.find({
+    protocol: protocolId,
+    treatmentType,
+    isActive: true,
+  }).sort({ startDate: 1, cycleNumber: 1 });
+
+  for (let index = 0; index < cycles.length; index += 1) {
+    const cycle = cycles[index];
+    const nextNumber = index + 1;
+    if (cycle.cycleNumber === nextNumber) continue;
+
+    const autoTitle = buildAutoCycleTitle(treatmentType, cycle.cycleNumber);
+    if (autoTitle && cycle.title === autoTitle) {
+      cycle.title = buildAutoCycleTitle(treatmentType, nextNumber);
+    }
+    cycle.cycleNumber = nextNumber;
+    await cycle.save();
+  }
+};
+
 const syncProtocolPlannedCounts = async (protocol, updatedBy) => {
   const activeCycles = await TreatmentCycle.find({
     protocol: protocol._id,
@@ -614,6 +649,8 @@ const bulkUpdateCycles = async (req, res, next) => {
       removedCycleIds,
     });
 
+    const removedTreatmentTypes = new Set();
+
     for (const cycleId of removedCycleIds) {
       if (!isValidId(cycleId)) continue;
       const cycle = await TreatmentCycle.findOne({
@@ -622,6 +659,7 @@ const bulkUpdateCycles = async (req, res, next) => {
         isActive: true,
       });
       if (!cycle) continue;
+      removedTreatmentTypes.add(cycle.treatmentType);
       cycle.status = "cancelled";
       cycle.isActive = false;
       cycle.cancelledAt = new Date();
@@ -652,6 +690,10 @@ const bulkUpdateCycles = async (req, res, next) => {
 
       syncDerivedTreatmentStatus(cycle);
       await cycle.save();
+    }
+
+    for (const treatmentType of removedTreatmentTypes) {
+      await renumberActiveCycles(protocol._id, treatmentType);
     }
 
     await syncProtocolPlannedCounts(protocol, req.user._id);
@@ -704,11 +746,14 @@ const deleteCycle = async (req, res, next) => {
     cycle.cancelledAt = new Date();
     cycle.cancelledBy = req.user._id;
     await cycle.save();
+    await renumberActiveCycles(protocol._id, cycle.treatmentType);
     await syncProtocolPlannedCounts(protocol, req.user._id);
+    const payload = await hydrateProtocolResponse(protocol._id);
 
     res.status(200).json({
       success: true,
       message: "Treatment item removed from roadmap",
+      ...payload,
     });
   } catch (error) {
     next(error);

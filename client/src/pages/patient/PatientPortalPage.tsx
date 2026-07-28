@@ -149,6 +149,41 @@ export function PatientPortalPage({
     };
   }, [activeProfileId]);
 
+  // Treatment data (protocol/cycles) can change on the oncologist side at any
+  // time, and this component has no Redux/polling backing it - so re-pull it
+  // whenever the patient (re)lands on a page that displays it, instead of
+  // relying solely on the one-time mount fetch above.
+  useEffect(() => {
+    if (!activeProfileId) return;
+    if (
+      page !== "patient-cycles" &&
+      page !== "patient-dashboard" &&
+      page !== "patient-profile"
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    getMyProtocol()
+      .then((response) => {
+        if (cancelled) return;
+        setProtocol(response.protocol || null);
+        setCycles(response.cycles || []);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        if (getApiStatus(error) === 404) {
+          setProtocol(null);
+          setCycles([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProfileId, page]);
+
   if (!activeProfileId) {
     return (
       <LoadingSpinner message="This patient account is not linked to a patient profile yet." />
